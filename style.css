@@ -1,0 +1,99 @@
+/* Estilo personalizado para un look "neon" y moderno */
+body {
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Inter', sans-serif;
+}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.card {
+    background-color: rgba(22, 22, 22, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: border-color 0.3s ease;
+}
+
+.nav-link {
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+}
+
+.nav-link.active, .nav-link:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #60a5fa;
+    border-left-color: #60a5fa;
+}
+
+.kpi-value {
+    color: #f0f0f0;
+    text-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+}
+.form-input {
+     background-color: #1a1a1a;
+     border: 1px solid #333;
+     border-radius: 0.5rem;
+     padding: 0.75rem;
+     width: 100%;
+     color: #e0e0e0;
+     transition: all 0.3s ease;
+}
+.form-input:focus {
+     outline: none;
+     border-color: #60a5fa;
+     box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+}
+.form-input:disabled {
+    background-color: #2a2a2a;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.main-content {
+    transition: margin-left 0.3s ease-in-out;
+}
+
+#confirmation-modal-backdrop {
+    background-color: rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Estilos para el dropdown de descarga */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #1a1a1a;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 0.5rem;
+    border: 1px solid #333;
+}
+.dropdown-content button {
+    color: #e0e0e0;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+.dropdown-content button:hover { background-color: #333; }
+.show { display: block; }
+
+/* Estilos para el toggle switch y tabs de facturación */
+.toggle-bg:after {
+    content: '';
+    /* Estas son clases de Tailwind que se usan aquí con @apply */
+    @apply absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition shadow-sm;
+}
+input:checked + .toggle-bg:after { transform: translateX(100%); @apply border-white; }
+input:checked + .toggle-bg { @apply bg-blue-600 border-blue-600; }
+.tab-button-inner.active { border-color: #60a5fa; color: #60a5fa; }
