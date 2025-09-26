@@ -1,0 +1,2469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Financiero</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Librerías para exportación de archivos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        /* Estilo personalizado para un look "neon" y moderno */
+        body {
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        .card {
+            background-color: rgba(22, 22, 22, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: border-color 0.3s ease;
+        }
+        
+        .nav-link {
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link.active, .nav-link:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border-left-color: #60a5fa;
+        }
+        
+        .kpi-value {
+            color: #f0f0f0;
+            text-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+        }
+        .form-input {
+             background-color: #1a1a1a;
+             border: 1px solid #333;
+             border-radius: 0.5rem;
+             padding: 0.75rem;
+             width: 100%;
+             color: #e0e0e0;
+             transition: all 0.3s ease;
+        }
+        .form-input:focus {
+             outline: none;
+             border-color: #60a5fa;
+             box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+        }
+        .form-input:disabled {
+            background-color: #2a2a2a;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .main-content {
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        #confirmation-modal-backdrop {
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Estilos para el dropdown de descarga */
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #1a1a1a;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 0.5rem;
+            border: 1px solid #333;
+        }
+        .dropdown-content button {
+            color: #e0e0e0;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+            text-align: left;
+        }
+        .dropdown-content button:hover { background-color: #333; }
+        .show { display: block; }
+        
+        /* Estilos para el toggle switch y tabs de facturación */
+        .toggle-bg:after {
+            content: ''; @apply absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition shadow-sm;
+        }
+        input:checked + .toggle-bg:after { transform: translateX(100%); @apply border-white; }
+        input:checked + .toggle-bg { @apply bg-blue-600 border-blue-600; }
+        .tab-button-inner.active { border-color: #60a5fa; color: #60a5fa; }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <!-- Barra de Navegación Lateral -->
+    <aside id="sidebar" class="w-20 bg-black/50 p-4 flex flex-col fixed h-full transition-all duration-300 ease-in-out">
+        <div id="sidebar-toggle" class="flex items-center justify-center gap-3 mb-10 cursor-pointer">
+            <div class="flex items-center gap-3 overflow-hidden">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package flex-shrink-0">
+                     <path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+                 </svg>
+                <span class="text-xl font-bold text-white whitespace-nowrap nav-text hidden">Finanzas PRO</span>
+            </div>
+        </div>
+        <nav class="flex flex-col gap-2 flex-grow">
+            <a href="#" id="nav-inicio" class="nav-link active flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="layout-dashboard"></i> <span class="nav-text hidden">Inicio</span>
+            </a>
+            <a href="#" id="nav-cashflow" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="arrow-left-right"></i> <span class="nav-text hidden">Cash Flow</span>
+            </a>
+            <a href="#" id="nav-cuentas" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="landmark"></i> <span class="nav-text hidden">Cuentas & Bancos</span>
+            </a>
+            <a href="#" id="nav-proformas" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="file-check-2"></i> <span class="nav-text hidden">Proformas</span>
+            </a>
+            <a href="#" id="nav-reportes" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="file-line-chart"></i> <span class="nav-text hidden">Reportes</span>
+            </a>
+             <a href="#" id="nav-archivos" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="archive"></i> <span class="nav-text hidden">Archivos</span>
+            </a>
+            <a href="#" id="nav-ajustes" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="settings"></i> <span class="nav-text hidden">Ajustes</span>
+            </a>
+            <!-- Módulos Adicionales (inicialmente ocultos) -->
+            <a href="#" id="nav-facturacion" class="nav-link hidden flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="file-text"></i> <span class="nav-text hidden">Facturación</span>
+            </a>
+             <a href="#" id="nav-usuarios" class="nav-link hidden flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="users"></i> <span class="nav-text hidden">Usuarios</span>
+            </a>
+            <a href="#" id="nav-inversiones" class="nav-link hidden flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="trending-up"></i> <span class="nav-text hidden">Inversiones</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main id="main-content" class="flex-1 ml-20 p-8 main-content">
+        
+        <!-- Pestaña 1: Inicio General -->
+        <div id="page-inicio" class="page-content">
+             <h2 class="text-3xl font-bold mb-6 text-white uppercase tracking-wider">
+                 EUROPA ENVIOS
+             </h2>
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                 <div class="card p-6 rounded-xl text-center">
+                     <p class="text-gray-400">Saldo Total Disponible en Euros</p>
+                     <p id="total-eur" class="text-5xl font-bold kpi-value mt-2">€0.00</p>
+                 </div>
+                 <div class="card p-6 rounded-xl text-center">
+                     <p class="text-gray-400">Saldo Total Disponible en Dólares</p>
+                     <p id="total-usd" class="text-5xl font-bold kpi-value mt-2">$0.00</p>
+                 </div>
+             </div>
+             <div class="card p-6 rounded-xl">
+                 <div class="flex justify-between items-center mb-4">
+                     <h3 class="font-semibold">Ingresos vs. Egresos Anuales</h3>
+                     <div>
+                         <label for="inicio-chart-currency" class="text-sm text-gray-400 mr-2">Moneda:</label>
+                         <select id="inicio-chart-currency" class="form-input !p-2 !w-auto !text-sm bg-gray-900">
+                             <option value="EUR">EUR (€)</option>
+                             <option value="USD">USD ($)</option>
+                         </select>
+                     </div>
+                 </div>
+                <div class="h-80"><canvas id="annualFlowChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Pestaña 2: Cash Flow -->
+        <div id="page-cashflow" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Flujo de Caja (Cash Flow)</h2>
+            <div class="grid grid-cols-1 gap-6">
+                <!-- Formulario para agregar/editar movimientos -->
+                <div class="card p-6 rounded-xl">
+                    <h3 id="form-title" class="font-semibold mb-4 text-lg">Agregar Nuevo Movimiento</h3>
+                    <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <input type="hidden" id="transaction-id">
+                        <div>
+                            <label for="transaction-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                            <input type="date" id="transaction-date" class="form-input" required>
+                        </div>
+                        <div class="lg:col-span-2">
+                            <label for="transaction-description" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
+                            <input type="text" id="transaction-description" class="form-input" placeholder="Ej: Pago de suscripción" required>
+                        </div>
+                        <div>
+                            <label for="transaction-type" class="block text-sm font-medium text-gray-400 mb-1">Tipo</label>
+                            <select id="transaction-type" class="form-input" required>
+                                <option value="Ingreso">Ingreso</option>
+                                <option value="Egreso">Egreso</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="transaction-part" class="block text-sm font-medium text-gray-400 mb-1">Parte</label>
+                            <select id="transaction-part" class="form-input" required>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="transaction-account" class="block text-sm font-medium text-gray-400 mb-1">Cuenta / Banco</label>
+                            <select id="transaction-account" class="form-input" required>
+                                <!-- Options populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div>
+                            <label for="transaction-category" class="block text-sm font-medium text-gray-400 mb-1">Categoría</label>
+                            <select id="transaction-category" class="form-input" required></select>
+                        </div>
+                        <div>
+                           <label for="transaction-amount" class="block text-sm font-medium text-gray-400 mb-1">Monto</label>
+                            <div class="relative">
+                                <span id="amount-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                <input type="number" id="transaction-amount" class="form-input pl-8" placeholder="250.00" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="flex items-end gap-2 lg:col-span-2">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="save" class="w-4 h-4"></i><span id="form-submit-button-text">Guardar</span>
+                            </button>
+                             <button type="button" id="form-cancel-button" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors hidden">
+                                 Cancelar
+                             </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Transferencia entre cuentas -->
+                <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold mb-4 text-lg">Transferencia entre Cuentas</h3>
+                    <form id="transfer-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label for="transfer-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                            <input type="date" id="transfer-date" class="form-input" required>
+                        </div>
+                        <div>
+                            <label for="transfer-from" class="block text-sm font-medium text-gray-400 mb-1">Cuenta Origen</label>
+                            <select id="transfer-from" class="form-input" required></select>
+                        </div>
+                        <div>
+                            <label for="transfer-to" class="block text-sm font-medium text-gray-400 mb-1">Cuenta Destino</label>
+                            <select id="transfer-to" class="form-input" required></select>
+                        </div>
+                        <div>
+                            <label for="transfer-amount" class="block text-sm font-medium text-gray-400 mb-1">Monto a Enviar</label>
+                             <div class="relative">
+                                 <span id="transfer-amount-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                 <input type="number" id="transfer-amount" class="form-input pl-8" placeholder="1000.00" step="0.01" required>
+                             </div>
+                        </div>
+                        <div>
+                            <label for="transfer-fee-source" class="block text-sm font-medium text-gray-400 mb-1">Comisión Origen (Opcional)</label>
+                             <div class="relative">
+                                 <span id="transfer-fee-source-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                 <input type="number" id="transfer-fee-source" class="form-input pl-8" placeholder="5.00" step="0.01">
+                             </div>
+                        </div>
+                        <div>
+                            <label id="transfer-extra-label" for="transfer-extra-field" class="block text-sm font-medium text-gray-400 mb-1">Comisión Destino (Opcional)</label>
+                             <div class="relative">
+                                 <span id="transfer-extra-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                 <input type="number" id="transfer-extra-field" class="form-input pl-8" placeholder="1.00" step="0.01">
+                             </div>
+                        </div>
+                        <div class="md:col-span-2 lg:col-span-3">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="arrow-right-left" class="w-4 h-4"></i> Realizar Transferencia
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabla de movimientos -->
+                <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
+                    <div class="mb-4">
+                        <input type="text" id="cashflow-search" class="form-input" placeholder="Buscar por descripción, cuenta o categoría...">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left min-w-[700px]">
+                            <thead>
+                                <tr class="text-gray-400 border-b border-gray-700">
+                                    <th class="py-2 px-3">Fecha</th>
+                                    <th class="py-2 px-3">Descripción</th>
+                                    <th class="py-2 px-3">Cuenta</th>
+                                    <th class="py-2 px-3">Categoría</th>
+                                    <th class="py-2 px-3">Parte</th>
+                                    <th class="py-2 px-3 text-right">Monto</th>
+                                    <th class="py-2 px-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-table-body">
+                                <!-- Las filas se generarán dinámicamente con JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña 3: Cuentas & Bancos -->
+        <div id="page-cuentas" class="page-content hidden">
+             <h2 class="text-3xl font-bold mb-6 text-white">Cuentas y Bancos</h2>
+             <div id="accounts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <!-- Las tarjetas de cuenta se generarán dinámicamente -->
+             </div>
+             <div class="card p-6 rounded-xl mt-6">
+                 <h3 class="font-semibold mb-4">Distribución de Saldos</h3>
+                 <div id="balance-totals" class="grid grid-cols-2 gap-4 mb-4 border-b border-gray-700 pb-4">
+                     <!-- Totales por moneda generados por JS -->
+                 </div>
+                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                     <!-- Gráfico y Leyenda EUR -->
+                     <div id="eur-chart-container" class="hidden">
+                         <h4 class="font-semibold text-center mb-2">Distribución de Saldos en Euros (€)</h4>
+                         <div class="flex flex-col-reverse md:flex-row gap-6 items-center">
+                             <div id="balance-legend-eur" class="w-full md:w-1/2 lg:w-2/3"></div>
+                             <div class="w-full md:w-1/2 lg:w-1/3 h-40">
+                                 <canvas id="accountsBalanceChartEUR"></canvas>
+                             </div>
+                         </div>
+                     </div>
+                     <!-- Gráfico y Leyenda USD -->
+                     <div id="usd-chart-container" class="hidden">
+                          <h4 class="font-semibold text-center mb-2">Distribución de Saldos en Dólares ($)</h4>
+                         <div class="flex flex-col-reverse md:flex-row gap-6 items-center">
+                             <div id="balance-legend-usd" class="w-full md:w-1/2 lg:w-2/3"></div>
+                             <div class="w-full md:w-1/2 lg:w-1/3 h-40">
+                                 <canvas id="accountsBalanceChartUSD"></canvas>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+        </div>
+
+        <!-- Pestaña 3.5: Proformas -->
+        <div id="page-proformas" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Gestión de Proformas</h2>
+            <div class="grid grid-cols-1 gap-6">
+                <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold mb-4 text-lg">Agregar Nueva Proforma</h3>
+                    <form id="proforma-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label for="proforma-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                            <input type="date" id="proforma-date" class="form-input" required>
+                        </div>
+                        <div>
+                            <label for="proforma-number" class="block text-sm font-medium text-gray-400 mb-1">N° de Proforma</label>
+                            <input type="text" id="proforma-number" class="form-input" placeholder="Ej: P-2024-001" required>
+                        </div>
+                        <div>
+                            <label for="proforma-client" class="block text-sm font-medium text-gray-400 mb-1">Cliente</label>
+                            <input type="text" id="proforma-client" class="form-input" placeholder="Nombre del Cliente" required>
+                        </div>
+                         <div class="lg:col-span-2">
+                           <label for="proforma-amount" class="block text-sm font-medium text-gray-400 mb-1">Monto</label>
+                           <div class="flex gap-2">
+                                <input type="number" id="proforma-amount" class="form-input" placeholder="1500.00" step="0.01" required>
+                                <select id="proforma-currency" class="form-input w-24">
+                                    <option value="EUR">€</option>
+                                    <option value="USD">$</option>
+                                </select>
+                           </div>
+                        </div>
+                        <div class="lg:col-span-1 flex items-end">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Agregar Proforma
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold mb-4">Listado de Proformas</h3>
+                    <div class="mb-4">
+                        <input type="text" id="proformas-search" class="form-input" placeholder="Buscar por N° de proforma o cliente...">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left min-w-[600px]">
+                            <thead>
+                                <tr class="text-gray-400 border-b border-gray-700">
+                                    <th class="py-2 px-3">Fecha</th>
+                                    <th class="py-2 px-3">N° Proforma</th>
+                                    <th class="py-2 px-3">Cliente</th>
+                                    <th class="py-2 px-3 text-right">Monto</th>
+                                    <th class="py-2 px-3 text-center">Estado</th>
+                                    <th class="py-2 px-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="proformas-table-body">
+                                <!-- Filas generadas por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Pestaña 4: Reportes -->
+        <div id="page-reportes" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Centro de Reportes</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Panel de Opciones -->
+                <div class="card p-6 rounded-xl lg:col-span-1">
+                    <h3 class="font-semibold mb-4">Generar Nuevo Reporte</h3>
+                    <form id="report-form" class="space-y-4">
+                        <div>
+                            <label for="report-type" class="block text-sm font-medium text-gray-400">Tipo de Reporte</label>
+                            <select id="report-type" class="form-input mt-1">
+                                <option value="movimientos">Movimientos de Cuentas</option>
+                                <option value="documentos">Proformas y Facturas</option>
+                                <option value="inversiones">Inversiones</option>
+                            </select>
+                        </div>
+                        <div id="report-filters">
+                            <div>
+                                <label for="report-period" class="block text-sm font-medium text-gray-400">Período</label>
+                                <select id="report-period" class="form-input mt-1">
+                                    <option value="daily">Diario</option>
+                                    <option value="weekly">Semanal</option>
+                                    <option value="monthly" selected>Mensual</option>
+                                    <option value="annual">Anual</option>
+                                </select>
+                            </div>
+                            <div id="date-input-container" class="mt-4">
+                                <!-- El input de fecha se insertará aquí dinámicamente -->
+                            </div>
+                            <div id="report-account-container" class="mt-4">
+                                <label for="report-account" class="block text-sm font-medium text-gray-400">Cuenta / Banco</label>
+                                <select id="report-account" class="form-input mt-1">
+                                    <!-- Opciones de cuenta generadas por JS -->
+                                </select>
+                            </div>
+                            <div id="report-part-container" class="mt-4">
+                                <label for="report-part" class="block text-sm font-medium text-gray-400">Parte</label>
+                                <select id="report-part" class="form-input mt-1">
+                                    <option value="all">Ambas (A y B)</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="search" class="w-4 h-4"></i> Generar Reporte
+                        </button>
+                    </form>
+                </div>
+                <!-- Área de Visualización del Reporte -->
+                <div class="card p-6 rounded-xl lg:col-span-2">
+                    <div id="report-display-area" class="h-full">
+                        <!-- Contenido del reporte se inserta aquí -->
+                        <div class="text-center text-gray-500 flex flex-col items-center justify-center h-full">
+                            <i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i>
+                            <h3 class="font-semibold text-lg">Seleccione los filtros y genere un reporte</h3>
+                            <p class="text-sm">Los resultados se mostrarán aquí.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña 5: Archivos -->
+        <div id="page-archivos" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Archivos Anuales</h2>
+            <div class="card p-6 rounded-xl">
+                 <div class="flex items-end gap-4 mb-6">
+                     <div class="flex-grow">
+                         <label for="archive-year-select" class="block text-sm font-medium text-gray-400">Seleccionar Año</label>
+                         <select id="archive-year-select" class="form-input mt-1"></select>
+                     </div>
+                     <button id="view-archive-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Ver Archivo</button>
+                 </div>
+                 <div id="archive-display-area">
+                      <div class="text-center text-gray-500 py-10">
+                         <i data-lucide="archive" class="w-16 h-16 mx-auto mb-4"></i>
+                         <p>Seleccione un año para ver los datos archivados.</p>
+                     </div>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Pestaña 6: Ajustes -->
+        <div id="page-ajustes" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Ajustes</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 <div class="card p-6 rounded-xl lg:col-span-2">
+                    <h3 class="font-semibold text-lg mb-4">Gestión de Módulos</h3>
+                    <p class="text-sm text-gray-400 mb-4">Activa o desactiva módulos para expandir la funcionalidad de tu dashboard.</p>
+                    <div id="modules-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Módulos generados por JS -->
+                    </div>
+                </div>
+
+                <!-- NUEVO: Configuración Facturación Electrónica AEAT -->
+                <div id="aeat-settings-card" class="card p-6 rounded-xl lg:col-span-2 hidden">
+                    <h3 class="font-semibold text-lg mb-4">Configuración de Facturación Electrónica (AEAT)</h3>
+                    <div class="bg-gray-800/50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-blue-300">Activar Conexión con AEAT</h4>
+                                <p class="text-sm text-gray-400">Permite la generación de facturas electrónicas válidas (`Veri*factu`).</p>
+                            </div>
+                            <div id="aeat-toggle-container">
+                                <!-- El botón dinámico se insertará aquí -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold text-lg mb-4">Gestión de Cuentas</h3>
+                    <form id="add-account-form" class="space-y-4 mb-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="new-account-name" class="block text-sm font-medium text-gray-400">Nombre de la Cuenta</label>
+                                <input type="text" id="new-account-name" class="form-input mt-1" required placeholder="Ej: Banco Principal">
+                            </div>
+                            <div>
+                                <label for="new-account-currency" class="block text-sm font-medium text-gray-400">Moneda</label>
+                                <select id="new-account-currency" class="form-input mt-1" required>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="new-account-balance" class="block text-sm font-medium text-gray-400">Saldo Inicial</label>
+                            <input type="number" id="new-account-balance" class="form-input mt-1" required placeholder="1000.00" step="0.01">
+                        </div>
+                         <div>
+                            <label for="new-account-logo" class="block text-sm font-medium text-gray-400">Logo (Código SVG o URL Base64)</label>
+                            <textarea id="new-account-logo" rows="2" class="form-input mt-1" placeholder="<svg>...</svg> o data:image/..."></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Agregar Cuenta
+                        </button>
+                    </form>
+                    <h4 class="font-semibold text-md mb-2">Cuentas Existentes</h4>
+                    <div id="settings-accounts-list" class="space-y-2 max-h-48 overflow-y-auto">
+                        <!-- Lista de cuentas generada por JS -->
+                    </div>
+                </div>
+                <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold text-lg mb-4">Gestión de Categorías</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <!-- Categorías de Ingreso -->
+                        <div>
+                            <h4 class="font-semibold mb-2">Ingresos</h4>
+                            <form id="add-income-category-form" class="flex gap-2 mb-3">
+                                <input type="text" id="new-income-category" class="form-input" placeholder="Nueva categoría" required>
+                                <button type="submit" class="p-3 bg-green-600/20 hover:bg-green-600/40 text-green-300 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                            </form>
+                            <div id="income-categories-list" class="space-y-2 max-h-32 overflow-y-auto">
+                                <!-- Lista generada por JS -->
+                            </div>
+                        </div>
+                        <!-- Categorías de Egreso -->
+                        <div>
+                            <h4 class="font-semibold mb-2">Egresos</h4>
+                            <form id="add-expense-category-form" class="flex gap-2 mb-3">
+                                <input type="text" id="new-expense-category" class="form-input" placeholder="Nueva categoría" required>
+                                <button type="submit" class="p-3 bg-red-600/20 hover:bg-red-600/40 text-red-300 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                            </form>
+                            <div id="expense-categories-list" class="space-y-2 max-h-32 overflow-y-auto">
+                               <!-- Lista generada por JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold text-lg mb-4">Actualizar Saldo de Cuenta</h3>
+                    <p class="text-sm text-gray-400 mb-4">Esto crea una transacción de ajuste para conciliar el saldo real con el del sistema.</p>
+                    <form id="update-balance-form" class="space-y-4">
+                        <div>
+                            <label for="update-account-select" class="block text-sm font-medium text-gray-400">Seleccionar Cuenta</label>
+                            <select id="update-account-select" class="form-input mt-1" required></select>
+                        </div>
+                        <div>
+                            <label for="new-balance-amount" class="block text-sm font-medium text-gray-400">Nuevo Saldo Real</label>
+                            <input type="number" id="new-balance-amount" class="form-input mt-1" required placeholder="1500.50" step="0.01">
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Crear Ajuste de Saldo
+                        </button>
+                    </form>
+                </div>
+                <div class="card p-6 rounded-xl bg-red-900/20 border-red-500/30">
+                    <h3 class="font-semibold text-lg mb-4 text-red-300">Cierre Anual</h3>
+                    <p class="text-sm text-red-200 mb-4">Esta acción archivará todos los movimientos y documentos dentro del rango de fechas seleccionado. Esta acción no se puede deshacer.</p>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="cierre-start-date" class="block text-sm font-medium text-red-200 mb-1">Fecha de Inicio</label>
+                            <input type="date" id="cierre-start-date" class="form-input" required>
+                        </div>
+                        <div>
+                            <label for="cierre-end-date" class="block text-sm font-medium text-red-200 mb-1">Fecha de Cierre</label>
+                            <input type="date" id="cierre-end-date" class="form-input" required>
+                        </div>
+                    </div>
+                    <button id="close-year-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        Realizar Cierre de Año
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestaña 7: Facturación (AHORA CON CONTENIDO) -->
+        <div id="page-facturacion" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Gestión de Facturación Electrónica</h2>
+            
+            <div class="border-b border-gray-700 mb-6">
+                <nav class="flex -mb-px space-x-6" aria-label="Tabs">
+                    <button id="facturacion-tab-crear" class="tab-button-inner active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition">Crear Factura</button>
+                    <button id="facturacion-tab-config" class="tab-button-inner whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500 font-medium text-sm transition">Configuración AEAT (Backend)</button>
+                </nav>
+            </div>
+
+            <!-- Contenido Pestaña Crear Factura -->
+            <div id="facturacion-content-crear">
+                <div class="grid lg:grid-cols-5 gap-6">
+                    <div class="lg:col-span-3">
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4 text-lg">Nueva Factura</h3>
+                            <form id="nueva-factura-form" class="space-y-4">
+                                <div>
+                                    <label for="factura-operation-type" class="block text-sm text-gray-400 mb-1">Tipo de Operación</label>
+                                    <select id="factura-operation-type" class="form-input">
+                                        <option value="nacional">Nacional / Intracomunitaria (UE)</option>
+                                        <option value="exportacion">Exportación (Fuera de la UE)</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
+                                        <input type="text" id="factura-cliente" class="form-input" value="Cliente de Ejemplo S.L." required>
+                                    </div>
+                                    <div>
+                                        <label for="factura-nif" class="block text-sm text-gray-400 mb-1">NIF/CIF</label>
+                                        <input type="text" id="factura-nif" class="form-input" value="B12345678" required>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label for="factura-numero" class="block text-sm text-gray-400 mb-1">Nº Factura</label>
+                                        <input type="text" id="factura-numero" class="form-input" value="2024-0001" required>
+                                    </div>
+                                    <div>
+                                        <label for="factura-fecha" class="block text-sm text-gray-400 mb-1">Fecha</label>
+                                        <input type="date" id="factura-fecha" class="form-input" required>
+                                    </div>
+                                    <div>
+                                        <label for="factura-currency" class="block text-sm text-gray-400 mb-1">Moneda</label>
+                                        <select id="factura-currency" class="form-input">
+                                            <option value="EUR">EUR (€)</option>
+                                            <option value="USD">USD ($)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-700 pt-4">
+                                    <h4 class="font-semibold mb-2">Conceptos</h4>
+                                    <div id="factura-items-container" class="space-y-2">
+                                        <!-- Items de factura aquí -->
+                                    </div>
+                                    <button type="button" id="factura-add-item-btn" class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2">
+                                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir concepto
+                                    </button>
+                                </div>
+                                <div class="pt-4 flex justify-end">
+                                    <button type="submit" id="generate-invoice-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                        <i data-lucide="file-output" class="w-4 h-4"></i> Generar Factura
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4 text-lg">Resumen y Resultado</h3>
+                            <div class="space-y-3 text-sm border-b border-gray-700 pb-3 mb-3">
+                                <div class="flex justify-between"><span class="text-gray-400">Subtotal:</span> <span id="factura-subtotal">€0.00</span></div>
+                                <div class="flex justify-between"><span class="text-gray-400" id="factura-iva-label">IVA (21%):</span> <span id="factura-iva">€0.00</span></div>
+                                <div class="flex justify-between text-lg font-bold text-white"><span >TOTAL:</span> <span id="factura-total">€0.00</span></div>
+                            </div>
+                            <div id="factura-api-response" class="min-h-[150px]">
+                                <p class="text-center text-gray-500 pt-8">El resultado de la generación aparecerá aquí.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenido Pestaña Configuración AEAT -->
+            <div id="facturacion-content-config" class="hidden">
+                 <div class="card p-6 rounded-xl max-w-4xl mx-auto">
+                    <h3 class="font-semibold text-lg mb-4">Configuración del Backend</h3>
+                    <p class="text-sm text-gray-400 mb-6">Introduce y guarda los datos de configuración para conectar con los servicios de la AEAT. Estos datos se almacenan localmente en tu navegador.</p>
+                    <form id="aeat-config-form">
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="font-semibold text-blue-300">Certificado Digital</h4>
+                                 <div class="mt-2 space-y-3">
+                                    <div>
+                                        <label for="aeat-cert-path" class="block text-sm text-gray-400 mb-1">Ruta del Certificado (.p12, .pfx)</label>
+                                        <input type="text" id="aeat-cert-path" placeholder="/ruta/segura/en/servidor/certificado.p12" class="form-input">
+                                        <p class="text-xs text-yellow-400 mt-1">En un sistema real, esto sería una ruta en el servidor, no se subiría el archivo directamente desde aquí.</p>
+                                    </div>
+                                    <div>
+                                        <label for="aeat-cert-pass" class="block text-sm text-gray-400 mb-1">Contraseña del Certificado</label>
+                                        <input type="password" id="aeat-cert-pass" placeholder="Contraseña de tu certificado digital" class="form-input">
+                                    </div>
+                                 </div>
+                            </div>
+                             <div class="border-t border-gray-700 pt-6">
+                                 <h4 class="font-semibold text-blue-300">Integración `Veri*factu`</h4>
+                                  <div class="mt-2 space-y-3">
+                                    <div>
+                                        <label for="aeat-endpoint" class="block text-sm text-gray-400 mb-1">Endpoint del Servicio de la AEAT</label>
+                                        <input type="text" id="aeat-endpoint" class="form-input">
+                                    </div>
+                                    <div>
+                                        <label for="aeat-api-key" class="block text-sm text-gray-400 mb-1">Credenciales API (si son requeridas)</label>
+                                        <input type="text" id="aeat-api-key" placeholder="Pega aquí tu clave API" class="form-input">
+                                    </div>
+                                 </div>
+                            </div>
+                            <div class="pt-4 flex justify-end">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                 </div>
+            </div>
+        </div>
+        
+        <!-- Pestaña 8: Usuarios (Placeholder) -->
+        <div id="page-usuarios" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Gestión de Usuarios</h2>
+            <div class="card p-6 rounded-xl text-center">
+                <i data-lucide="construct" class="w-16 h-16 mx-auto mb-4 text-yellow-500"></i>
+                <h3 class="font-semibold text-lg">Módulo en Construcción</h3>
+                <p class="text-gray-400">Esta sección estará disponible próximamente.</p>
+            </div>
+        </div>
+
+        <!-- Pestaña 9: Inversiones -->
+        <div id="page-inversiones" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Gestión de Inversiones</h2>
+            <div class="grid grid-cols-1 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card p-6 rounded-xl text-center">
+                        <p class="text-gray-400">Total Invertido en Euros</p>
+                        <p id="total-invested-eur" class="text-4xl font-bold kpi-value mt-2">€0.00</p>
+                    </div>
+                    <div class="card p-6 rounded-xl text-center">
+                        <p class="text-gray-400">Total Invertido en Dólares</p>
+                        <p id="total-invested-usd" class="text-4xl font-bold kpi-value mt-2">$0.00</p>
+                    </div>
+                </div>
+                <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold mb-4">Movimientos de Inversión</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left min-w-[600px]">
+                            <thead>
+                                <tr class="text-gray-400 border-b border-gray-700">
+                                    <th class="py-2 px-3">Fecha</th>
+                                    <th class="py-2 px-3">Descripción</th>
+                                    <th class="py-2 px-3">Cuenta Origen</th>
+                                    <th class="py-2 px-3 text-right">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="investments-table-body">
+                                <!-- Filas generadas por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Confirmación -->
+        <div id="confirmation-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+            <div id="confirmation-modal-backdrop" class="absolute inset-0"></div>
+            <div class="card rounded-xl p-8 z-10 w-full max-w-md">
+                <h3 id="modal-title" class="text-xl font-bold text-white mb-4">Confirmar Acción</h3>
+                <p id="modal-message" class="text-gray-300 mb-6">¿Estás seguro de que quieres continuar?</p>
+                <div class="flex justify-end gap-4">
+                    <button id="modal-cancel-btn" class="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold">Cancelar</button>
+                    <button id="modal-confirm-btn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // =================================================================
+            // APLICACIÓN PRINCIPAL Y ESTADO
+            // =================================================================
+            const App = {
+                state: {
+                    accounts: [],
+                    transactions: [],
+                    documents: [],
+                    incomeCategories: [],
+                    expenseCategories: [],
+                    modules: [],
+                    archivedData: {},
+                    activeReport: { type: null, data: [] },
+                    settings: {
+                        aeatModuleActive: false,
+                        aeatConfig: { // NUEVO para guardar la config
+                            certPath: '',
+                            certPass: '',
+                            endpoint: '',
+                            apiKey: ''
+                        }
+                    }
+                },
+                
+                elements: {
+                    sidebar: document.getElementById('sidebar'),
+                    mainContent: document.getElementById('main-content'),
+                    navLinks: document.querySelectorAll('.nav-link'),
+                    pages: document.querySelectorAll('.page-content'),
+                    transactionForm: document.getElementById('transaction-form'),
+                    transactionsTableBody: document.getElementById('transactions-table-body'),
+                    transferForm: document.getElementById('transfer-form'),
+                    proformaForm: document.getElementById('proforma-form'),
+                    addAccountForm: document.getElementById('add-account-form'),
+                    updateBalanceForm: document.getElementById('update-balance-form'),
+                    reportForm: document.getElementById('report-form'),
+                    reportDisplayArea: document.getElementById('report-display-area'),
+                    addIncomeCategoryForm: document.getElementById('add-income-category-form'),
+                    addExpenseCategoryForm: document.getElementById('add-expense-category-form'),
+                    settingsAccountsList: document.getElementById('settings-accounts-list'),
+                    incomeCategoriesList: document.getElementById('income-categories-list'),
+                    expenseCategoriesList: document.getElementById('expense-categories-list'),
+                    modulesList: document.getElementById('modules-list'),
+                    proformasTableBody: document.getElementById('proformas-table-body'),
+                    pageProformas: document.getElementById('page-proformas'),
+                    
+                    // Elementos de Facturación AEAT
+                    aeatSettingsCard: document.getElementById('aeat-settings-card'),
+                    aeatToggleContainer: document.getElementById('aeat-toggle-container'),
+                    aeatConfigForm: document.getElementById('aeat-config-form'), 
+                    nuevaFacturaForm: document.getElementById('nueva-factura-form'),
+                    facturaItemsContainer: document.getElementById('factura-items-container'),
+                    facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
+                    facturaApiResponse: document.getElementById('factura-api-response'),
+                    facturaOperationType: document.getElementById('factura-operation-type'),
+                },
+
+                charts: {
+                    accountsBalanceChartEUR: null,
+                    accountsBalanceChartUSD: null,
+                    annualFlowChart: null,
+                },
+
+                init() {
+                    lucide.createIcons();
+                    this.loadData();
+                    this.bindEventListeners();
+                    this.recalculateAllBalances();
+                    this.updateAll();
+                    this.switchPage('inicio');
+                    this.setDateDefaults();
+                    this.updateDateInputForReports();
+                    this.toggleReportFilters();
+                    this.addFacturaItem();
+                    this.handleOperationTypeChange(); // Set initial state of invoice form
+                },
+
+                // =================================================================
+                // PERSISTENCIA DE DATOS (localStorage)
+                // =================================================================
+                saveData() {
+                    try {
+                        const stateToSave = { ...this.state, activeReport: { type: null, data: [] } };
+                        localStorage.setItem('financeDashboardData', JSON.stringify(stateToSave));
+                    } catch (error) {
+                        console.error("Error al guardar datos en localStorage:", error);
+                    }
+                },
+
+                loadData() {
+                    const savedData = localStorage.getItem('financeDashboardData');
+                    if (savedData) {
+                        try {
+                            const parsedData = JSON.parse(savedData);
+                            const defaultState = this.getDefaultState();
+                            this.state = {
+                                ...defaultState,
+                                ...parsedData,
+                                settings: { // Deep merge para no perder nuevas propiedades en settings
+                                    ...defaultState.settings,
+                                    ...(parsedData.settings || {})
+                                }
+                            };
+                        } catch(error) {
+                            console.error("Error al cargar datos, se usarán los valores por defecto.", error);
+                            this.setDefaultState();
+                        }
+                    } else {
+                        this.setDefaultState();
+                    }
+                },
+
+                getDefaultState() {
+                    return {
+                        accounts: [
+                             { id: crypto.randomUUID(), name: 'CAIXA Bank', currency: 'EUR', symbol: '€', balance: 0.00, logoHtml: `<svg viewBox="0 0 80 60" class="w-6 h-6"><path d="M48.4,0L22.8,27.3c-0.3,0.3-0.3,0.8,0,1.1L48.4,56c1,1.1,2.8,0.4,2.8-1.1V36.8c0-1,0.8-1.7,1.7-1.7h11.2c8.8,0,15.9-7.1,15.9-15.9S83.1,2.3,74.3,2.3H64c-1,0-1.7-0.8-1.7-1.7V1.1C62.3,0.1,49.1-0.7,48.4,0z" fill="#0073B7"></path><circle cx="23.3" cy="28" r="5.5" fill="#FFC107"></circle><circle cx="23.3" cy="44.6" r="6.8" fill="#E6532B"></circle></svg>` },
+                             { id: crypto.randomUUID(), name: 'Banco WISE', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" class="w-6 h-6"><path fill="#a3e635" d="M50.9 64H64L33 20.6L24 34.3l15.1 21.7-10.8-16L18.3 56 33 34.3 43 20.6 11.7 64h13.2L4 39.1l2.8 3.8-6.4 7.6L33 26.3 0 64h12.9L33 36l17.9 28z"></path></svg>` },
+                             { id: crypto.randomUUID(), name: 'Caja Chica', currency: 'EUR', symbol: '€', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzIDIiPjxwYXRoIGZpbGw9IiNDNjBCMUUiIGQ9Ik0wIDBoM3YySDB6Ii8+PHBhdGggZmlsbD0iI0ZGQzQwMCIgZD0iTTAgLjVoM3YxSDB6Ii8+PC9zdmc+" alt="Bandera de España" class="w-6 h-6 rounded-sm border border-gray-600">` },
+                             { id: crypto.randomUUID(), name: 'Caja Eu', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjMDAzMzk5IiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48ZyBmaWxsPSIjRkZDQzAwIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0NTAgMzAwKSI+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDYwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDkwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDEyMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMTUwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDE4MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjEwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDI0MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjcwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMzMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjwvZz48L3N2Zz4=" alt="Bandera de la Unión Europea" class="w-6 h-6 rounded-sm border border-gray-600">` },
+                             { id: crypto.randomUUID(), name: 'Caja Arg.', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5IDYiPjxyZWN0IGZpbGw9IiM3NEFDREYiIHdpZHRoPSI5IiBoZWlnaHQ9IjMiLz48cmVjdCB5PSIzIiBmaWxsPSIjNzRBQ0RGIiB3aWR0aD0iOSIgaGVpZHRoPSIzIi8+PHJlY3QgeT0iMiIgZmlsbD0iI0ZGRiIgd2lkdGg9IjkiIGhlaWdodD0iMiIvPjwvc3ZnPg==" alt="Bandera de Argentina" class="w-6 h-6 rounded-sm border border-gray-600">` },
+                             { id: crypto.randomUUID(), name: 'Caja Py', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMSA2Ij48cGF0aCBmaWxsPSIjRDUyQjFFIiBkPSJNMCAwaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjRkZGIiBkPSJNMCAyaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjMDAzOEE4IiBkPSJNMCA0aDExdjJIMHoiLz48L3N2Zz4=" alt="Bandera de Paraguay" class="w-6 h-6 rounded-sm border border-gray-600">` }
+                        ],
+                        transactions: [],
+                        documents: [],
+                        incomeCategories: ['Ventas', 'Servicios', 'Otros Ingresos', 'Transferencia', 'Ajuste de Saldo'],
+                        expenseCategories: ['Operaciones', 'Marketing', 'Salarios', 'Software', 'Impuestos', 'Otros Gastos', 'Inversión', 'Transferencia', 'Comisiones', 'Ajuste de Saldo'],
+                        modules: [
+                            { id: 'facturacion', name: 'Facturación', description: 'Gestiona tus facturas y proformas. Activa la conexión con AEAT en ajustes.', active: false, navId: 'nav-facturacion', pageId: 'page-facturacion', icon: 'file-text' },
+                            { id: 'usuarios', name: 'Gestión de Usuarios', description: 'Invita a usuarios con permisos de solo lectura o edición.', active: false, navId: 'nav-usuarios', pageId: 'page-usuarios', icon: 'users' },
+                            { id: 'inversiones', name: 'Inversiones', description: 'Realiza un seguimiento de tus fondos de inversión y resguardo.', active: false, navId: 'nav-inversiones', pageId: 'page-inversiones', icon: 'trending-up' }
+                        ],
+                        archivedData: {},
+                        activeReport: { type: null, data: [] },
+                        settings: {
+                            aeatModuleActive: false,
+                            aeatConfig: {
+                                certPath: '',
+                                certPass: '',
+                                endpoint: 'https://www2.agenciatributaria.gob.es/ws/VERIFACTU...',
+                                apiKey: ''
+                            }
+                        }
+                    };
+                },
+
+                setDefaultState() {
+                    this.state = this.getDefaultState();
+                },
+
+                // =================================================================
+                // MANEJO DE VISTAS Y NAVEGACIÓN
+                // =================================================================
+                switchPage(pageId) {
+                    this.elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
+                    this.elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
+                    
+                    if (pageId === 'cuentas') setTimeout(() => this.renderBalanceLegendAndChart(), 0);
+                    if (pageId === 'inicio') setTimeout(() => this.renderInicioCharts(), 50);
+                    if (pageId === 'facturacion') this.renderAeatConfig(); // Cargar datos al entrar a la pestaña
+                },
+
+                // =================================================================
+                // LÓGICA DE ACTUALIZACIÓN Y RENDERIZADO
+                // =================================================================
+                updateAll() {
+                    this.renderTransactions();
+                    this.renderAccountsTab();
+                    this.renderBalanceLegendAndChart();
+                    this.updateInicioKPIs();
+                    this.renderInicioCharts();
+                    this.populateSelects();
+                    this.renderSettings();
+                    this.renderDocuments();
+                    this.renderInvestments();
+                    this.updateModuleVisibility();
+                    this.renderArchives();
+                    this.saveData();
+                },
+
+                recalculateAllBalances() {
+                    const initialBalances = new Map();
+                    this.state.accounts.forEach(acc => {
+                        const initialTransaction = this.state.transactions.find(t => t.isInitialBalance && t.account === acc.name);
+                        initialBalances.set(acc.name, initialTransaction ? initialTransaction.amount : 0);
+                    });
+
+                    this.state.accounts.forEach(account => {
+                        let currentBalance = initialBalances.get(account.name) || 0;
+                        this.state.transactions
+                            .filter(t => t.account === account.name && !t.isInitialBalance)
+                            .forEach(t => {
+                                currentBalance += (t.type === 'Ingreso' ? t.amount : -t.amount);
+                            });
+                        account.balance = currentBalance;
+                    });
+                },
+
+                renderTransactions() {
+                    const tbody = this.elements.transactionsTableBody;
+                    const fragment = document.createDocumentFragment();
+                    let operationalTransactions = this.state.transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
+                    
+                    const searchTerm = document.getElementById('cashflow-search').value.toLowerCase();
+                    if (searchTerm) {
+                        operationalTransactions = operationalTransactions.filter(t => 
+                            t.description.toLowerCase().includes(searchTerm) ||
+                            t.account.toLowerCase().includes(searchTerm) ||
+                            t.category.toLowerCase().includes(searchTerm)
+                        );
+                    }
+                    
+                    tbody.innerHTML = '';
+
+                    if(operationalTransactions.length === 0){
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td colspan="7" class="text-center py-4 text-gray-500">No hay movimientos que coincidan con la búsqueda.</td>`;
+                        fragment.appendChild(row);
+                    } else {
+                        operationalTransactions.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(t => {
+                            const row = document.createElement('tr');
+                            row.className = 'border-b border-gray-800 hover:bg-gray-800/50 transition-colors';
+                            const amountColor = t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400';
+                            const sign = t.type === 'Ingreso' ? '+' : '-';
+
+                            row.innerHTML = `
+                                <td class="py-3 px-3">${t.date}</td>
+                                <td class="py-3 px-3">${this.escapeHTML(t.description)}</td>
+                                <td class="py-3 px-3">${this.escapeHTML(t.account)}</td>
+                                <td class="py-3 px-3">${this.escapeHTML(t.category)}</td>
+                                <td class="py-3 px-3">${this.escapeHTML(t.part)}</td>
+                                <td class="py-3 px-3 text-right font-medium ${amountColor}">${sign} ${this.formatCurrency(t.amount, t.currency)}</td>
+                                <td class="py-3 px-3">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button class="edit-btn p-2 text-blue-400 hover:text-blue-300" data-id="${t.id}" title="Editar">
+                                            <i data-lucide="edit" class="w-4 h-4"></i>
+                                        </button>
+                                        <button class="delete-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </td>`;
+                            fragment.appendChild(row);
+                        });
+                    }
+                    tbody.appendChild(fragment);
+                    lucide.createIcons();
+                },
+
+                renderAccountsTab() {
+                    const accountsGrid = document.getElementById('accounts-grid');
+                    const fragment = document.createDocumentFragment();
+                    this.state.accounts.forEach(account => {
+                        const card = document.createElement('div');
+                        card.className = 'card p-6 rounded-xl flex flex-col';
+                        
+                        const headerDiv = document.createElement('div');
+                        headerDiv.className = 'flex justify-between items-start mb-2';
+                        
+                        const nameH3 = document.createElement('h3');
+                        nameH3.className = 'font-semibold text-lg';
+                        nameH3.textContent = account.name;
+                        
+                        const iconWrapper = document.createElement('div');
+                        iconWrapper.innerHTML = account.logoHtml ? account.logoHtml : `<i data-lucide="wallet" class="text-gray-500"></i>`;
+                        
+                        headerDiv.appendChild(nameH3);
+                        headerDiv.appendChild(iconWrapper);
+
+                        const bodyDiv = document.createElement('div');
+                        bodyDiv.className = 'mt-auto';
+                        
+                        const labelP = document.createElement('p');
+                        labelP.className = 'text-gray-400 text-sm';
+                        labelP.textContent = 'Saldo Actual';
+                        
+                        const balanceP = document.createElement('p');
+                        balanceP.className = 'text-4xl font-bold kpi-value mt-2';
+                        balanceP.textContent = this.formatCurrency(account.balance, account.currency);
+
+                        bodyDiv.appendChild(labelP);
+                        bodyDiv.appendChild(balanceP);
+
+                        card.appendChild(headerDiv);
+                        card.appendChild(bodyDiv);
+                        fragment.appendChild(card);
+                    });
+                    accountsGrid.innerHTML = '';
+                    accountsGrid.appendChild(fragment);
+                    lucide.createIcons();
+                },
+
+                renderBalanceLegendAndChart() {
+                    const totalsContainer = document.getElementById('balance-totals');
+                    const accounts = this.state.accounts;
+                    
+                    const totalEUR = accounts.filter(a => a.currency === 'EUR').reduce((sum, a) => sum + a.balance, 0);
+                    const totalUSD = accounts.filter(a => a.currency === 'USD').reduce((sum, a) => sum + a.balance, 0);
+                    totalsContainer.innerHTML = `
+                        <div><p class="text-gray-400 text-sm">Saldo Total en Euros</p><p class="text-2xl font-bold text-white">${this.formatCurrency(totalEUR, 'EUR')}</p></div>
+                        <div><p class="text-gray-400 text-sm">Saldo Total en Dólares</p><p class="text-2xl font-bold text-white">${this.formatCurrency(totalUSD, 'USD')}</p></div>
+                    `;
+
+                    this.renderSingleCurrencyChart('EUR', totalEUR, 'accountsBalanceChartEUR', 'balance-legend-eur', 'eur-chart-container');
+                    this.renderSingleCurrencyChart('USD', totalUSD, 'accountsBalanceChartUSD', 'balance-legend-usd', 'usd-chart-container');
+                },
+
+                renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, containerId) {
+                    const container = document.getElementById(containerId);
+                    const accounts = this.state.accounts.filter(a => a.currency === currency && a.balance > 0);
+
+                    if (accounts.length === 0) {
+                        container.classList.add('hidden');
+                        return;
+                    }
+                    container.classList.remove('hidden');
+                    
+                    const legendContainer = document.getElementById(legendId);
+                    const chartCtx = document.getElementById(canvasId)?.getContext('2d');
+                    if (!legendContainer || !chartCtx) return;
+                    
+                    const chartInstanceName = canvasId;
+                    if (this.charts[chartInstanceName]) {
+                        this.charts[chartInstanceName].destroy();
+                    }
+
+                    const colorPairs = [ ['#FFC3A0', '#FF7A85'], ['#D4A5A5', '#A5D4D4'], ['#CDB4DB', '#FFC8DD'], ['#A2D2FF', '#BDE0FE'], ['#FBC2EB', '#A6C1EE'], ['#FDDB6D', '#F1C40F'] ];
+                    const backgroundColors = [];
+                    
+                    accounts.forEach((account, index) => {
+                        backgroundColors.push(colorPairs[index % colorPairs.length][0]);
+                    });
+
+                    legendContainer.innerHTML = accounts.map((account, index) => {
+                        const percentage = totalBalance > 0 ? ((account.balance / totalBalance) * 100).toFixed(1) : 0;
+                        return `
+                            <div class="flex items-center justify-between py-2 text-sm border-b border-gray-800 last:border-b-0">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-3 h-3 rounded-full" style="background-color: ${backgroundColors[index]};"></span>
+                                    <span>${this.escapeHTML(account.name)}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-semibold">${percentage}%</span>
+                                    <span class="text-xs text-gray-400 block">${this.formatCurrency(account.balance, account.currency)}</span>
+                                </div>
+                            </div>`;
+                    }).join('');
+
+                    this.charts[chartInstanceName] = new Chart(chartCtx, { 
+                        type: 'doughnut', 
+                        data: { 
+                            labels: accounts.map(a => a.name), 
+                            datasets: [{ 
+                                data: accounts.map(a => a.balance), 
+                                backgroundColor: backgroundColors,
+                                borderColor: '#0a0a0a', borderWidth: 5, borderRadius: 10,
+                            }] 
+                        }, 
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, cutout: '65%',
+                            plugins: { legend: { display: false } }
+                        } 
+                    });
+                },
+
+                updateInicioKPIs() {
+                    const totalEUR = this.state.accounts.filter(a => a.currency === 'EUR').reduce((s, a) => s + a.balance, 0);
+                    const totalUSD = this.state.accounts.filter(a => a.currency === 'USD').reduce((s, a) => s + a.balance, 0);
+                    document.getElementById('total-eur').textContent = this.formatCurrency(totalEUR, 'EUR');
+                    document.getElementById('total-usd').textContent = this.formatCurrency(totalUSD, 'USD');
+                },
+                
+                renderInicioCharts() {
+                    const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
+                    if (!annualCtx) return;
+
+                    if (this.charts.annualFlowChart) this.charts.annualFlowChart.destroy();
+                    
+                    const selectedCurrency = document.getElementById('inicio-chart-currency').value;
+                    const currencySymbol = selectedCurrency === 'EUR' ? '€' : '$';
+
+                    const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+                    const currentYear = new Date().getFullYear();
+                    const incomeData = Array(12).fill(0);
+                    const expenseData = Array(12).fill(0);
+
+                    this.state.transactions
+                        .filter(t => t.currency === selectedCurrency)
+                        .forEach(t => {
+                            const tDate = new Date(t.date);
+                            if (tDate.getFullYear() === currentYear) {
+                                const month = tDate.getMonth();
+                                if (t.type === 'Ingreso') incomeData[month] += t.amount;
+                                else if (t.type === 'Egreso') expenseData[month] += t.amount;
+                            }
+                        });
+
+                    const incomeGradient = annualCtx.createLinearGradient(0, 0, 0, 320);
+                    incomeGradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+                    incomeGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+                    
+                    const expenseGradient = annualCtx.createLinearGradient(0, 0, 0, 320);
+                    expenseGradient.addColorStop(0, 'rgba(239, 68, 68, 0.5)');
+                    expenseGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+                    this.charts.annualFlowChart = new Chart(annualCtx, {
+                        type: 'line',
+                        data: {
+                            labels: months,
+                            datasets: [
+                                { label: `Ingresos (${currencySymbol})`, data: incomeData, borderColor: 'rgba(59, 130, 246, 1)', backgroundColor: incomeGradient, fill: true, tension: 0.4 },
+                                { label: `Egresos (${currencySymbol})`, data: expenseData, borderColor: 'rgba(239, 68, 68, 1)', backgroundColor: expenseGradient, fill: true, tension: 0.4 }
+                            ]
+                        },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, 
+                            scales: { 
+                                y: { 
+                                    beginAtZero: true,
+                                    ticks: { callback: value => currencySymbol + value.toLocaleString(selectedCurrency === 'EUR' ? 'de-DE' : 'en-US') }
+                                } 
+                            },
+                            plugins: { legend: { position: 'bottom' } }
+                        }
+                    });
+                },
+
+                populateSelects() {
+                    const accounts = this.state.accounts;
+                    const optionsHtml = accounts.map(acc => `<option value="${this.escapeHTML(acc.name)}">${this.escapeHTML(acc.name)}</option>`).join('');
+                    
+                    const selects = ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select'];
+                    selects.forEach(id => {
+                        const select = document.getElementById(id);
+                        if (select) select.innerHTML = optionsHtml;
+                    });
+
+                    this.populateCategories();
+                    this.updateCurrencySymbol();
+                    this.updateTransferFormUI();
+                    this.populateReportAccounts();
+                },
+
+                populateCategories() {
+                    const typeSelect = document.getElementById('transaction-type');
+                    const categorySelect = document.getElementById('transaction-category');
+                    const currentType = typeSelect.value;
+                    const categories = currentType === 'Ingreso' ? this.state.incomeCategories : this.state.expenseCategories;
+                    categorySelect.innerHTML = categories.map(cat => `<option value="${this.escapeHTML(cat)}">${this.escapeHTML(cat)}</option>`).join('');
+                },
+
+                updateCurrencySymbol() {
+                    const accountSelect = document.getElementById('transaction-account');
+                    const account = this.state.accounts.find(acc => acc.name === accountSelect.value);
+                    if (account) {
+                        document.getElementById('amount-currency-symbol').textContent = account.symbol;
+                    }
+                },
+
+                updateTransferFormUI() {
+                    if(!document.getElementById('transfer-from').value) return;
+
+                    const fromAccount = this.state.accounts.find(a => a.name === document.getElementById('transfer-from').value);
+                    const toAccount = this.state.accounts.find(a => a.name === document.getElementById('transfer-to').value);
+                    
+                    document.getElementById('transfer-amount-currency-symbol').textContent = fromAccount.symbol;
+                    document.getElementById('transfer-fee-source-currency-symbol').textContent = fromAccount.symbol;
+                    document.getElementById('transfer-extra-currency-symbol').textContent = toAccount.symbol;
+
+                    const extraFieldLabel = document.getElementById('transfer-extra-label');
+                    const extraFieldInput = document.getElementById('transfer-extra-field');
+
+                    if (fromAccount.currency !== toAccount.currency) {
+                        extraFieldLabel.textContent = `Monto a Recibir (${toAccount.symbol})`;
+                        extraFieldInput.placeholder = "950.00";
+                        extraFieldInput.required = true;
+                    } else {
+                        extraFieldLabel.textContent = "Comisión Destino (Opcional)";
+                        extraFieldInput.placeholder = "1.00";
+                        extraFieldInput.required = false;
+                    }
+                },
+
+                populateReportAccounts() {
+                    const reportAccountSelect = document.getElementById('report-account');
+                    reportAccountSelect.innerHTML = '<option value="all">Todas las Cuentas</option>';
+                    reportAccountSelect.innerHTML += this.state.accounts.map(acc => `<option value="${this.escapeHTML(acc.name)}">${this.escapeHTML(acc.name)}</option>`).join('');
+                },
+
+                renderSettings() {
+                    const accountsList = this.elements.settingsAccountsList;
+                    const incomeList = this.elements.incomeCategoriesList;
+                    const expenseList = this.elements.expenseCategoriesList;
+                    const modulesList = this.elements.modulesList;
+
+                    const accountFragment = document.createDocumentFragment();
+                    this.state.accounts.forEach(acc => {
+                        const div = document.createElement('div');
+                        div.className = "flex items-center justify-between bg-gray-800/50 p-2 rounded";
+                        div.innerHTML = `
+                            <div class="flex items-center gap-2 text-sm">${acc.logoHtml || ''}<span>${this.escapeHTML(acc.name)}</span></div>
+                            <button class="delete-account-btn p-1 text-red-400 hover:text-red-300" data-name="${this.escapeHTML(acc.name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+                        accountFragment.appendChild(div);
+                    });
+                    accountsList.innerHTML = '';
+                    accountsList.appendChild(accountFragment);
+
+                    const renderCategoryList = (categories) => {
+                        const fragment = document.createDocumentFragment();
+                        const essentialCategories = ['Transferencia', 'Comisiones', 'Ajuste de Saldo', 'Inversión', 'Otros Ingresos', 'Otros Gastos'];
+                        categories.forEach(cat => {
+                            const div = document.createElement('div');
+                            div.className = "flex items-center justify-between bg-gray-800/50 p-2 rounded text-sm";
+                            const isEssential = essentialCategories.includes(cat);
+                            const deleteButtonHtml = isEssential 
+                                ? `<span class="p-1 text-gray-600 cursor-not-allowed" title="Categoría esencial no se puede eliminar"><i data-lucide="lock" class="w-4 h-4"></i></span>`
+                                : `<button class="delete-category-btn p-1 text-red-400 hover:text-red-300" data-name="${this.escapeHTML(cat)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+                            div.innerHTML = `<span>${this.escapeHTML(cat)}</span> ${deleteButtonHtml}`;
+                            fragment.appendChild(div);
+                        });
+                        return fragment;
+                    };
+                    incomeList.innerHTML = '';
+                    incomeList.appendChild(renderCategoryList(this.state.incomeCategories));
+                    expenseList.innerHTML = '';
+                    expenseList.appendChild(renderCategoryList(this.state.expenseCategories));
+
+                    const moduleFragment = document.createDocumentFragment();
+                    this.state.modules.forEach(module => {
+                        const div = document.createElement('div');
+                        div.className = "flex items-center justify-between gap-3 p-3 bg-gray-800/50 rounded-lg";
+                        const buttonHtml = module.active
+                            ? `<button class="module-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-colors text-xs flex items-center justify-center gap-1" data-id="${module.id}">
+                                   <i data-lucide="check-circle" class="w-4 h-4"></i> Activado
+                               </button>`
+                            : `<button class="module-toggle-btn border border-blue-800 text-blue-400 font-bold py-2 px-3 rounded-lg hover:bg-blue-800/20 hover:text-blue-300 transition-colors text-xs" data-id="${module.id}">
+                                   Activar
+                               </button>`;
+                        div.innerHTML = `
+                            <div class="flex items-center gap-3"> <i data-lucide="${module.icon}" class="text-blue-400"></i>
+                                <div><h4 class="font-semibold">${module.name}</h4><p class="text-xs text-gray-400">${module.description}</p></div>
+                            </div>
+                            ${buttonHtml}`;
+                        moduleFragment.appendChild(div);
+                    });
+                    modulesList.innerHTML = '';
+                    modulesList.appendChild(moduleFragment);
+                    
+                    this.renderAeatSettings(); // Renderizar ajustes AEAT
+
+                    lucide.createIcons();
+                },
+
+                renderAeatSettings() {
+                    const facturacionModule = this.state.modules.find(m => m.id === 'facturacion');
+                    this.elements.aeatSettingsCard.classList.toggle('hidden', !facturacionModule || !facturacionModule.active);
+
+                    // Renderizar el botón dinámico en lugar del toggle
+                    const container = this.elements.aeatToggleContainer;
+                    const isActive = this.state.settings.aeatModuleActive;
+                    const buttonHtml = isActive
+                        ? `<button class="aeat-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-colors text-xs flex items-center justify-center gap-1">
+                               <i data-lucide="check-circle" class="w-4 h-4"></i> Activado
+                           </button>`
+                        : `<button class="aeat-toggle-btn border border-blue-800 text-blue-400 font-bold py-2 px-3 rounded-lg hover:bg-blue-800/20 hover:text-blue-300 transition-colors text-xs">
+                               Activar
+                           </button>`;
+                    container.innerHTML = buttonHtml;
+                    lucide.createIcons();
+                },
+
+                renderDocuments() {
+                    const proformasTbody = this.elements.proformasTableBody;
+                    const proformasData = this.state.documents.filter(d => d.type === 'Proforma');
+                    const proformaSearchTerm = this.elements.pageProformas.querySelector('#proformas-search').value.toLowerCase();
+                    let filteredProformas = proformasData;
+
+                    if (proformaSearchTerm) {
+                        filteredProformas = proformasData.filter(d =>
+                            d.number.toLowerCase().includes(proformaSearchTerm) ||
+                            d.client.toLowerCase().includes(proformaSearchTerm)
+                        );
+                    }
+
+                    proformasTbody.innerHTML = '';
+                    if (filteredProformas.length === 0) {
+                        proformasTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay proformas que coincidan.</td></tr>`;
+                    } else {
+                        const proformaFragment = document.createDocumentFragment();
+                        filteredProformas.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(p => {
+                            const row = document.createElement('tr');
+                            row.className = "border-b border-gray-800 hover:bg-gray-800/50";
+                            const statusClass = p.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
+                            row.innerHTML = `
+                                <td class="py-3 px-3">${p.date}</td>
+                                <td class="py-2 px-3">${this.escapeHTML(p.number)}</td>
+                                <td class="py-2 px-3">${this.escapeHTML(p.client)}</td>
+                                <td class="py-2 px-3 text-right">${this.formatCurrency(p.amount, p.currency)}</td>
+                                <td class="py-2 px-3 text-center">
+                                    <button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${p.id}">${p.status}</button>
+                                </td>
+                                <td class="py-2 px-3">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${p.id}" title="Eliminar">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </td>`;
+                            proformaFragment.appendChild(row);
+                        });
+                        proformasTbody.appendChild(proformaFragment);
+                    }
+                    lucide.createIcons();
+                },
+                
+                renderInvestments() {
+                    const investments = this.state.transactions.filter(t => t.category === 'Inversión');
+                    const tbody = document.getElementById('investments-table-body');
+                    const fragment = document.createDocumentFragment();
+                    
+                    const totalEUR = investments.filter(i => i.currency === 'EUR').reduce((sum, i) => sum + i.amount, 0);
+                    const totalUSD = investments.filter(i => i.currency === 'USD').reduce((sum, i) => sum + i.amount, 0);
+
+                    document.getElementById('total-invested-eur').textContent = this.formatCurrency(totalEUR, 'EUR');
+                    document.getElementById('total-invested-usd').textContent = this.formatCurrency(totalUSD, 'USD');
+
+                    tbody.innerHTML = '';
+                    if (investments.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td colspan="4" class="text-center py-4 text-gray-500">No hay inversiones registradas.</td>`;
+                        fragment.appendChild(row);
+                    } else {
+                        investments.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
+                            const row = document.createElement('tr');
+                            row.className = 'border-b border-gray-800 hover:bg-gray-800/50';
+                            row.innerHTML = `
+                                <td class="py-3 px-3">${t.date}</td>
+                                <td class="py-3 px-3">${this.escapeHTML(t.description)}</td>
+                                <td class="py-3 px-3">${this.escapeHTML(t.account)}</td>
+                                <td class="py-3 px-3 text-right text-yellow-400">${this.formatCurrency(t.amount, t.currency)}</td>
+                            `;
+                            fragment.appendChild(row);
+                        });
+                    }
+                    tbody.appendChild(fragment);
+                },
+
+                updateModuleVisibility() {
+                    this.state.modules.forEach(module => {
+                        const navLink = document.getElementById(module.navId);
+                        if (navLink) navLink.classList.toggle('hidden', !module.active);
+                    });
+                    this.renderAeatSettings(); // Actualizar visibilidad del panel AEAT
+                },
+
+                renderArchives() {
+                    const yearSelect = document.getElementById('archive-year-select');
+                    const displayArea = document.getElementById('archive-display-area');
+                    const archiveYears = Object.keys(this.state.archivedData);
+
+                    if (archiveYears.length === 0) {
+                        yearSelect.innerHTML = '<option>No hay archivos</option>';
+                        displayArea.innerHTML = `<div class="text-center text-gray-500 py-10"><i data-lucide="archive" class="w-16 h-16 mx-auto mb-4"></i><p>Aún no se ha realizado ningún cierre anual.</p></div>`;
+                        lucide.createIcons();
+                        return;
+                    }
+
+                    yearSelect.innerHTML = archiveYears.map(year => `<option value="${year}">${year}</option>`).join('');
+                },
+
+
+                // =================================================================
+                // MANEJADORES DE EVENTOS
+                // =================================================================
+                bindEventListeners() {
+                    document.getElementById('sidebar-toggle').addEventListener('click', () => this.toggleSidebar());
+                    
+                    this.elements.navLinks.forEach(link => link.addEventListener('click', e => { e.preventDefault(); this.switchPage(link.id.split('-')[1]); }));
+                    
+                    // Forms
+                    this.elements.transactionForm.addEventListener('submit', e => this.handleTransactionFormSubmit(e));
+                    this.elements.transferForm.addEventListener('submit', e => this.handleTransferFormSubmit(e));
+                    this.elements.proformaForm.addEventListener('submit', e => this.handleProformaFormSubmit(e));
+                    this.elements.addAccountForm.addEventListener('submit', e => this.handleAddAccount(e));
+                    this.elements.updateBalanceForm.addEventListener('submit', e => this.handleUpdateBalance(e));
+                    this.elements.reportForm.addEventListener('submit', e => this.handleReportGeneration(e));
+                    this.elements.addIncomeCategoryForm.addEventListener('submit', e => this.handleAddCategory(e, 'income'));
+                    this.elements.addExpenseCategoryForm.addEventListener('submit', e => this.handleAddCategory(e, 'expense'));
+                    
+                    // Botones especiales
+                    document.getElementById('form-cancel-button').addEventListener('click', () => this.resetTransactionForm());
+                    document.getElementById('close-year-btn').addEventListener('click', () => this.handleCloseYear());
+                    document.getElementById('view-archive-btn').addEventListener('click', () => this.handleViewArchive());
+
+                    // Select changes
+                    document.getElementById('transaction-type').addEventListener('change', () => this.populateCategories());
+                    document.getElementById('transaction-account').addEventListener('change', () => this.updateCurrencySymbol());
+                    document.getElementById('transfer-from').addEventListener('change', () => this.updateTransferFormUI());
+                    document.getElementById('transfer-to').addEventListener('change', () => this.updateTransferFormUI());
+                    document.getElementById('report-period').addEventListener('change', () => this.updateDateInputForReports());
+                    document.getElementById('inicio-chart-currency').addEventListener('change', () => this.renderInicioCharts());
+                    document.getElementById('report-type').addEventListener('change', () => this.toggleReportFilters());
+
+                    // Event Delegation for dynamic elements
+                    this.elements.transactionsTableBody.addEventListener('click', e => this.handleTransactionsTableClick(e));
+                    this.elements.settingsAccountsList.addEventListener('click', e => this.handleSettingsAccountsListClick(e));
+                    this.elements.incomeCategoriesList.addEventListener('click', e => this.handleCategoryDeleteClick(e, 'income'));
+                    this.elements.expenseCategoriesList.addEventListener('click', e => this.handleCategoryDeleteClick(e, 'expense'));
+                    this.elements.modulesList.addEventListener('click', e => this.handleModuleToggle(e));
+                    this.elements.aeatSettingsCard.addEventListener('click', e => this.handleAeatModuleToggleClick(e));
+                    this.elements.pageProformas.addEventListener('click', e => this.handleProformasPageClick(e));
+                    this.elements.reportDisplayArea.addEventListener('click', e => this.handleReportDownloadClick(e));
+                    document.getElementById('cashflow-search').addEventListener('input', () => this.renderTransactions());
+                    document.getElementById('proformas-search').addEventListener('input', () => this.renderDocuments());
+                    
+                    // Listeners para Facturación
+                    this.elements.aeatConfigForm.addEventListener('submit', e => this.handleSaveAeatConfig(e));
+                    document.getElementById('factura-currency').addEventListener('change', () => this.calculateFacturaTotals());
+                    document.getElementById('factura-operation-type').addEventListener('change', () => this.handleOperationTypeChange());
+                    this.elements.nuevaFacturaForm.addEventListener('submit', e => this.handleGenerateInvoice(e));
+                    this.elements.facturaAddItemBtn.addEventListener('click', () => this.addFacturaItem());
+                    this.elements.facturaItemsContainer.addEventListener('input', e => this.calculateFacturaTotals(e));
+                    this.elements.facturaItemsContainer.addEventListener('click', e => {
+                        if (e.target.closest('.factura-remove-item-btn')) {
+                            e.target.closest('.factura-item-row').remove();
+                            this.calculateFacturaTotals();
+                        }
+                    });
+
+                    // Listeners para las pestañas internas de facturación
+                    document.getElementById('facturacion-tab-crear').addEventListener('click', () => this.switchFacturacionTab('crear'));
+                    document.getElementById('facturacion-tab-config').addEventListener('click', () => this.switchFacturacionTab('config'));
+                },
+                
+                handleTransactionFormSubmit(e) {
+                    e.preventDefault();
+                    const id = document.getElementById('transaction-id').value;
+                    const accountName = document.getElementById('transaction-account').value;
+                    const account = this.state.accounts.find(acc => acc.name === accountName);
+                    const amount = parseFloat(document.getElementById('transaction-amount').value);
+
+                    if (isNaN(amount) || amount <= 0) {
+                        alert('Por favor, introduce un monto válido y mayor que cero.');
+                        return;
+                    }
+                    
+                    const transactionData = {
+                        date: document.getElementById('transaction-date').value,
+                        description: document.getElementById('transaction-description').value,
+                        type: document.getElementById('transaction-type').value,
+                        part: document.getElementById('transaction-part').value,
+                        account: accountName,
+                        category: document.getElementById('transaction-category').value,
+                        currency: account.currency,
+                        amount: amount,
+                    };
+
+                    if (id) { // Editing existing transaction
+                        const index = this.state.transactions.findIndex(t => t.id == id);
+                        if (index !== -1) {
+                            const oldTransaction = { ...this.state.transactions[index] };
+
+                            // Revert old transaction amount from its account's balance
+                            const oldAccount = this.state.accounts.find(acc => acc.name === oldTransaction.account);
+                            if (oldAccount) {
+                                const amountToRevert = oldTransaction.type === 'Ingreso' ? -oldTransaction.amount : oldTransaction.amount;
+                                oldAccount.balance += amountToRevert;
+                            }
+
+                            // Apply new transaction amount to its account's balance
+                            const newAccount = this.state.accounts.find(acc => acc.name === transactionData.account);
+                            if (newAccount) {
+                                const amountToAdd = transactionData.type === 'Ingreso' ? transactionData.amount : -transactionData.amount;
+                                newAccount.balance += amountToAdd;
+                            }
+
+                            this.state.transactions[index] = { ...this.state.transactions[index], ...transactionData };
+                        }
+                    } else { // Adding new transaction
+                        transactionData.id = crypto.randomUUID();
+                        this.state.transactions.push(transactionData);
+
+                        // Update balance incrementally
+                        if (account && !transactionData.isInitialBalance) {
+                            const amountToAdd = transactionData.type === 'Ingreso' ? transactionData.amount : -transactionData.amount;
+                            account.balance += amountToAdd;
+                        }
+                    }
+                    
+                    this.resetTransactionForm();
+                    this.updateAll();
+                },
+
+                handleTransferFormSubmit(e) {
+                    e.preventDefault();
+                    const date = document.getElementById('transfer-date').value;
+                    const fromAccount = this.state.accounts.find(a => a.name === document.getElementById('transfer-from').value);
+                    const toAccount = this.state.accounts.find(a => a.name === document.getElementById('transfer-to').value);
+                    const amount = parseFloat(document.getElementById('transfer-amount').value);
+                    const feeSource = parseFloat(document.getElementById('transfer-fee-source').value) || 0;
+                    
+                    if (isNaN(amount) || amount <= 0) {
+                        alert('Por favor, introduce un monto a enviar válido y mayor que cero.');
+                        return;
+                    }
+                    if (isNaN(feeSource) || feeSource < 0) {
+                        alert('La comisión de origen debe ser un número válido.');
+                        return;
+                    }
+
+                    const egresoTrans = { id: crypto.randomUUID(), date, description: `Transferencia a ${toAccount.name}`, type: 'Egreso', account: fromAccount.name, category: 'Transferencia', currency: fromAccount.currency, amount, part: 'A' };
+                    this.state.transactions.push(egresoTrans);
+                    fromAccount.balance -= amount;
+
+                    if (feeSource > 0) {
+                        const feeTrans = { id: crypto.randomUUID(), date, description: `Comisión de transferencia`, type: 'Egreso', account: fromAccount.name, category: 'Comisiones', currency: fromAccount.currency, amount: feeSource, part: 'A' };
+                        this.state.transactions.push(feeTrans);
+                        fromAccount.balance -= feeSource;
+                    }
+
+                    if (fromAccount.currency !== toAccount.currency) {
+                        const amountReceived = parseFloat(document.getElementById('transfer-extra-field').value);
+                        if (isNaN(amountReceived) || amountReceived <= 0) {
+                            alert('Debe especificar un monto recibido válido y mayor que cero para transferencias entre distintas monedas.'); return;
+                        }
+                        const ingresoTrans = { id: crypto.randomUUID(), date, description: `Transferencia de ${fromAccount.name}`, type: 'Ingreso', account: toAccount.name, category: 'Transferencia', currency: toAccount.currency, amount: amountReceived, part: 'A' };
+                        this.state.transactions.push(ingresoTrans);
+                        toAccount.balance += amountReceived;
+
+                    } else {
+                        const feeDestination = parseFloat(document.getElementById('transfer-extra-field').value) || 0;
+                        if (isNaN(feeDestination) || feeDestination < 0) {
+                            alert('La comisión de destino debe ser un número válido.');
+                            return;
+                        }
+                        const ingresoTrans = { id: crypto.randomUUID(), date, description: `Transferencia de ${fromAccount.name}`, type: 'Ingreso', account: toAccount.name, category: 'Transferencia', currency: toAccount.currency, amount, part: 'A' };
+                        this.state.transactions.push(ingresoTrans);
+                        toAccount.balance += amount;
+
+                        if (feeDestination > 0) {
+                            const feeDestTrans = { id: crypto.randomUUID(), date, description: `Comisión de transferencia`, type: 'Egreso', account: toAccount.name, category: 'Comisiones', currency: toAccount.currency, amount: feeDestination, part: 'A' };
+                            this.state.transactions.push(feeDestTrans);
+                            toAccount.balance -= feeDestination;
+                        }
+                    }
+                    
+                    this.elements.transferForm.reset();
+                    this.setDateDefaults();
+                    this.updateAll();
+                },
+
+                handleProformaFormSubmit(e) {
+                    e.preventDefault();
+                    const amount = parseFloat(document.getElementById('proforma-amount').value);
+                    if (isNaN(amount) || amount <= 0) {
+                        alert('Por favor, introduce un monto válido y mayor que cero para el documento.');
+                        return;
+                    }
+
+                    this.state.documents.push({
+                        id: crypto.randomUUID(),
+                        type: 'Proforma', // Modificado: Siempre es Proforma
+                        date: document.getElementById('proforma-date').value,
+                        number: document.getElementById('proforma-number').value,
+                        client: document.getElementById('proforma-client').value,
+                        amount: amount,
+                        currency: document.getElementById('proforma-currency').value,
+                        status: 'Adeudada'
+                    });
+                    this.elements.proformaForm.reset();
+                    this.setDateDefaults();
+                    this.updateAll();
+                },
+
+                handleAddAccount(e) {
+                    e.preventDefault();
+                    const name = document.getElementById('new-account-name').value;
+                    const balance = parseFloat(document.getElementById('new-account-balance').value);
+
+                    if (isNaN(balance)) {
+                        alert('Por favor, introduce un saldo inicial válido.');
+                        return;
+                    }
+
+                    if (this.state.accounts.some(acc => acc.name === name)) {
+                        alert('Ya existe una cuenta con este nombre.'); return;
+                    }
+                    
+                    const newAccount = {
+                        id: crypto.randomUUID(),
+                        name,
+                        currency: document.getElementById('new-account-currency').value,
+                        symbol: document.getElementById('new-account-currency').value === 'USD' ? '$' : '€',
+                        balance: balance, // El saldo se establece directamente
+                        logoHtml: document.getElementById('new-account-logo').value
+                    };
+                    this.state.accounts.push(newAccount);
+                    
+                    // Se crea una transacción de "Saldo Inicial" para mantener el histórico, pero ya no se usa para el recálculo constante.
+                    if (balance !== 0) {
+                         this.state.transactions.push({
+                             id: crypto.randomUUID(),
+                             date: new Date().toISOString().split('T')[0],
+                             description: `Saldo Inicial para ${name}`,
+                             type: balance > 0 ? 'Ingreso' : 'Egreso',
+                             account: name,
+                             category: 'Ajuste de Saldo',
+                             currency: newAccount.currency,
+                             amount: Math.abs(balance),
+                             part: 'A',
+                             isInitialBalance: true
+                         });
+                    }
+
+                    this.elements.addAccountForm.reset();
+                    this.updateAll();
+                },
+
+                handleUpdateBalance(e) {
+                    e.preventDefault();
+                    const accountName = document.getElementById('update-account-select').value;
+                    const newBalance = parseFloat(document.getElementById('new-balance-amount').value);
+                    const account = this.state.accounts.find(acc => acc.name === accountName);
+                    
+                    if (isNaN(newBalance) || newBalance < 0) {
+                        alert('Por favor, introduce un nuevo saldo válido.');
+                        return;
+                    }
+
+                    if(account) {
+                        const currentBalance = account.balance;
+                        const difference = newBalance - currentBalance;
+                        
+                        if (difference !== 0) {
+                            this.state.transactions.push({
+                                id: crypto.randomUUID(),
+                                date: new Date().toISOString().split('T')[0],
+                                description: `Ajuste de Saldo`,
+                                type: difference > 0 ? 'Ingreso' : 'Egreso',
+                                account: accountName,
+                                category: 'Ajuste de Saldo',
+                                currency: account.currency,
+                                amount: Math.abs(difference),
+                                part: 'A'
+                            });
+                            // Actualiza el saldo directamente
+                            account.balance += difference;
+                        }
+                    }
+                    this.elements.updateBalanceForm.reset();
+                    this.updateAll();
+                },
+
+                handleReportGeneration(e) {
+                    e.preventDefault();
+                    const type = document.getElementById('report-type').value;
+                    const period = document.getElementById('report-period').value;
+                    const account = document.getElementById('report-account').value;
+                    const part = document.getElementById('report-part').value;
+
+                    let startDate, endDate;
+
+                    switch (period) {
+                        case 'daily':
+                            const dateVal = document.getElementById('report-date').value;
+                            startDate = new Date(dateVal);
+                            endDate = new Date(dateVal);
+                            startDate.setUTCHours(0, 0, 0, 0);
+                            endDate.setUTCHours(23, 59, 59, 999);
+                            break;
+                        case 'weekly':
+                            const weekVal = document.getElementById('report-week').value;
+                            if (!weekVal) return;
+                            const [yearW, weekW] = weekVal.split('-W');
+                            const simple = new Date(Date.UTC(yearW, 0, 1 + (weekW - 1) * 7));
+                            const dow = simple.getUTCDay();
+                            const ISOweekStart = simple;
+                            if (dow <= 4) ISOweekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
+                            else ISOweekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+                            startDate = new Date(ISOweekStart);
+                            endDate = new Date(startDate);
+                            endDate.setUTCDate(startDate.getUTCDate() + 6);
+                            break;
+                        case 'monthly':
+                            const monthVal = document.getElementById('report-month').value;
+                            const [yearM, monthM] = monthVal.split('-');
+                            startDate = new Date(Date.UTC(yearM, monthM - 1, 1));
+                            endDate = new Date(Date.UTC(yearM, monthM, 0, 23, 59, 59, 999));
+                            break;
+                        case 'annual':
+                            const yearA = document.getElementById('report-year').value;
+                            startDate = new Date(Date.UTC(yearA, 0, 1));
+                            endDate = new Date(Date.UTC(yearA, 11, 31, 23, 59, 59, 999));
+                            break;
+                    }
+                    
+                    this.state.activeReport.type = type;
+
+                    if (type === 'movimientos') {
+                        const filteredTransactions = this.state.transactions.filter(t => {
+                            const tDate = new Date(t.date);
+                            const accountMatch = (account === 'all' || t.account === account);
+                            const partMatch = (part === 'all' || t.part === part);
+                            return tDate >= startDate && tDate <= endDate && accountMatch && partMatch && !t.isInitialBalance;
+                        });
+                        this.state.activeReport.data = filteredTransactions;
+                        this.renderReport(filteredTransactions, period, startDate, account, part);
+                    } else if (type === 'documentos') {
+                        const filteredDocs = this.state.documents.filter(d => {
+                            const dDate = new Date(d.date);
+                            return dDate >= startDate && dDate <= endDate;
+                        });
+                        this.state.activeReport.data = filteredDocs;
+                        this.renderDocumentsReport(filteredDocs, period, startDate);
+                    } else if (type === 'inversiones') {
+                        const filteredInvestments = this.state.transactions.filter(t => {
+                            const tDate = new Date(t.date);
+                            const partMatch = (part === 'all' || t.part === part);
+                            return t.category === 'Inversión' && tDate >= startDate && tDate <= endDate && partMatch;
+                        });
+                        this.state.activeReport.data = filteredInvestments;
+                        this.renderInvestmentsReport(filteredInvestments, period, startDate, part);
+                    }
+                },
+
+                handleAddCategory(e, type) {
+                    e.preventDefault();
+                    const input = document.getElementById(`new-${type}-category`);
+                    const newCategory = input.value.trim();
+                    const categoryList = type === 'income' ? this.state.incomeCategories : this.state.expenseCategories;
+                    
+                    if (newCategory && !categoryList.includes(newCategory)) {
+                        categoryList.push(newCategory);
+                        this.updateAll();
+                    }
+                    input.value = '';
+                },
+
+                handleTransactionsTableClick(e) {
+                    const editButton = e.target.closest('.edit-btn');
+                    if (editButton) {
+                        const id = editButton.dataset.id;
+                        const transaction = this.state.transactions.find(t => t.id == id);
+                        if (!transaction) return;
+
+                        document.getElementById('transaction-id').value = transaction.id;
+                        document.getElementById('transaction-date').value = transaction.date;
+                        document.getElementById('transaction-description').value = transaction.description;
+                        document.getElementById('transaction-type').value = transaction.type;
+                        this.populateCategories();
+                        document.getElementById('transaction-part').value = transaction.part;
+                        document.getElementById('transaction-account').value = transaction.account;
+                        this.updateCurrencySymbol();
+                        document.getElementById('transaction-category').value = transaction.category;
+                        document.getElementById('transaction-amount').value = transaction.amount;
+                        
+                        document.getElementById('form-title').textContent = 'Editar Movimiento';
+                        document.getElementById('form-submit-button-text').textContent = 'Actualizar';
+                        document.getElementById('form-cancel-button').classList.remove('hidden');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+
+                    const deleteButton = e.target.closest('.delete-btn');
+                    if (deleteButton) {
+                        this.showConfirmationModal(
+                            'Eliminar Movimiento', '¿Estás seguro de que quieres eliminar este movimiento?',
+                            () => {
+                                const transactionId = deleteButton.dataset.id;
+                                const transactionIndex = this.state.transactions.findIndex(t => t.id == transactionId);
+                                if (transactionIndex > -1) {
+                                    const transactionToDelete = this.state.transactions[transactionIndex];
+                                    
+                                    // Revertir el cambio en el saldo antes de eliminar
+                                    const account = this.state.accounts.find(acc => acc.name === transactionToDelete.account);
+                                    if (account) {
+                                        const amountToRevert = transactionToDelete.type === 'Ingreso' ? -transactionToDelete.amount : transactionToDelete.amount;
+                                        account.balance += amountToRevert;
+                                    }
+
+                                    // Eliminar la transacción del estado
+                                    this.state.transactions.splice(transactionIndex, 1);
+                                }
+                                this.updateAll();
+                            }
+                        );
+                    }
+                },
+
+                handleSettingsAccountsListClick(e) {
+                    const deleteButton = e.target.closest('.delete-account-btn');
+                    if (deleteButton) {
+                        const accountName = deleteButton.dataset.name;
+                        this.showConfirmationModal(
+                            'Eliminar Cuenta', `¿Seguro que quieres eliminar "${accountName}" y todos sus movimientos? Esta acción no se puede deshacer.`,
+                            () => {
+                                this.state.accounts = this.state.accounts.filter(acc => acc.name !== accountName);
+                                this.state.transactions = this.state.transactions.filter(t => t.account !== accountName);
+                                this.updateAll();
+                            }
+                        );
+                    }
+                },
+
+                handleCategoryDeleteClick(e, type) {
+                    const deleteButton = e.target.closest('.delete-category-btn');
+                    if (deleteButton) {
+                        const categoryName = deleteButton.dataset.name;
+                        
+                        this.showConfirmationModal(
+                            'Eliminar Categoría', `¿Seguro que quieres eliminar la categoría "${categoryName}"? Las transacciones existentes se moverán a la categoría "Otros".`,
+                            () => {
+                                const defaultCategory = type === 'income' ? 'Otros Ingresos' : 'Otros Gastos';
+                                
+                                this.state.transactions.forEach(t => {
+                                    if (t.category === categoryName) {
+                                        t.category = defaultCategory;
+                                    }
+                                });
+
+                                if (type === 'income') {
+                                    this.state.incomeCategories = this.state.incomeCategories.filter(cat => cat !== categoryName);
+                                } else {
+                                    this.state.expenseCategories = this.state.expenseCategories.filter(cat => cat !== categoryName);
+                                }
+
+                                this.updateAll();
+                            }
+                        );
+                    }
+                },
+
+                handleModuleToggle(e) {
+                    if (e.target.closest('.module-toggle-btn')) {
+                        const button = e.target.closest('.module-toggle-btn');
+                        const moduleId = button.dataset.id;
+                        const module = this.state.modules.find(m => m.id === moduleId);
+                        if (module) {
+                            module.active = !module.active; // Toggle the state
+                            const currentPageId = document.querySelector('.page-content:not(.hidden)').id;
+                            if (!module.active && currentPageId === module.pageId) {
+                                this.switchPage('inicio');
+                            }
+                            this.updateAll();
+                        }
+                    }
+                },
+
+                handleProformasPageClick(e) {
+                    const statusBtn = e.target.closest('.status-btn');
+                    if (statusBtn) {
+                        const doc = this.state.documents.find(d => d.id == statusBtn.dataset.id);
+                        if (doc) {
+                            doc.status = doc.status === 'Adeudada' ? 'Cobrada' : 'Adeudada';
+                            this.updateAll();
+                        }
+                    }
+                    const deleteBtn = e.target.closest('.delete-doc-btn');
+                    if (deleteBtn) {
+                        this.showConfirmationModal(
+                            'Eliminar Documento', '¿Seguro que quieres eliminar este documento?',
+                            () => {
+                                this.state.documents = this.state.documents.filter(d => d.id != deleteBtn.dataset.id);
+                                this.updateAll();
+                            }
+                        );
+                    }
+                },
+
+                handleCloseYear() {
+                    const startDateStr = document.getElementById('cierre-start-date').value;
+                    const endDateStr = document.getElementById('cierre-end-date').value;
+
+                    if (!startDateStr || !endDateStr) {
+                        alert('Por favor, selecciona una fecha de inicio y de cierre.');
+                        return;
+                    }
+
+                    const startDate = new Date(startDateStr);
+                    const endDate = new Date(endDateStr);
+                    endDate.setUTCHours(23, 59, 59, 999);
+
+                    if (startDate >= endDate) {
+                        alert('La fecha de inicio debe ser anterior a la fecha de cierre.');
+                        return;
+                    }
+                    
+                    const closingYear = endDate.getUTCFullYear();
+
+                    this.showConfirmationModal(
+                        `Confirmar Cierre Anual ${closingYear}`,
+                        `Estás a punto de archivar todos los datos desde ${startDateStr} hasta ${endDateStr}. Los saldos se recalcularán para el nuevo período. ¿Estás seguro? Esta acción no se puede deshacer.`,
+                        () => {
+                            const archiveKey = `${closingYear}-${startDateStr.substring(5)}-${endDateStr.substring(5)}`;
+                            if (this.state.archivedData[archiveKey]) {
+                                alert(`El cierre para este período ya ha sido realizado. No se puede sobrescribir.`);
+                                return;
+                            }
+
+                            const transactionsToArchive = this.state.transactions.filter(t => {
+                                const tDate = new Date(t.date);
+                                return tDate >= startDate && tDate <= endDate;
+                            });
+
+                            const documentsToArchive = this.state.documents.filter(d => {
+                                const dDate = new Date(d.date);
+                                return dDate >= startDate && dDate <= endDate;
+                            });
+                            
+                            const newInitialBalances = new Map();
+                            this.state.accounts.forEach(account => {
+                                const balanceAtEndDate = this.calculateBalanceForAccount(account.name, endDate);
+                                newInitialBalances.set(account.name, balanceAtEndDate);
+                            });
+
+                            // Archive data
+                            this.state.archivedData[archiveKey] = {
+                                startDate: startDateStr,
+                                endDate: endDateStr,
+                                transactions: transactionsToArchive,
+                                documents: documentsToArchive
+                            };
+
+                            // Remove archived transactions and create new initial balances
+                            this.state.transactions = this.state.transactions.filter(t => !transactionsToArchive.includes(t));
+                            
+                            let nextDay = new Date(endDate);
+                            nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+                            const nextDayStr = nextDay.toISOString().split('T')[0];
+
+                            newInitialBalances.forEach((balance, accountName) => {
+                                const account = this.state.accounts.find(a => a.name === accountName);
+                                if (account) {
+                                    this.state.transactions.push({
+                                        id: crypto.randomUUID(),
+                                        date: nextDayStr,
+                                        description: `Saldo de Cierre Período ${archiveKey}`,
+                                        type: 'Ingreso',
+                                        account: accountName,
+                                        category: 'Ajuste de Saldo',
+                                        currency: account.currency,
+                                        amount: balance,
+                                        part: 'A',
+                                        isInitialBalance: true
+                                    });
+                                }
+                            });
+
+                            // Remove archived documents
+                            this.state.documents = this.state.documents.filter(d => !documentsToArchive.includes(d));
+
+                            alert(`Cierre del período ${archiveKey} completado con éxito.`);
+                            
+                            // Después de un cambio tan grande, un recálculo completo está justificado.
+                            this.recalculateAllBalances(); 
+                            this.updateAll();
+                        }
+                    );
+                },
+
+                handleViewArchive() {
+                    const yearSelect = document.getElementById('archive-year-select');
+                    const selectedYear = yearSelect.value;
+                    const displayArea = document.getElementById('archive-display-area');
+                    const archive = this.state.archivedData[selectedYear];
+
+                    if (!archive) {
+                        displayArea.innerHTML = `<div class="text-center text-gray-500 py-10"><p>No se encontraron datos para el período ${selectedYear}.</p></div>`;
+                        return;
+                    }
+
+                    const transactionsHtml = archive.transactions.length > 0
+                        ? archive.transactions.map(t => `
+                            <tr class="border-b border-gray-800 text-sm">
+                                <td class="py-2 px-3">${t.date}</td>
+                                <td class="py-2 px-3">${this.escapeHTML(t.description)}</td>
+                                <td class="py-2 px-3">${this.escapeHTML(t.account)}</td>
+                                <td class="py-2 px-3 text-right ${t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400'}">
+                                    ${this.formatCurrency(t.amount, t.currency)}
+                                </td>
+                            </tr>`).join('')
+                        : `<tr><td colspan="4" class="text-center py-4 text-gray-500">No hay movimientos.</td></tr>`;
+
+                     displayArea.innerHTML = `
+                        <div class="mb-6">
+                            <h3 class="font-semibold text-lg">Resumen del Archivo ${selectedYear}</h3>
+                            <p class="text-sm text-gray-400">Período: ${archive.startDate} a ${archive.endDate}</p>
+                        </div>
+                        <div class="overflow-y-auto" style="max-height: 50vh;">
+                            <h4 class="font-semibold mb-2">Movimientos Archivados</h4>
+                            <table class="w-full text-left">
+                                <thead class="sticky top-0 bg-gray-900/50 backdrop-blur-sm">
+                                    <tr class="text-gray-400 border-b border-gray-700 text-sm">
+                                        <th class="py-2 px-3">Fecha</th>
+                                        <th class="py-2 px-3">Descripción</th>
+                                        <th class="py-2 px-3">Cuenta</th>
+                                        <th class="py-2 px-3 text-right">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${transactionsHtml}</tbody>
+                            </table>
+                        </div>`;
+                },
+                
+                resetTransactionForm() {
+                    this.elements.transactionForm.reset();
+                    document.getElementById('transaction-id').value = '';
+                    document.getElementById('form-title').textContent = 'Agregar Nuevo Movimiento';
+                    document.getElementById('form-submit-button-text').textContent = 'Guardar';
+                    document.getElementById('form-cancel-button').classList.add('hidden');
+                    this.setDateDefaults();
+                    this.populateCategories();
+                    this.updateCurrencySymbol();
+                },
+
+                toggleSidebar() {
+                    this.elements.sidebar.classList.toggle('w-64');
+                    this.elements.sidebar.classList.toggle('w-20');
+                    this.elements.mainContent.classList.toggle('ml-64');
+                    this.elements.mainContent.classList.toggle('ml-20');
+                    document.querySelectorAll('.nav-text').forEach(el => el.classList.toggle('hidden'));
+                },
+
+                toggleReportFilters() {
+                    const reportType = document.getElementById('report-type').value;
+                    const accountContainer = document.getElementById('report-account-container');
+                    const partContainer = document.getElementById('report-part-container');
+
+                    if (reportType === 'documentos') {
+                        accountContainer.style.display = 'none';
+                        partContainer.style.display = 'none';
+                    } else {
+                        partContainer.style.display = 'block';
+                        if (reportType === 'movimientos') {
+                            accountContainer.style.display = 'block';
+                        } else { // inversiones
+                            accountContainer.style.display = 'none';
+                        }
+                    }
+                },
+
+                // =================================================================
+                // NUEVAS FUNCIONES PARA FACTURACIÓN AEAT
+                // =================================================================
+                
+                switchFacturacionTab(tabId) {
+                    const tabs = ['crear', 'config'];
+                    tabs.forEach(id => {
+                        document.getElementById(`facturacion-tab-${id}`).classList.toggle('active', id === tabId);
+                        document.getElementById(`facturacion-content-${id}`).classList.toggle('hidden', id !== tabId);
+                    });
+                },
+
+                handleAeatModuleToggleClick(e) {
+                    if (e.target.closest('.aeat-toggle-btn')) {
+                        this.state.settings.aeatModuleActive = !this.state.settings.aeatModuleActive;
+                        this.updateAll();
+                    }
+                },
+                
+                addFacturaItem(item = { concept: '', quantity: 1, price: 0 }) {
+                    const div = document.createElement('div');
+                    div.className = 'grid grid-cols-12 gap-2 factura-item-row items-center';
+                    div.innerHTML = `
+                        <div class="col-span-6">
+                            <input type="text" class="form-input factura-item-concept" placeholder="Descripción del servicio" value="${this.escapeHTML(item.concept)}" required>
+                        </div>
+                        <div class="col-span-2">
+                            <input type="number" class="form-input factura-item-quantity" placeholder="1" value="${item.quantity}" min="0" step="1" required>
+                        </div>
+                        <div class="col-span-3">
+                            <input type="number" class="form-input factura-item-price" placeholder="100.00" value="${item.price}" min="0" step="0.01" required>
+                        </div>
+                        <div class="col-span-1 text-right">
+                           <button type="button" class="factura-remove-item-btn p-2 text-red-400 hover:text-red-300">
+                               <i data-lucide="x-circle" class="w-5 h-5"></i>
+                           </button>
+                        </div>
+                    `;
+                    this.elements.facturaItemsContainer.appendChild(div);
+                    lucide.createIcons();
+                },
+
+                calculateFacturaTotals() {
+                    let subtotal = 0;
+                    const selectedCurrency = document.getElementById('factura-currency').value;
+                    const operationType = this.elements.facturaOperationType.value;
+
+                    document.querySelectorAll('.factura-item-row').forEach(row => {
+                        const quantity = parseFloat(row.querySelector('.factura-item-quantity').value) || 0;
+                        const price = parseFloat(row.querySelector('.factura-item-price').value) || 0;
+                        subtotal += quantity * price;
+                    });
+                    
+                    const iva = operationType === 'exportacion' ? 0 : subtotal * 0.21;
+                    const total = subtotal + iva;
+
+                    document.getElementById('factura-subtotal').textContent = this.formatCurrency(subtotal, selectedCurrency);
+                    document.getElementById('factura-iva').textContent = this.formatCurrency(iva, selectedCurrency);
+                    document.getElementById('factura-total').textContent = this.formatCurrency(total, selectedCurrency);
+                },
+
+                handleGenerateInvoice(e) {
+                    e.preventDefault();
+                    const selectedCurrency = document.getElementById('factura-currency').value;
+                    const operationType = this.elements.facturaOperationType.value;
+
+                    // Flujo sin AEAT: Guardar como factura normal en el sistema
+                    const newInvoice = {
+                        id: crypto.randomUUID(),
+                        type: 'Factura',
+                        date: document.getElementById('factura-fecha').value,
+                        number: document.getElementById('factura-numero').value,
+                        client: document.getElementById('factura-cliente').value,
+                        amount: parseFloat(document.getElementById('factura-total').textContent.replace(/[^0-9,-]+/g,"").replace(",", ".")),
+                        currency: selectedCurrency,
+                        status: 'Adeudada',
+                        operationType: operationType // Guardar el tipo de operación
+                    };
+                    
+                    if (this.state.settings.aeatModuleActive) {
+                        // Flujo CON AEAT: Simular envío a backend
+                        const items = [];
+                        document.querySelectorAll('.factura-item-row').forEach(row => {
+                            items.push({
+                                concept: row.querySelector('.factura-item-concept').value,
+                                quantity: parseFloat(row.querySelector('.factura-item-quantity').value) || 0,
+                                price: parseFloat(row.querySelector('.factura-item-price').value) || 0,
+                            });
+                        });
+
+                        const invoiceData = {
+                            client: {
+                                name: document.getElementById('factura-cliente').value,
+                                nif: document.getElementById('factura-nif').value,
+                            },
+                            number: document.getElementById('factura-numero').value,
+                            date: document.getElementById('factura-fecha').value,
+                            currency: selectedCurrency,
+                            operationType: operationType,
+                            items: items,
+                            subtotal: parseFloat(document.getElementById('factura-subtotal').textContent.replace(/[^0-9,-]+/g,"").replace(",", ".")),
+                            iva: parseFloat(document.getElementById('factura-iva').textContent.replace(/[^0-9,-]+/g,"").replace(",", ".")),
+                            total: parseFloat(document.getElementById('factura-total').textContent.replace(/[^0-9,-]+/g,"").replace(",", ".")),
+                        };
+                        
+                        this.elements.facturaApiResponse.innerHTML = `
+                             <div class="flex items-center text-blue-400">
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Enviando al Backend para firmar y registrar en AEAT...</span>
+                             </div>
+                             <pre class="mt-4 text-xs p-3 rounded-md bg-black/30 overflow-x-auto">${this.escapeHTML(JSON.stringify(invoiceData, null, 2))}</pre>
+                        `;
+
+                        setTimeout(() => {
+                             const success = Math.random() > 0.1;
+                             if (success) {
+                                 this.state.documents.push(newInvoice); // Guardar también en el sistema local al tener éxito
+                                 this.updateAll();
+                                 this.elements.facturaApiResponse.innerHTML = `
+                                    <div class="p-4 bg-green-900/30 text-green-300 rounded-lg border border-green-500/30">
+                                        <h4 class="font-bold">Éxito (Vía Módulo AEAT)</h4>
+                                        <p class="text-sm mt-2">Factura registrada en AEAT y guardada localmente.</p>
+                                        <p class="text-sm mt-1 font-mono text-xs">ID Veri*factu: ${'VF-' + Date.now()}</p>
+                                    </div>
+                                 `;
+                             } else {
+                                  this.elements.facturaApiResponse.innerHTML = `
+                                     <div class="p-4 bg-red-900/30 text-red-300 rounded-lg border border-red-500/30">
+                                         <h4 class="font-bold">Error</h4>
+                                         <p class="text-sm mt-2">No se pudo conectar con el servicio de la AEAT. La factura no ha sido guardada.</p>
+                                     </div>
+                                  `;
+                             }
+                        }, 2500);
+                    } else {
+                        this.state.documents.push(newInvoice);
+                        this.updateAll();
+                        this.elements.facturaApiResponse.innerHTML = `
+                            <div class="p-4 bg-gray-800/50 text-gray-300 rounded-lg border border-gray-700">
+                                <h4 class="font-bold">Operación Local (Módulo AEAT Inactivo)</h4>
+                                <p class="text-sm mt-2">La factura se ha guardado en el sistema localmente.</p>
+                            </div>
+                        `;
+                    }
+                },
+
+                handleSaveAeatConfig(e) {
+                    e.preventDefault();
+                    this.state.settings.aeatConfig = {
+                        certPath: document.getElementById('aeat-cert-path').value,
+                        certPass: document.getElementById('aeat-cert-pass').value,
+                        endpoint: document.getElementById('aeat-endpoint').value,
+                        apiKey: document.getElementById('aeat-api-key').value,
+                    };
+                    this.saveData();
+
+                    const button = this.elements.aeatConfigForm.querySelector('button[type="submit"]');
+                    const originalText = button.innerHTML;
+                    button.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> Guardado!`;
+                    button.classList.add('bg-green-600', 'hover:bg-green-700');
+                    button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    lucide.createIcons();
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.classList.remove('bg-green-600', 'hover:bg-green-700');
+                        button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                        lucide.createIcons();
+                    }, 2000);
+                },
+
+                renderAeatConfig() {
+                    const config = this.state.settings.aeatConfig;
+                    if(config) {
+                        document.getElementById('aeat-cert-path').value = config.certPath || '';
+                        document.getElementById('aeat-cert-pass').value = config.certPass || '';
+                        document.getElementById('aeat-endpoint').value = config.endpoint || '';
+                        document.getElementById('aeat-api-key').value = config.apiKey || '';
+                    }
+                },
+
+                handleOperationTypeChange() {
+                    const operationType = this.elements.facturaOperationType.value;
+                    const currencySelect = document.getElementById('factura-currency');
+                    const ivaLabel = document.getElementById('factura-iva-label');
+
+                    if (operationType === 'exportacion') {
+                        currencySelect.value = 'USD';
+                        currencySelect.disabled = true;
+                        ivaLabel.textContent = 'IVA (0% - Exportación):';
+                    } else {
+                        currencySelect.disabled = false;
+                        ivaLabel.textContent = 'IVA (21%):';
+                    }
+                    this.calculateFacturaTotals();
+                },
+
+                // =================================================================
+                // FUNCIONES DE UTILIDAD
+                // =================================================================
+                formatCurrency(amount, currency) {
+                    const locale = currency === 'EUR' ? 'de-DE' : 'en-US';
+                    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
+                },
+
+                escapeHTML(str) {
+                    if (typeof str !== 'string') return str;
+                    const p = document.createElement('p');
+                    p.appendChild(document.createTextNode(str));
+                    return p.innerHTML;
+                },
+                
+                showConfirmationModal(title, message, onConfirm) {
+                    const modal = document.getElementById('confirmation-modal');
+                    document.getElementById('modal-title').textContent = title;
+                    document.getElementById('modal-message').textContent = message;
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+
+                    const confirmBtn = document.getElementById('modal-confirm-btn');
+                    const cancelBtn = document.getElementById('modal-cancel-btn');
+                    const backdrop = document.getElementById('confirmation-modal-backdrop');
+
+                    const confirmHandler = () => { onConfirm(); hide(); };
+                    const hide = () => {
+                        modal.classList.add('hidden');
+                        modal.classList.remove('flex');
+                        confirmBtn.removeEventListener('click', confirmHandler);
+                        cancelBtn.removeEventListener('click', hide);
+                        backdrop.removeEventListener('click', hide);
+                    };
+                    
+                    confirmBtn.addEventListener('click', confirmHandler, { once: true });
+                    cancelBtn.addEventListener('click', hide, { once: true });
+                    backdrop.addEventListener('click', hide, { once: true });
+                },
+                
+                setDateDefaults() {
+                    const today = new Date().toISOString().split('T')[0];
+                    ['transaction-date', 'transfer-date', 'proforma-date', 'cierre-start-date', 'cierre-end-date', 'factura-fecha'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if(el) el.value = today;
+                    });
+                },
+
+                updateDateInputForReports() {
+                    const period = document.getElementById('report-period').value;
+                    const container = document.getElementById('date-input-container');
+                    const today = new Date();
+                    const todayISO = today.toISOString();
+                    let inputHtml = '';
+                    switch (period) {
+                        case 'daily': inputHtml = `<label for="report-date" class="block text-sm font-medium text-gray-400">Fecha</label><input type="date" id="report-date" class="form-input mt-1" value="${todayISO.split('T')[0]}">`; break;
+                        case 'weekly':
+                            const week = `${today.getFullYear()}-W${this.getWeekNumber(today)}`;
+                            inputHtml = `<label for="report-week" class="block text-sm font-medium text-gray-400">Semana</label><input type="week" id="report-week" class="form-input mt-1" value="${week}">`;
+                            break;
+                        case 'monthly': inputHtml = `<label for="report-month" class="block text-sm font-medium text-gray-400">Mes</label><input type="month" id="report-month" class="form-input mt-1" value="${todayISO.substring(0, 7)}">`; break;
+                        case 'annual': 
+                            const currentYear = today.getFullYear(); 
+                            let yearOptions = ''; 
+                            for (let i = 0; i < 5; i++) { yearOptions += `<option value="${currentYear - i}">${currentYear - i}</option>`; } 
+                            inputHtml = `<label for="report-year" class="block text-sm font-medium text-gray-400">Año</label><select id="report-year" class="form-input mt-1">${yearOptions}</select>`; 
+                            break;
+                    }
+                    container.innerHTML = inputHtml;
+                },
+
+                getWeekNumber(d) {
+                    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                    var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+                },
+
+                calculateBalanceForAccount(accountName, upToDate) {
+                    const initialTransaction = this.state.transactions.find(t => t.isInitialBalance && t.account === accountName);
+                    let balance = initialTransaction ? initialTransaction.amount : 0;
+                    
+                    this.state.transactions
+                        .filter(t => t.account === accountName && !t.isInitialBalance && new Date(t.date) <= upToDate)
+                        .forEach(t => {
+                            balance += (t.type === 'Ingreso' ? t.amount : -t.amount);
+                        });
+                    return balance;
+                },
+            };
+
+            App.init();
+
+        });
+    </script>
+</body>
+</html>
+
