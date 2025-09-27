@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
+/* Estilo personalizado para un look "neon" y moderno */
 body {
     background-color: #0a0a0a;
     color: #e0e0e0;
     font-family: 'Inter', sans-serif;
 }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 .card {
     background-color: rgba(22, 22, 22, 0.7);
@@ -29,23 +29,20 @@ body {
     color: #f0f0f0;
     text-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
 }
-
 .form-input {
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    width: 100%;
-    color: #e0e0e0;
-    transition: all 0.3s ease;
+     background-color: #1a1a1a;
+     border: 1px solid #333;
+     border-radius: 0.5rem;
+     padding: 0.75rem;
+     width: 100%;
+     color: #e0e0e0;
+     transition: all 0.3s ease;
 }
-
 .form-input:focus {
-    outline: none;
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+     outline: none;
+     border-color: #60a5fa;
+     box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
 }
-
 .form-input:disabled {
     background-color: #2a2a2a;
     cursor: not-allowed;
@@ -66,3 +63,54 @@ body {
 ::-webkit-scrollbar-track { background: #1a1a1a; }
 ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Estilos para el dropdown de descarga */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #1a1a1a;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+    border-radius: 0.5rem;
+    border: 1px solid #333;
+}
+.dropdown-content button {
+    color: #e0e0e0;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+}
+.dropdown-content button:hover { background-color: #333; }
+.show { display: block; }
+
+/* Estilos para el toggle switch y tabs de facturación (CORREGIDO) */
+.toggle-bg:after {
+    content: '';
+    position: absolute;
+    top: 0.125rem;
+    left: 0.125rem;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 9999px;
+    height: 1.25rem;
+    width: 1.25rem;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+input:checked + .toggle-bg:after {
+    transform: translateX(100%);
+    border-color: white;
+}
+input:checked + .toggle-bg {
+    background-color: #2563eb; /* bg-blue-600 */
+    border-color: #2563eb; /* border-blue-600 */
+}
+.tab-button-inner.active {
+    border-color: #60a5fa;
+    color: #60a5fa;
+}
