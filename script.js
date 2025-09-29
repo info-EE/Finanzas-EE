@@ -2020,7 +2020,62 @@ document.addEventListener('DOMContentLoaded', () => {
                         const simple = new Date(Date.UTC(yearW, 0, 1 + (weekW - 1) * 7));
                         const dow = simple.getUTCDay();
                         const ISOweekStart = simple;
-        
+                        if (dow <= 4)
+                            ISOweekStart.setDate(simple.getDate() - simple.getUTCDay() + 1);
+                        else
+                            ISOweekStart.setDate(simple.getDate() + 8 - simple.getUTCDay());
+                        startDate = new Date(ISOweekStart);
+                        endDate = new Date(startDate);
+                        endDate.setDate(startDate.getDate() + 6);
+                        endDate.setUTCHours(23, 59, 59, 999);
+                        break;
+                    case 'monthly':
+                        const monthVal = document.getElementById('report-month').value;
+                        if (!monthVal) return;
+                        const [yearM, monthM] = monthVal.split('-');
+                        startDate = new Date(Date.UTC(yearM, monthM - 1, 1));
+                        endDate = new Date(Date.UTC(yearM, monthM, 0));
+                        endDate.setUTCHours(23, 59, 59, 999);
+                        break;
+                    case 'annual':
+                        const yearVal = document.getElementById('report-year').value;
+                        if (!yearVal) return;
+                        startDate = new Date(Date.UTC(yearVal, 0, 1));
+                        endDate = new Date(Date.UTC(yearVal, 11, 31));
+                        endDate.setUTCHours(23, 59, 59, 999);
+                        break;
+                }
+
+                let data;
+                let title = '';
+                if (type === 'movimientos') {
+                    data = this.state.transactions.filter(t => {
+                        const tDate = new Date(t.date);
+                        const inDateRange = tDate >= startDate && tDate <= endDate;
+                        const accountMatch = account === 'all' || t.account === account;
+                        const partMatch = part === 'all' || t.part === part;
+                        return inDateRange && accountMatch && partMatch;
+                    });
+                    title = `Reporte de Movimientos (${account === 'all' ? 'Todas las Cuentas' : account})`;
+                } else if (type === 'documentos') {
+                    data = this.state.documents.filter(d => {
+                        const dDate = new Date(d.date);
+                        return dDate >= startDate && dDate <= endDate;
+                    });
+                    title = `Reporte de Documentos`;
+                } else if (type === 'inversiones') {
+                    data = this.state.transactions.filter(t => {
+                        const tDate = new Date(t.date);
+                        return tDate >= startDate && tDate <= endDate && t.category === 'Inversión';
+                    });
+                    title = `Reporte de Inversiones`;
+                }
+
+                this.state.activeReport = { type, data, title };
+                this.renderReport();
+            }
+        },
+
         handleReportDownloadClick(e) {
             const downloadBtn = e.target.closest('#report-download-btn');
             if (downloadBtn) {
