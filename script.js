@@ -193,8 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pageId === 'cuentas') setTimeout(() => this.renderBalanceLegendAndChart(), 0);
             if (pageId === 'inicio') setTimeout(() => this.renderInicioCharts(), 50);
             if (pageId === 'facturacion') {
+                this.switchFacturacionTab('crear'); // <-- Pestaña por defecto
                 this.renderAeatConfig();
-                // Asegurarse de que haya al menos una línea de concepto al entrar en la página de facturación.
                 if (this.elements.facturaItemsContainer.childElementCount === 0) {
                     this.addFacturaItem();
                 }
@@ -1188,9 +1188,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const module = this.state.modules.find(m => m.id === moduleId);
                 if (module) {
                     module.active = !module.active;
-                    const currentPageId = document.querySelector('.page-content:not(.hidden)').id;
-                    if (!module.active && currentPageId === module.pageId) {
-                        this.switchPage('inicio');
+
+                    if (module.active) {
+                        // Si se activa el módulo, vamos a su página.
+                        this.switchPage(module.id);
+                    } else {
+                        // Si se desactiva un módulo y estábamos en su página, volvemos a inicio.
+                        const currentPageId = document.querySelector('.page-content:not(.hidden)').id;
+                        if (currentPageId === module.pageId) {
+                            this.switchPage('inicio');
+                        }
                     }
                     this.updateAll();
                 }
