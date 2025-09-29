@@ -58,7 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
             facturasTableBody: document.getElementById('facturas-table-body'),
             defaultFiltersContainer: document.getElementById('default-filters-container'),
             sociedadesFiltersContainer: document.getElementById('sociedades-filters-container'),
-            fiscalParamsForm: document.getElementById('fiscal-params-form')
+            fiscalParamsForm: document.getElementById('fiscal-params-form'),
+
+            // Visor de Facturas
+            invoiceViewerModal: document.getElementById('invoice-viewer-modal'),
+            invoiceContentArea: document.getElementById('invoice-content-area'),
+            closeInvoiceViewerBtn: document.getElementById('close-invoice-viewer-btn'),
+            printInvoiceBtn: document.getElementById('print-invoice-btn'),
+            pdfInvoiceBtn: document.getElementById('pdf-invoice-btn')
         },
 
         charts: {
@@ -695,10 +702,135 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         },
 
+        showInvoiceViewer(invoiceId) {
+            const invoice = this.state.documents.find(doc => doc.id === invoiceId);
+            if (!invoice) {
+                console.error('Factura no encontrada');
+                return;
+            }
+
+            const currencySymbol = this.getCurrencySymbol(invoice.currency);
+            const ivaRate = invoice.operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
+
+            let itemsHtml = '';
+            invoice.items.forEach(item => {
+                itemsHtml += `
+                    <tr class="border-b border-gray-700">
+                        <td class="py-2 px-4">${this.escapeHTML(item.description)}</td>
+                        <td class="py-2 px-4 text-right">${item.quantity}</td>
+                        <td class="py-2 px-4 text-right">${this.formatCurrency(item.price, invoice.currency)}</td>
+                        <td class="py-2 px-4 text-right">${this.formatCurrency(item.quantity * item.price, invoice.currency)}</td>
+                    </tr>
+                `;
+            });
+
+            const invoiceHtml = `
+                <div id="invoice-printable-area">
+                    <header class="flex justify-between items-start mb-8 p-8">
+                        <div>
+                            <h1 class="text-3xl font-bold text-white">FACTURA</h1>
+                            <p class="text-gray-400">Nº: ${this.escapeHTML(invoice.number)}</p>
+                            <p class="text-gray-400">Fecha: ${invoice.date}</p>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-xl font-semibold text-blue-300">Tu Empresa/Nombre</h2>
+                            <p class="text-gray-400">Tu Dirección</p>
+                            <p class="text-gray-400">Tu NIF/CIF</p>
+                        </div>
+                    </header>
+                    <div class="p-8">
+                        <div class="mb-8">
+                            <h3 class="font-semibold text-gray-300 mb-2">Facturar a:</h3>
+                            <p>${this.escapeHTML(invoice.client)}</p>
+                            <p>${this.escapeHTML(invoice.nif)}</p>
+                        </div>
+                        <table class="w-full text-left mb-8">
+                            <thead>
+                                <tr class="bg-gray-800 text-gray-300">
+                                    <th class="py-2 px-4">Concepto</th>
+                                    <th class="py-2 px-4 text-right">Cantidad</th>
+                                    <th class="py-2 px-4 text-right">Precio Unit.</th>
+                                    <th class="py-2 px-4 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                            </tbody>
+                        </table>
+                        <div class="flex justify-end">
+                            <div class="w-full max-w-xs space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Subtotal:</span>
+                                    <span>${this.formatCurrency(invoice.subtotal, invoice.currency)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">IVA (${(ivaRate * 100).toFixed(0)}%):</span>
+                                    <span>${this.formatCurrency(invoice.iva, invoice.currency)}</span>
+                                </div>
+                                <div class="flex justify-between font-bold text-xl border-t border-gray-600 pt-2 mt-2">
+                                    <span>TOTAL:</span>
+                                    <span>${this.formatCurrency(invoice.total, invoice.currency)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            this.elements.invoiceContentArea.innerHTML = invoiceHtml;
+            this.elements.invoiceViewerModal.classList.remove('hidden');
+            this.elements.invoiceViewerModal.classList.add('flex');
+            lucide.createIcons();
+        },
+
+        hideInvoiceViewer() {
+            this.elements.invoiceViewerModal.classList.add('hidden');
+            this.elements.invoiceViewerModal.classList.remove('flex');
+            this.elements.invoiceContentArea.innerHTML = '';
+        },
+
+        printInvoice() {
+            const printContent = this.elements.invoiceContentArea.innerHTML;
+            const printWindow = window.open('', '', 'height=800,width=800');
+            printWindow.document.write('<html><head><title>Factura</title>');
+            // Aquí podrías enlazar un CSS específico para impresión
+            printWindow.document.write('<link rel="stylesheet" href="style.css">');
+            printWindow.document.write('<style>body { background-color: #111827; color: #d1d5db; } .card { background-color: #1f2937; } @media print { body { background-color: white; color: black; } .text-white { color: black !important; } .text-gray-300 { color: #4b5563 !important; } .text-gray-400 { color: #6b7280 !important; } .bg-gray-800 { background-color: #f3f4f6 !important; } .border-gray-700 { border-color: #d1d5db !important; } }</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(printContent);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            setTimeout(() => { // Timeout para asegurar que el contenido se cargue
+                printWindow.print();
+                printWindow.close();
+            }, 250);
+        },
+
+        downloadInvoiceAsPDF() {
+            const { jsPDF } = window.jspdf;
+            const invoiceElement = document.getElementById('invoice-printable-area');
+            const doc = new jsPDF({
+                orientation: 'p',
+                unit: 'pt',
+                format: 'a4'
+            });
+
+            doc.html(invoiceElement, {
+                callback: function (doc) {
+                    doc.save('factura.pdf');
+                },
+                x: 10,
+                y: 10,
+                width: 575, // A4 width in points is ~595, leave some margin
+                windowWidth: invoiceElement.scrollWidth
+            });
+        },
+
         handleFacturasTableClick(e) {
             const target = e.target;
             const statusBtn = target.closest('.status-btn');
             const deleteBtn = target.closest('.delete-doc-btn');
+            const viewBtn = target.closest('.view-invoice-btn');
 
             if (statusBtn) {
                 const docId = statusBtn.dataset.id;
@@ -706,6 +838,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (deleteBtn) {
                 const docId = deleteBtn.dataset.id;
                 this.deleteDocument(docId);
+            } else if (viewBtn) {
+                const docId = viewBtn.dataset.id;
+                this.showInvoiceViewer(docId);
             }
         },
 
@@ -769,6 +904,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('facturas-search').addEventListener('input', () => this.renderFacturas());
             this.elements.facturasTableBody.addEventListener('click', e => this.handleFacturasTableClick(e));
             
+            // Listeners para el visor de facturas
+            this.elements.closeInvoiceViewerBtn.addEventListener('click', () => this.hideInvoiceViewer());
+            this.elements.printInvoiceBtn.addEventListener('click', () => this.printInvoice());
+            this.elements.pdfInvoiceBtn.addEventListener('click', () => this.downloadInvoiceAsPDF());
+
             this.elements.aeatConfigForm.addEventListener('submit', e => this.handleSaveAeatConfig(e));
             this.elements.fiscalParamsForm.addEventListener('submit', e => this.handleSaveFiscalParams(e));
             document.getElementById('factura-currency').addEventListener('change', () => this.calculateFacturaTotals());
@@ -2060,18 +2200,3 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="flex justify-between items-center text-lg border-t border-gray-700 pt-3 mt-3">
                         <span class="font-semibold">Resultado Contable Acumulado:</span>
                         <span class="font-bold">${this.formatCurrency(resultadoContable, 'EUR')}</span>
-                    </div>
-                     <div class="flex justify-between items-center text-xl text-blue-300">
-                        <span class="font-bold">Pago a cuenta estimado (${taxRate}%):</span>
-                        <span class="font-bold">${this.formatCurrency(pagoACuenta, 'EUR')}</span>
-                    </div>
-                </div>
-                <p class="text-xs text-gray-500 mt-4">* Este es un cálculo provisional para el modelo 202, basado en el resultado del período actual. No sustituye el asesoramiento fiscal profesional.</p>
-            `;
-            lucide.createIcons();
-        },
-    };
-
-    App.init();
-
-});
