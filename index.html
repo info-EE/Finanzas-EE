@@ -563,26 +563,26 @@
                                     <select id="factura-operation-type" class="form-input">
                                         </select>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
+                                <div class="grid grid-cols-12 gap-4 mb-4">
+                                    <div class="col-span-6">
                                         <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
-                                        <input type="text" id="factura-cliente" class="form-input" value="Cliente de Ejemplo S.L." required>
+                                        <input type="text" id="factura-client" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm" placeholder="Nombre del Cliente" required>
                                     </div>
-                                    <div>
+                                    <div class="col-span-6">
                                         <label for="factura-nif" class="block text-sm text-gray-400 mb-1">NIF/CIF</label>
-                                        <input type="text" id="factura-nif" class="form-input" value="B12345678" required>
+                                        <input type="text" id="factura-nif" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm" placeholder="NIF/CIF del Cliente" required>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
+                                <div class="grid grid-cols-12 gap-4 mb-4">
+                                    <div class="col-span-4">
                                         <label for="factura-numero" class="block text-sm text-gray-400 mb-1">Nº Factura</label>
                                         <input type="text" id="factura-numero" class="form-input" value="2024-0001" required>
                                     </div>
-                                    <div>
+                                    <div class="col-span-4">
                                         <label for="factura-fecha" class="block text-sm text-gray-400 mb-1">Fecha</label>
                                         <input type="date" id="factura-fecha" class="form-input" required>
                                     </div>
-                                    <div>
+                                    <div class="col-span-4">
                                         <label for="factura-currency" class="block text-sm text-gray-400 mb-1">Moneda</label>
                                         <select id="factura-currency" class="form-input">
                                             <option value="EUR">EUR (€)</option>
