@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
             incomeCategoriesList: document.getElementById('income-categories-list'),
             expenseCategoriesList: document.getElementById('expense-categories-list'),
             operationTypesList: document.getElementById('operation-types-list'),
-            modulesList: document.getElementById('modules-list'),
             proformasTableBody: document.getElementById('proformas-table-body'),
             pageProformas: document.getElementById('page-proformas'),
             aeatSettingsCard: document.getElementById('aeat-settings-card'),
@@ -151,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     { id: crypto.randomUUID(), name: 'CAIXA Bank', currency: 'EUR', symbol: '€', balance: 0.00, logoHtml: `<svg viewBox="0 0 80 60" class="w-6 h-6"><path d="M48.4,0L22.8,27.3c-0.3,0.3-0.3,0.8,0,1.1L48.4,56c1,1.1,2.8,0.4,2.8-1.1V36.8c0-1,0.8-1.7,1.7-1.7h11.2c8.8,0,15.9-7.1,15.9-15.9S83.1,2.3,74.3,2.3H64c-1,0-1.7-0.8-1.7-1.7V1.1C62.3,0.1,49.1-0.7,48.4,0z" fill="#0073B7"></path><circle cx="23.3" cy="28" r="5.5" fill="#FFC107"></circle><circle cx="23.3" cy="44.6" r="6.8" fill="#E6532B"></circle></svg>` },
                     { id: crypto.randomUUID(), name: 'Banco WISE', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" class="w-6 h-6"><path fill="#a3e635" d="M50.9 64H64L33 20.6L24 34.3l15.1 21.7-10.8-16L18.3 56 33 34.3 43 20.6 11.7 64h13.2L4 39.1l2.8 3.8-6.4 7.6L33 26.3 0 64h12.9L33 36l17.9 28z"></path></svg>` },
                     { id: crypto.randomUUID(), name: 'Caja Chica', currency: 'EUR', symbol: '€', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzIDIiPjxwYXRoIGZpbGw9IiNDNjBCMUUiIGQ9Ik0wIDBoM3YySDB6Ii8+PHBhdGggZmlsbD0iI0ZGQzQwMCIgZD0iTTAgLjVoM3YxSDB6Ii8+PC9zdmc+" alt="Bandera de España" class="w-6 h-6 rounded-sm border border-gray-600">` },
-                    { id: crypto.randomUUID(), name: 'Caja Eu', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjMDAzMzk5IiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48ZyBmaWxsPSIjRkZDQzAwIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0NTAgMzAwKSI+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDYwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDkwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDEyMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMTUwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDE4MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjEwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDI0MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjcwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMzMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjwvZz48L3N2Zz4=" alt="Bandera de la Unión Europea" class="w-6 h-6 rounded-sm border border-gray-600">` },
+                    { id: crypto.randomUUID(), name: 'Caja Eu', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjMDAzMzk5IiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48ZyBmaWxsPSIjRkZDQzAwIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0NTAgMzAwKSI+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDkwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDEyMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMTUwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDE4MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjEwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDI0MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjcwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMzMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjwvZz48L3N2Zz4=" alt="Bandera de la Unión Europea" class="w-6 h-6 rounded-sm border border-gray-600">` },
                     { id: crypto.randomUUID(), name: 'Caja Arg.', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5IDYiPjxyZWN0IGZpbGw9IiM3NEFDREYiIHdpZHRoPSI5IiBoZWlnaHQ9IjMiLz48cmVjdCB5PSIzIiBmaWxsPSIjNzRBQ0RGIiB3aWR0aD0iOSIgaGVpZHRoPSIzIi8+PHJlY3QgeT0iMiIgZmlsbD0iI0ZGRiIgd2lkdGg9IjkiIGhlaWdodD0iMiIvPjwvc3ZnPg==" alt="Bandera de Argentina" class="w-6 h-6 rounded-sm border border-gray-600">` },
                     { id: crypto.randomUUID(), name: 'Caja Py', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMSA2Ij48cGF0aCBmaWxsPSIjRDUyQjFFIiBkPSJNMCAwaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjRkZGIiBkPSJNMCAyaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjMDAzOEE4IiBkPSJNMCA0aDExdjJIMHoiLz48L3N2Zz4=" alt="Bandera de Paraguay" class="w-6 h-6 rounded-sm border border-gray-600">` }
                 ],
@@ -160,11 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 incomeCategories: ['Ventas', 'Servicios', 'Otros Ingresos', 'Transferencia', 'Ajuste de Saldo'],
                 expenseCategories: ['Operaciones', 'Marketing', 'Salarios', 'Software', 'Impuestos', 'Otros Gastos', 'Inversión', 'Transferencia', 'Comisiones', 'Ajuste de Saldo'],
                 invoiceOperationTypes: ['Nacional / Intracomunitaria (UE)', 'Exportación (Fuera de la UE)'],
-                modules: [
-                    { id: 'facturacion', name: 'Facturación', description: 'Gestiona tus facturas y proformas. Activa la conexión con AEAT en ajustes.', active: false, navId: 'nav-facturacion', pageId: 'page-facturacion', icon: 'file-text' },
-                    { id: 'usuarios', name: 'Gestión de Usuarios', description: 'Invita a usuarios con permisos de solo lectura o edición.', active: false, navId: 'nav-usuarios', pageId: 'page-usuarios', icon: 'users' },
-                    { id: 'inversiones', name: 'Inversiones', description: 'Realiza un seguimiento de tus fondos de inversión y resguardo.', active: false, navId: 'nav-inversiones', pageId: 'page-inversiones', icon: 'trending-up' }
-                ],
+                modules: [],
                 archivedData: {},
                 activeReport: { type: null, data: [] },
                 settings: {
@@ -527,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const accountsList = this.elements.settingsAccountsList;
             const incomeList = this.elements.incomeCategoriesList;
             const expenseList = this.elements.expenseCategoriesList;
-            const modulesList = this.elements.modulesList;
+            
             const operationTypesList = this.elements.operationTypesList;
 
             const accountFragment = document.createDocumentFragment();
@@ -564,27 +559,6 @@ document.addEventListener('DOMContentLoaded', () => {
             operationTypesList.innerHTML = '';
             operationTypesList.appendChild(renderCategoryList(this.state.invoiceOperationTypes, ['Nacional / Intracomunitaria (UE)', 'Exportación (Fuera de la UE)']));
 
-
-            const moduleFragment = document.createDocumentFragment();
-            this.state.modules.forEach(module => {
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between gap-3 p-3 bg-gray-800/50 rounded-lg";
-                const buttonHtml = module.active
-                    ? `<button class="module-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-colors text-xs flex items-center justify-center gap-1" data-id="${module.id}">
-                        <i data-lucide="check-circle" class="w-4 h-4"></i> Activado
-                    </button>`
-                    : `<button class="module-toggle-btn border border-blue-800 text-blue-400 font-bold py-2 px-3 rounded-lg hover:bg-blue-800/20 hover:text-blue-300 transition-colors text-xs" data-id="${module.id}">
-                        Activar
-                    </button>`;
-                div.innerHTML = `
-                    <div class="flex items-center gap-3"> <i data-lucide="${module.icon}" class="text-blue-400"></i>
-                        <div><h4 class="font-semibold">${module.name}</h4><p class="text-xs text-gray-400">${module.description}</p></div>
-                    </div>
-                    ${buttonHtml}`;
-                moduleFragment.appendChild(div);
-            });
-            modulesList.innerHTML = '';
-            modulesList.appendChild(moduleFragment);
             
             this.renderAeatSettings();
             this.renderFiscalParams();
@@ -687,6 +661,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </td>
                         <td class="py-2 px-3">
                             <div class="flex items-center justify-center gap-2">
+                                <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${f.id}" title="Ver Factura">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
                                 <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${f.id}" title="Eliminar">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
@@ -699,12 +676,42 @@ document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
         },
 
+        toggleDocumentStatus(docId) {
+            const doc = this.state.documents.find(d => d.id === docId);
+            if (doc) {
+                doc.status = doc.status === 'Adeudada' ? 'Cobrada' : 'Adeudada';
+                this.updateAll();
+            }
+        },
+
+        deleteDocument(docId) {
+            this.showConfirmationModal(
+                'Eliminar Documento',
+                '¿Seguro que quieres eliminar este documento?',
+                () => {
+                    this.state.documents = this.state.documents.filter(d => d.id !== docId);
+                    this.updateAll();
+                }
+            );
+        },
+
+        handleFacturasTableClick(e) {
+            const target = e.target;
+            const statusBtn = target.closest('.status-btn');
+            const deleteBtn = target.closest('.delete-doc-btn');
+
+            if (statusBtn) {
+                const docId = statusBtn.dataset.id;
+                this.toggleDocumentStatus(docId);
+            } else if (deleteBtn) {
+                const docId = deleteBtn.dataset.id;
+                this.deleteDocument(docId);
+            }
+        },
+
         updateModuleVisibility() {
-            this.state.modules.forEach(module => {
-                const navLink = document.getElementById(module.navId);
-                if (navLink) navLink.classList.toggle('hidden', !module.active);
-            });
-            this.renderAeatSettings();
+            // Esta función ya no es necesaria y puede ser eliminada o dejada en blanco.
+            // Los enlaces de navegación ahora son siempre visibles.
         },
 
         renderArchives() {
@@ -753,13 +760,14 @@ document.addEventListener('DOMContentLoaded', () => {
             this.elements.incomeCategoriesList.addEventListener('click', e => this.handleCategoryDeleteClick(e, 'income'));
             this.elements.expenseCategoriesList.addEventListener('click', e => this.handleCategoryDeleteClick(e, 'expense'));
             this.elements.operationTypesList.addEventListener('click', e => this.handleCategoryDeleteClick(e, 'operationType'));
-            this.elements.modulesList.addEventListener('click', e => this.handleModuleToggle(e));
+            
             this.elements.aeatSettingsCard.addEventListener('click', e => this.handleAeatModuleToggleClick(e));
             this.elements.pageProformas.addEventListener('click', e => this.handleProformasPageClick(e));
             this.elements.reportDisplayArea.addEventListener('click', e => this.handleReportDownloadClick(e));
             document.getElementById('cashflow-search').addEventListener('input', () => this.renderTransactions());
             document.getElementById('proformas-search').addEventListener('input', () => this.renderDocuments());
             document.getElementById('facturas-search').addEventListener('input', () => this.renderFacturas());
+            this.elements.facturasTableBody.addEventListener('click', e => this.handleFacturasTableClick(e));
             
             this.elements.aeatConfigForm.addEventListener('submit', e => this.handleSaveAeatConfig(e));
             this.elements.fiscalParamsForm.addEventListener('submit', e => this.handleSaveFiscalParams(e));
@@ -1182,47 +1190,19 @@ document.addEventListener('DOMContentLoaded', () => {
         },
 
         handleModuleToggle(e) {
-            if (e.target.closest('.module-toggle-btn')) {
-                const button = e.target.closest('.module-toggle-btn');
-                const moduleId = button.dataset.id;
-                const module = this.state.modules.find(m => m.id === moduleId);
-                if (module) {
-                    module.active = !module.active;
-
-                    if (module.active) {
-                        // Si se activa el módulo, vamos a su página.
-                        this.switchPage(module.id);
-                    } else {
-                        // Si se desactiva un módulo y estábamos en su página, volvemos a inicio.
-                        const currentPageId = document.querySelector('.page-content:not(.hidden)').id;
-                        if (currentPageId === module.pageId) {
-                            this.switchPage('inicio');
-                        }
-                    }
-                    this.updateAll();
-                }
-            }
+            // Esta función ya no es necesaria y puede ser eliminada.
         },
 
         handleProformasPageClick(e) {
             const statusBtn = e.target.closest('.status-btn');
-            if (statusBtn) {
-                const doc = this.state.documents.find(d => d.id == statusBtn.dataset.id);
-                if (doc) {
-                    doc.status = doc.status === 'Adeudada' ?
-                    'Cobrada' : 'Adeudada';
-                    this.updateAll();
-                }
-            }
             const deleteBtn = e.target.closest('.delete-doc-btn');
-            if (deleteBtn) {
-                this.showConfirmationModal(
-                    'Eliminar Documento', '¿Seguro que quieres eliminar este documento?',
-                    () => {
-                        this.state.documents = this.state.documents.filter(d => d.id != deleteBtn.dataset.id);
-                        this.updateAll();
-                    }
-                );
+
+            if (statusBtn) {
+                const docId = statusBtn.dataset.id;
+                this.toggleDocumentStatus(docId);
+            } else if (deleteBtn) {
+                const docId = deleteBtn.dataset.id;
+                this.deleteDocument(docId);
             }
         },
 
