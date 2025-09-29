@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
             facturaApiResponse: document.getElementById('factura-api-response'),
             facturaOperationType: document.getElementById('factura-operation-type'),
+            facturasTableBody: document.getElementById('facturas-table-body'),
             defaultFiltersContainer: document.getElementById('default-filters-container'),
             sociedadesFiltersContainer: document.getElementById('sociedades-filters-container'),
             fiscalParamsForm: document.getElementById('fiscal-params-form')
@@ -210,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.populateSelects();
             this.renderSettings();
             this.renderDocuments();
+            this.renderFacturas();
             this.renderInvestments();
             this.updateModuleVisibility();
             this.renderArchives();
@@ -652,36 +654,49 @@ document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
         },
         
-        renderInvestments() {
-            const investments = this.state.transactions.filter(t => t.category === 'Inversión');
-            const tbody = document.getElementById('investments-table-body');
-            const fragment = document.createDocumentFragment();
-            
-            const totalEUR = investments.filter(i => i.currency === 'EUR').reduce((sum, i) => sum + i.amount, 0);
-            const totalUSD = investments.filter(i => i.currency === 'USD').reduce((sum, i) => sum + i.amount, 0);
-
-            document.getElementById('total-invested-eur').textContent = this.formatCurrency(totalEUR, 'EUR');
-            document.getElementById('total-invested-usd').textContent = this.formatCurrency(totalUSD, 'USD');
-
-            tbody.innerHTML = '';
-            if (investments.length === 0) {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td colspan="4" class="text-center py-4 text-gray-500">No hay inversiones registradas.</td>`;
-                fragment.appendChild(row);
-            } else {
-                investments.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
-                    const row = document.createElement('tr');
-                    row.className = 'border-b border-gray-800 hover:bg-gray-800/50';
-                    row.innerHTML = `
-                        <td class="py-3 px-3">${t.date}</td>
-                        <td class="py-3 px-3">${this.escapeHTML(t.description)}</td>
-                        <td class="py-3 px-3">${this.escapeHTML(t.account)}</td>
-                        <td class="py-3 px-3 text-right text-yellow-400">${this.formatCurrency(t.amount, t.currency)}</td>
-                    `;
-                    fragment.appendChild(row);
-                });
+        renderFacturas() {
+            const facturasTbody = this.elements.facturasTableBody;
+            const facturasData = this.state.documents.filter(d => d.type === 'Factura');
+            const facturaSearchTerm = document.getElementById('facturas-search').value.toLowerCase();
+            let filteredFacturas = facturasData;
+        
+            if (facturaSearchTerm) {
+                filteredFacturas = facturasData.filter(d =>
+                    d.number.toLowerCase().includes(facturaSearchTerm) ||
+                    d.client.toLowerCase().includes(facturaSearchTerm)
+                );
             }
-            tbody.appendChild(fragment);
+        
+            facturasTbody.innerHTML = '';
+            if (filteredFacturas.length === 0) {
+                facturasTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay facturas que coincidan.</td></tr>`;
+            } else {
+                const facturaFragment = document.createDocumentFragment();
+                filteredFacturas.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(f => {
+                    const row = document.createElement('tr');
+                    row.className = "border-b border-gray-800 hover:bg-gray-800/50";
+                    
+                    const statusClass = f.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
+                    row.innerHTML = `
+                        <td class="py-3 px-3">${f.date}</td>
+                        <td class="py-2 px-3">${this.escapeHTML(f.number)}</td>
+                        <td class="py-2 px-3">${this.escapeHTML(f.client)}</td>
+                        <td class="py-2 px-3 text-right">${this.formatCurrency(f.amount, f.currency)}</td>
+                        <td class="py-2 px-3 text-center">
+                            <button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${f.id}">${f.status}</button>
+                        </td>
+                        <td class="py-2 px-3">
+                            <div class="flex items-center justify-center gap-2">
+                                <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${f.id}" title="Eliminar">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </td>`;
+                    facturaFragment.appendChild(row);
+                });
+                facturasTbody.appendChild(facturaFragment);
+            }
+            lucide.createIcons();
         },
 
         updateModuleVisibility() {
@@ -744,6 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
             this.elements.reportDisplayArea.addEventListener('click', e => this.handleReportDownloadClick(e));
             document.getElementById('cashflow-search').addEventListener('input', () => this.renderTransactions());
             document.getElementById('proformas-search').addEventListener('input', () => this.renderDocuments());
+            document.getElementById('facturas-search').addEventListener('input', () => this.renderFacturas());
             
             this.elements.aeatConfigForm.addEventListener('submit', e => this.handleSaveAeatConfig(e));
             this.elements.fiscalParamsForm.addEventListener('submit', e => this.handleSaveFiscalParams(e));
@@ -759,6 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             document.getElementById('facturacion-tab-crear').addEventListener('click', () => this.switchFacturacionTab('crear'));
+            document.getElementById('facturacion-tab-listado').addEventListener('click', () => this.switchFacturacionTab('listado'));
             document.getElementById('facturacion-tab-config').addEventListener('click', () => this.switchFacturacionTab('config'));
         },
         
@@ -1377,11 +1394,17 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         
         switchFacturacionTab(tabId) {
-            const tabs = ['crear', 'config'];
-            tabs.forEach(id => {
-                document.getElementById(`facturacion-tab-${id}`).classList.toggle('active', id === tabId);
-                document.getElementById(`facturacion-content-${id}`).classList.toggle('hidden', id !== tabId);
+            const tabs = ['crear', 'listado', 'config'];
+            tabs.forEach(t => {
+                document.getElementById(`facturacion-content-${t}`).classList.toggle('hidden', t !== tabId);
+                document.getElementById(`facturacion-tab-${t}`).classList.toggle('active', t === tabId);
+                document.getElementById(`facturacion-tab-${t}`).classList.toggle('border-transparent', t !== tabId);
+                document.getElementById(`facturacion-tab-${t}`).classList.toggle('text-gray-400', t !== tabId);
             });
+        
+            if (tabId === 'listado') {
+                this.renderFacturas();
+            }
         },
 
         handleAeatModuleToggleClick(e) {
