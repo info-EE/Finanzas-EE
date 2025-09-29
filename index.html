@@ -328,29 +328,48 @@
                         </div>
                         <div id="report-filters">
                             <div id="default-filters-container">
-                                <div>
-                                    <label for="report-period" class="block text-sm font-medium text-gray-400">Período</label>
-                                    <select id="report-period" class="form-input mt-1">
-                                        <option value="daily">Diario</option>
-                                        <option value="weekly">Semanal</option>
-                                        <option value="monthly" selected>Mensual</option>
-                                        <option value="annual">Anual</option>
-                                    </select>
-                                </div>
-                                <div id="date-input-container" class="mt-4">
-                                     </div>
-                                <div id="report-account-container" class="mt-4">
-                                    <label for="report-account" class="block text-sm font-medium text-gray-400">Cuenta / Banco</label>
-                                    <select id="report-account" class="form-input mt-1">
+                                <div class="grid grid-cols-12 gap-4">
+                                    <div class="col-span-6 md:col-span-3">
+                                        <label for="report-period" class="block text-sm font-medium text-gray-400 mb-1">Período</label>
+                                        <select id="report-period" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+                                            <option value="daily">Diario</option>
+                                            <option value="weekly">Semanal</option>
+                                            <option value="monthly" selected>Mensual</option>
+                                            <option value="annual">Anual</option>
                                         </select>
+                                    </div>
+                                    <!-- Contenedores para cada tipo de selector de fecha -->
+                                    <div id="date-input-daily" class="col-span-6 md:col-span-3 hidden">
+                                        <label for="report-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                                        <input type="date" id="report-date" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+                                    </div>
+                                    <div id="date-input-weekly" class="col-span-6 md:col-span-3 hidden">
+                                        <label for="report-week" class="block text-sm font-medium text-gray-400 mb-1">Semana</label>
+                                        <input type="week" id="report-week" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+                                    </div>
+                                    <div id="date-input-monthly" class="col-span-6 md:col-span-3">
+                                        <label for="report-month" class="block text-sm font-medium text-gray-400 mb-1">Mes</label>
+                                        <input type="month" id="report-month" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
+                                    </div>
+                                    <div id="date-input-annual" class="col-span-6 md:col-span-3 hidden">
+                                        <label for="report-year" class="block text-sm font-medium text-gray-400 mb-1">Año</label>
+                                        <input type="number" id="report-year" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm" placeholder="Ej: 2024">
+                                    </div>
                                 </div>
-                                <div id="report-part-container" class="mt-4">
-                                    <label for="report-part" class="block text-sm font-medium text-gray-400">Parte</label>
-                                    <select id="report-part" class="form-input mt-1">
-                                        <option value="all">Ambas (A y B)</option>
-                                        <option value="A">A</option>
-                                        <option value="B">B</option>
-                                    </select>
+                                <div class="grid grid-cols-12 gap-4">
+                                    <div class="col-span-6 md:col-span-3">
+                                        <label for="report-account" class="block text-sm font-medium text-gray-400">Cuenta / Banco</label>
+                                        <select id="report-account" class="form-input mt-1">
+                                            </select>
+                                    </div>
+                                    <div class="col-span-6 md:col-span-3">
+                                        <label for="report-part" class="block text-sm font-medium text-gray-400">Parte</label>
+                                        <select id="report-part" class="form-input mt-1">
+                                            <option value="all">Ambas (A y B)</option>
+                                            <option value="A">A</option>
+                                            <option value="B">B</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                             <div id="sociedades-filters-container" class="hidden space-y-4">
