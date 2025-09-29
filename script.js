@@ -1422,6 +1422,124 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             lucide.createIcons();
         },
+
+        // =================================================================
+        // FUNCIONES AUXILIARES Y UTILIDADES
+        // =================================================================
+        
+        escapeHTML(str) {
+            if (typeof str !== 'string') return '';
+            const p = document.createElement('p');
+            p.textContent = str;
+            return p.innerHTML;
+        },
+
+        formatCurrency(amount, currency = 'EUR') {
+            const symbol = this.getCurrencySymbol(currency);
+            const value = new Intl.NumberFormat(currency === 'EUR' ? 'de-DE' : 'en-US', {
+                style: 'decimal',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+            return `${value} ${symbol}`;
+        },
+
+        getCurrencySymbol(currency) {
+            switch (currency) {
+                case 'USD': return '$';
+                case 'EUR': return '€';
+                default: return currency;
+            }
+        },
+
+        setDateDefaults() {
+            const today = new Date().toISOString().split('T')[0];
+            ['transaction-date', 'transfer-date', 'proforma-date', 'factura-date'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = today;
+            });
+        },
+
+        updateDateInputForReports() {
+            const period = document.getElementById('report-period').value;
+            document.getElementById('date-input-daily').classList.toggle('hidden', period !== 'daily');
+            document.getElementById('date-input-weekly').classList.toggle('hidden', period !== 'weekly');
+            document.getElementById('date-input-monthly').classList.toggle('hidden', period !== 'monthly');
+            document.getElementById('date-input-annual').classList.toggle('hidden', period !== 'annual');
+        },
+
+        toggleReportFilters() {
+            const reportType = document.getElementById('report-type').value;
+            this.elements.defaultFiltersContainer.classList.toggle('hidden', reportType === 'sociedades');
+            this.elements.sociedadesFiltersContainer.classList.toggle('hidden', reportType !== 'sociedades');
+            if (reportType === 'sociedades') {
+                this.populateSociedadesYearFilter();
+            }
+        },
+
+        toggleSidebar() {
+            this.elements.sidebar.classList.toggle('-translate-x-full');
+        },
+
+        showConfirmationModal(title, message, onConfirm) {
+            const modal = document.getElementById('confirmation-modal');
+            document.getElementById('confirmation-modal-title').textContent = title;
+            document.getElementById('confirmation-modal-message').textContent = message;
+            modal.classList.remove('hidden');
+
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+
+            const confirmHandler = () => {
+                onConfirm();
+                modal.classList.add('hidden');
+                cleanup();
+            };
+
+            const cancelHandler = () => {
+                modal.classList.add('hidden');
+                cleanup();
+            };
+
+            const cleanup = () => {
+                confirmBtn.removeEventListener('click', confirmHandler);
+                cancelBtn.removeEventListener('click', cancelHandler);
+            };
+
+            confirmBtn.addEventListener('click', confirmHandler);
+            cancelBtn.addEventListener('click', cancelHandler);
+        },
+
+        showAlertModal(title, message) {
+            const modal = document.getElementById('alert-modal');
+            document.getElementById('alert-modal-title').textContent = title;
+            document.getElementById('alert-modal-message').textContent = message;
+            modal.classList.remove('hidden');
+
+            const okBtn = document.getElementById('alert-modal-ok-btn');
+            const okHandler = () => {
+                modal.classList.add('hidden');
+                okBtn.removeEventListener('click', okHandler);
+            };
+            okBtn.addEventListener('click', okHandler);
+        },
+
+        resetTransactionForm() {
+            this.elements.transactionForm.reset();
+            document.getElementById('transaction-id').value = '';
+            document.getElementById('form-title').textContent = 'Nuevo Movimiento';
+            document.getElementById('form-submit-button').textContent = 'Añadir Movimiento';
+            this.setDateDefaults();
+            this.populateCategories();
+            this.updateCurrencySymbol();
+        },
+
+        switchFacturacionTab(tabId) {
+            ['crear', 'listado', 'config'].forEach(id => {
+                document.getElementById(`facturacion-tab-${id}`).classList.toggle('active', id === tabId);
+                document.getElementById(`facturacion-content-${id}`).classList.toggle('hidden', id !== tabId);
+            });
+        }
     };
 
     App.init();
