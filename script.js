@@ -1539,6 +1539,171 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById(`facturacion-tab-${id}`).classList.toggle('active', id === tabId);
                 document.getElementById(`facturacion-content-${id}`).classList.toggle('hidden', id !== tabId);
             });
+        },
+
+        // =================================================================
+        // FUNCIONES DE FACTURACIÓN Y AEAT
+        // =================================================================
+
+        renderAeatConfig() {
+            const form = this.elements.aeatConfigForm;
+            const config = this.state.settings.aeatConfig;
+            form.querySelector('#aeat-cert-path').value = config.certPath;
+            form.querySelector('#aeat-cert-pass').value = config.certPass;
+            form.querySelector('#aeat-endpoint').value = config.endpoint;
+            form.querySelector('#aeat-api-key').value = config.apiKey;
+        },
+
+        handleSaveAeatConfig(e) {
+            e.preventDefault();
+            const form = this.elements.aeatConfigForm;
+            this.state.settings.aeatConfig = {
+                certPath: form.querySelector('#aeat-cert-path').value,
+                certPass: form.querySelector('#aeat-cert-pass').value,
+                endpoint: form.querySelector('#aeat-endpoint').value,
+                apiKey: form.querySelector('#aeat-api-key').value
+            };
+            this.saveData();
+            this.showAlertModal('Configuración Guardada', 'La configuración de la AEAT ha sido guardada correctamente.');
+        },
+
+        handleAeatModuleToggleClick(e) {
+            const toggleBtn = e.target.closest('.aeat-toggle-btn');
+            if (toggleBtn) {
+                this.state.settings.aeatModuleActive = !this.state.settings.aeatModuleActive;
+                this.renderAeatSettings();
+                this.saveData();
+            }
+        },
+
+        renderFiscalParams() {
+            const form = this.elements.fiscalParamsForm;
+            form.querySelector('#corporate-tax-rate').value = this.state.settings.fiscalParameters.corporateTaxRate;
+        },
+
+        handleSaveFiscalParams(e) {
+            e.preventDefault();
+            const rate = parseFloat(this.elements.fiscalParamsForm.querySelector('#corporate-tax-rate').value);
+            if (isNaN(rate) || rate < 0 || rate > 100) {
+                this.showAlertModal('Dato Inválido', 'Por favor, introduce un tipo de impuesto de sociedades válido (0-100).');
+                return;
+            }
+            this.state.settings.fiscalParameters.corporateTaxRate = rate;
+            this.saveData();
+            this.showAlertModal('Parámetros Guardados', 'Los parámetros fiscales han sido actualizados.');
+        },
+
+        addFacturaItem() {
+            const itemRow = document.createElement('div');
+            itemRow.className = 'factura-item-row grid grid-cols-12 gap-2 items-center mb-2';
+            itemRow.innerHTML = `
+                <div class="col-span-6">
+                    <input type="text" class="factura-item-description w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm" placeholder="Descripción del servicio" required>
+                </div>
+                <div class="col-span-2">
+                    <input type="number" class="factura-item-quantity w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm" placeholder="1" value="1" min="0" step="any" required>
+                </div>
+                <div class="col-span-2">
+                    <input type="number" class="factura-item-price w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm" placeholder="100" min="0" step="any" required>
+                </div>
+                <div class="col-span-1 text-right">
+                    <span class="factura-item-total text-sm">0.00</span>
+                </div>
+                <div class="col-span-1 flex justify-end">
+                    <button type="button" class="factura-remove-item-btn text-red-500 hover:text-red-400 p-1">
+                        <i data-lucide="x-circle" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `;
+            this.elements.facturaItemsContainer.appendChild(itemRow);
+            lucide.createIcons();
+        },
+
+        calculateFacturaTotals() {
+            let subtotal = 0;
+            const currency = document.getElementById('factura-currency').value;
+            const operationType = this.elements.facturaOperationType.value;
+            const ivaRate = operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
+
+            this.elements.facturaItemsContainer.querySelectorAll('.factura-item-row').forEach(row => {
+                const quantity = parseFloat(row.querySelector('.factura-item-quantity').value) || 0;
+                const price = parseFloat(row.querySelector('.factura-item-price').value) || 0;
+                const total = quantity * price;
+                row.querySelector('.factura-item-total').textContent = this.formatCurrency(total, currency);
+                subtotal += total;
+            });
+
+            const iva = subtotal * ivaRate;
+            const total = subtotal + iva;
+
+            document.getElementById('factura-subtotal').textContent = this.formatCurrency(subtotal, currency);
+            document.getElementById('factura-iva').textContent = this.formatCurrency(iva, currency);
+            document.getElementById('factura-total').textContent = this.formatCurrency(total, currency);
+        },
+
+        handleOperationTypeChange() {
+            const operationType = this.elements.facturaOperationType.value;
+            const ivaRate = operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
+            document.getElementById('factura-iva-label').textContent = `IVA (${(ivaRate * 100).toFixed(0)}%)`;
+            this.calculateFacturaTotals();
+        },
+
+        handleGenerateInvoice(e) {
+            e.preventDefault();
+            const form = this.elements.nuevaFacturaForm;
+            const currency = form.querySelector('#factura-currency').value;
+            const operationType = form.querySelector('#factura-operation-type').value;
+            const ivaRate = operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
+
+            let subtotal = 0;
+            const items = [];
+            form.querySelectorAll('.factura-item-row').forEach(row => {
+                const description = row.querySelector('.factura-item-description').value;
+                const quantity = parseFloat(row.querySelector('.factura-item-quantity').value);
+                const price = parseFloat(row.querySelector('.factura-item-price').value);
+                if (description && !isNaN(quantity) && !isNaN(price)) {
+                    items.push({ description, quantity, price });
+                    subtotal += quantity * price;
+                }
+            });
+
+            if (items.length === 0) {
+                this.showAlertModal('Factura Vacía', 'Debes añadir al menos un concepto a la factura.');
+                return;
+            }
+
+            const iva = subtotal * ivaRate;
+            const total = subtotal + iva;
+
+            const newInvoice = {
+                id: crypto.randomUUID(),
+                type: 'Factura',
+                date: form.querySelector('#factura-date').value,
+                number: form.querySelector('#factura-number').value,
+                client: form.querySelector('#factura-client').value,
+                nif: form.querySelector('#factura-nif').value,
+                currency: currency,
+                operationType: operationType,
+                items: items,
+                subtotal: subtotal,
+                iva: iva,
+                total: total,
+                amount: total, // 'amount' para consistencia con otros documentos
+                status: 'Adeudada'
+            };
+
+            this.state.documents.push(newInvoice);
+            this.showAlertModal('Factura Generada', `La factura ${newInvoice.number} ha sido creada con éxito.`);
+            
+            // Resetear formulario
+            form.reset();
+            this.elements.facturaItemsContainer.innerHTML = '';
+            this.addFacturaItem();
+            this.setDateDefaults();
+            this.calculateFacturaTotals();
+            
+            this.updateAll();
+            this.switchFacturacionTab('listado');
         }
     };
 
