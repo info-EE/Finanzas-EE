@@ -721,10 +721,100 @@
         
         <div id="page-clientes" class="page-content hidden">
             <h2 class="text-3xl font-bold mb-6 text-white">Gestión de Clientes</h2>
-            <div class="card p-6 rounded-xl text-center">
-                <i data-lucide="construction" class="w-16 h-16 mx-auto mb-4 text-yellow-500"></i>
-                <h3 class="font-semibold text-lg">Módulo en Construcción</h3>
-                <p class="text-gray-400">Esta sección estará disponible próximamente.</p>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1">
+                    <div class="card p-6 rounded-xl">
+                        <h3 id="client-form-title" class="font-semibold mb-4 text-lg">Agregar Nuevo Cliente</h3>
+                        <form id="add-client-form" class="space-y-4">
+                            <input type="hidden" id="client-id">
+                            <div>
+                                <label for="client-name" class="block text-sm font-medium text-gray-400 mb-1">Nombre Completo o Empresa</label>
+                                <input type="text" id="client-name" class="form-input" required>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="col-span-1">
+                                    <label for="client-tax-id-type" class="block text-sm font-medium text-gray-400 mb-1">Tipo ID</label>
+                                    <select id="client-tax-id-type" class="form-input">
+                                        <option>NIF</option>
+                                        <option>CIF</option>
+                                        <option>RUC</option>
+                                        <option>CUIT</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2">
+                                    <label for="client-tax-id" class="block text-sm font-medium text-gray-400 mb-1">Número</label>
+                                    <input type="text" id="client-tax-id" class="form-input">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="client-address" class="block text-sm font-medium text-gray-400 mb-1">Dirección Completa</label>
+                                <textarea id="client-address" rows="3" class="form-input" placeholder="País, Provincia, Ciudad, Calle, Número..."></textarea>
+                            </div>
+                            <div>
+                                <label for="client-phone-landline" class="block text-sm font-medium text-gray-400 mb-1">Teléfono Fijo</label>
+                                <div class="flex">
+                                    <select id="client-phone-landline-prefix" class="form-input rounded-r-none w-28">
+                                        <option value="+34">ES +34</option>
+                                        <option value="+595">PY +595</option>
+                                        <option value="+54">AR +54</option>
+                                        <option value="+1">US +1</option>
+                                    </select>
+                                    <input type="text" id="client-phone-landline" class="form-input rounded-l-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="client-phone-mobile" class="block text-sm font-medium text-gray-400 mb-1">Teléfono Celular</label>
+                                <div class="flex">
+                                    <select id="client-phone-mobile-prefix" class="form-input rounded-r-none w-28">
+                                        <option value="+34">ES +34</option>
+                                        <option value="+595">PY +595</option>
+                                        <option value="+54">AR +54</option>
+                                        <option value="+1">US +1</option>
+                                    </select>
+                                    <input type="text" id="client-phone-mobile" class="form-input rounded-l-none">
+                                </div>
+                            </div>
+                             <div>
+                                <label for="client-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                                <input type="email" id="client-email" class="form-input">
+                            </div>
+                            <div>
+                                <label for="client-industry" class="block text-sm font-medium text-gray-400 mb-1">Rubro</label>
+                                <input type="text" id="client-industry" class="form-input">
+                            </div>
+
+                            <div class="flex items-center gap-2 pt-2">
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i data-lucide="save" class="w-4 h-4"></i><span id="client-form-submit-text">Guardar Cliente</span>
+                                </button>
+                                <button type="button" id="client-form-cancel-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors hidden">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                     <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Listado de Clientes</h3>
+                         <div class="overflow-x-auto">
+                            <table class="w-full text-left min-w-[700px]">
+                                <thead>
+                                    <tr class="text-gray-400 border-b border-gray-700">
+                                        <th class="py-2 px-3">Nombre</th>
+                                        <th class="py-2 px-3">ID Fiscal</th>
+                                        <th class="py-2 px-3">Email</th>
+                                        <th class="py-2 px-3">Teléfono</th>
+                                        <th class="py-2 px-3 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clients-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

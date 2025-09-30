@@ -13,6 +13,7 @@ export function getDefaultState() {
         ],
         transactions: [],
         documents: [],
+        clients: [], // <-- NUEVO
         incomeCategories: ['Ventas', 'Servicios', 'Otros Ingresos', 'Transferencia', 'Ajuste de Saldo'],
         expenseCategories: ['Operaciones', 'Marketing', 'Salarios', 'Software', 'Impuestos', 'Otros Gastos', 'Inversión', 'Transferencia', 'Comisiones', 'Ajuste de Saldo'],
         invoiceOperationTypes: ['Nacional / Intracomunitaria (UE)', 'Exportación (Fuera de la UE)'],
@@ -42,7 +43,7 @@ export function loadData(app) {
             const defaultState = getDefaultState();
             const newState = { ...defaultState };
 
-            ['accounts', 'transactions', 'documents', 'incomeCategories', 'expenseCategories', 'invoiceOperationTypes'].forEach(key => {
+            ['accounts', 'transactions', 'documents', 'clients', 'incomeCategories', 'expenseCategories', 'invoiceOperationTypes'].forEach(key => { // <-- clients AÑADIDO
                 if (Array.isArray(parsedData[key])) {
                     newState[key] = parsedData[key];
                 }

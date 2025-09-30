@@ -39,7 +39,10 @@ export const elements = {
     invoiceContentArea: document.getElementById('invoice-content-area'),
     closeInvoiceViewerBtn: document.getElementById('close-invoice-viewer-btn'),
     printInvoiceBtn: document.getElementById('print-invoice-btn'),
-    pdfInvoiceBtn: document.getElementById('pdf-invoice-btn')
+    pdfInvoiceBtn: document.getElementById('pdf-invoice-btn'),
+    // NUEVO: Elementos de Clientes
+    addClientForm: document.getElementById('add-client-form'),
+    clientsTableBody: document.getElementById('clients-table-body'),
 };
 
 export const charts = {
@@ -75,10 +78,49 @@ export function updateAll(app) {
     renderDocuments(app.state);
     renderFacturas(app.state);
     renderInvestments(app.state);
+    renderClients(app.state); // <-- NUEVO
     updateModuleVisibility();
     renderArchives(app.state);
     app.saveData();
 }
+
+// NUEVA FUNCIÓN
+export function renderClients(state) {
+    const tbody = elements.clientsTableBody;
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    if (state.clients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay clientes registrados.</td></tr>`;
+        return;
+    }
+
+    state.clients.forEach(client => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-800 hover:bg-gray-800/50';
+        row.innerHTML = `
+            <td class="py-3 px-3">${escapeHTML(client.name)}</td>
+            <td class="py-3 px-3">${escapeHTML(client.taxIdType)} ${escapeHTML(client.taxId)}</td>
+            <td class="py-3 px-3">${escapeHTML(client.email)}</td>
+            <td class="py-3 px-3">${escapeHTML(client.phoneMobilePrefix)}${escapeHTML(client.phoneMobile)}</td>
+            <td class="py-3 px-3">
+                <div class="flex items-center justify-center gap-2">
+                    <button class="edit-client-btn p-2 text-blue-400 hover:text-blue-300" data-id="${client.id}" title="Editar">
+                        <i data-lucide="edit" class="w-4 h-4"></i>
+                    </button>
+                    <button class="delete-client-btn p-2 text-red-400 hover:text-red-300" data-id="${client.id}" title="Eliminar">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        fragment.appendChild(row);
+    });
+    tbody.appendChild(fragment);
+    lucide.createIcons();
+}
+
 
 export function renderTransactions(state) {
     const tbody = elements.transactionsTableBody;

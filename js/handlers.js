@@ -18,6 +18,15 @@ export function bindEventListeners(app) {
         });
     });
 
+    // --- NUEVOS LISTENERS PARA CLIENTES ---
+    if (elements.addClientForm) {
+        elements.addClientForm.addEventListener('submit', (e) => handleAddClient(e, app));
+    }
+    if (elements.clientsTableBody) {
+        elements.clientsTableBody.addEventListener('click', (e) => handleClientsTableClick(e, app));
+    }
+    // --- FIN DE NUEVOS LISTENERS ---
+
     elements.transactionForm.addEventListener('submit', (e) => app.handleTransactionFormSubmit(e));
     elements.transactionsTableBody.addEventListener('click', (e) => app.handleTransactionsTableClick(e));
     document.getElementById('transaction-type').addEventListener('change', () => populateCategories(app.state));
@@ -83,6 +92,84 @@ export function bindEventListeners(app) {
 
     elements.fiscalParamsForm.addEventListener('submit', (e) => app.handleFiscalParamsSave(e));
 }
+
+// --- NUEVAS FUNCIONES PARA CLIENTES ---
+export function handleAddClient(e, app) {
+    e.preventDefault();
+    const form = e.target;
+    const id = form.querySelector('#client-id').value;
+    
+    const clientData = {
+        name: form.querySelector('#client-name').value,
+        taxIdType: form.querySelector('#client-tax-id-type').value,
+        taxId: form.querySelector('#client-tax-id').value,
+        address: form.querySelector('#client-address').value,
+        phoneLandlinePrefix: form.querySelector('#client-phone-landline-prefix').value,
+        phoneLandline: form.querySelector('#client-phone-landline').value,
+        phoneMobilePrefix: form.querySelector('#client-phone-mobile-prefix').value,
+        phoneMobile: form.querySelector('#client-phone-mobile').value,
+        email: form.querySelector('#client-email').value,
+        industry: form.querySelector('#client-industry').value,
+    };
+
+    if (id) {
+        // Editar cliente existente
+        const client = app.state.clients.find(c => c.id === id);
+        if (client) {
+            Object.assign(client, clientData);
+        }
+    } else {
+        // Agregar nuevo cliente
+        clientData.id = crypto.randomUUID();
+        app.state.clients.push(clientData);
+    }
+
+    updateAll(app);
+    form.reset();
+    form.querySelector('#client-id').value = '';
+    document.getElementById('client-form-title').textContent = 'Agregar Nuevo Cliente';
+    document.getElementById('client-form-submit-text').textContent = 'Guardar Cliente';
+}
+
+export function handleClientsTableClick(e, app) {
+    const target = e.target;
+    const editBtn = target.closest('.edit-client-btn');
+    const deleteBtn = target.closest('.delete-client-btn');
+    const form = document.getElementById('add-client-form');
+
+    if (editBtn) {
+        const id = editBtn.dataset.id;
+        const client = app.state.clients.find(c => c.id === id);
+        if (client) {
+            form.querySelector('#client-id').value = client.id;
+            form.querySelector('#client-name').value = client.name;
+            form.querySelector('#client-tax-id-type').value = client.taxIdType;
+            form.querySelector('#client-tax-id').value = client.taxId;
+            form.querySelector('#client-address').value = client.address;
+            form.querySelector('#client-phone-landline-prefix').value = client.phoneLandlinePrefix;
+            form.querySelector('#client-phone-landline').value = client.phoneLandline;
+            form.querySelector('#client-phone-mobile-prefix').value = client.phoneMobilePrefix;
+            form.querySelector('#client-phone-mobile').value = client.phoneMobile;
+            form.querySelector('#client-email').value = client.email;
+            form.querySelector('#client-industry').value = client.industry;
+            
+            document.getElementById('client-form-title').textContent = 'Editar Cliente';
+            document.getElementById('client-form-submit-text').textContent = 'Actualizar Cliente';
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    if (deleteBtn) {
+        const id = deleteBtn.dataset.id;
+        app.showConfirmationModal('Eliminar Cliente', '¿Estás seguro de que quieres eliminar este cliente?', () => {
+            app.state.clients = app.state.clients.filter(c => c.id !== id);
+            updateAll(app);
+        });
+    }
+}
+
+// --- FIN DE NUEVAS FUNCIONES ---
+
 
 export function handleTransactionFormSubmit(e, app) {
     e.preventDefault();
