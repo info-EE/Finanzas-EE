@@ -338,6 +338,7 @@
                                             <option value="annual">Anual</option>
                                         </select>
                                     </div>
+                                    <!-- Contenedores para cada tipo de selector de fecha -->
                                     <div id="date-input-daily" class="col-span-6 md:col-span-3 hidden">
                                         <label for="report-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
                                         <input type="date" id="report-date" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
@@ -581,14 +582,14 @@
                                     <select id="factura-operation-type" class="form-input">
                                         </select>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
+                                <div class="grid grid-cols-12 gap-4 mb-4">
+                                    <div class="col-span-6">
                                         <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
-                                        <input type="text" id="factura-cliente" class="form-input" placeholder="Nombre del Cliente" required>
+                                        <input type="text" id="factura-client" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm" placeholder="Nombre del Cliente" required>
                                     </div>
-                                    <div>
+                                    <div class="col-span-6">
                                         <label for="factura-nif" class="block text-sm text-gray-400 mb-1">NIF/CIF</label>
-                                        <input type="text" id="factura-nif" class="form-input" placeholder="NIF/CIF del Cliente" required>
+                                        <input type="text" id="factura-nif" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm" placeholder="NIF/CIF del Cliente" required>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-12 gap-4 mb-4">
@@ -611,23 +612,7 @@
                                 <div class="border-t border-gray-700 pt-4">
                                     <h4 class="font-semibold mb-2">Conceptos</h4>
                                     <div id="factura-items-container" class="space-y-2">
-                                        <div class="grid grid-cols-12 gap-2 factura-item-row items-center">
-                                            <div class="col-span-6">
-                                                <input type="text" class="form-input factura-item-concept" placeholder="Descripción del servicio" required>
-                                            </div>
-                                            <div class="col-span-2">
-                                                <input type="number" class="form-input factura-item-quantity" placeholder="1" value="1" min="1" step="1" required>
-                                            </div>
-                                            <div class="col-span-3">
-                                                <input type="number" class="form-input factura-item-price" placeholder="0.00" value="" min="0" step="0.01" required>
-                                            </div>
-                                            <div class="col-span-1 text-right">
-                                                <button type="button" class="factura-remove-item-btn p-2 text-red-400 hover:text-red-300">
-                                                    <i data-lucide="x-circle" class="w-5 h-5"></i>
-                                                </button>
-                                            </div>
                                         </div>
-                                    </div>
                                     <button type="button" id="factura-add-item-btn" class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2">
                                         <i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir concepto
                                     </button>
@@ -658,17 +643,17 @@
 
             <div id="facturacion-content-listado" class="hidden">
                 <div class="card p-6 rounded-xl">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-semibold text-lg">Listado de Facturas</h3>
-                        <input type="text" id="facturas-search" class="form-input max-w-xs" placeholder="Buscar por N° o cliente...">
+                    <h3 class="font-semibold mb-4">Listado de Facturas</h3>
+                    <div class="mb-4">
+                        <input type="text" id="facturas-search" class="form-input" placeholder="Buscar por N° de factura o cliente...">
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left min-w-[700px]">
                             <thead>
                                 <tr class="text-gray-400 border-b border-gray-700">
+                                    <th class="py-2 px-3">Fecha</th>
                                     <th class="py-2 px-3">N° Factura</th>
                                     <th class="py-2 px-3">Cliente</th>
-                                    <th class="py-2 px-3">Fecha</th>
                                     <th class="py-2 px-3 text-right">Monto</th>
                                     <th class="py-2 px-3 text-center">Estado</th>
                                     <th class="py-2 px-3 text-center">Acciones</th>
@@ -728,7 +713,7 @@
         <div id="page-usuarios" class="page-content hidden">
             <h2 class="text-3xl font-bold mb-6 text-white">Gestión de Usuarios</h2>
             <div class="card p-6 rounded-xl text-center">
-                <i data-lucide="construction" class="w-16 h-16 mx-auto mb-4 text-yellow-500"></i>
+                <i data-lucide="construct" class="w-16 h-16 mx-auto mb-4 text-yellow-500"></i>
                 <h3 class="font-semibold text-lg">Módulo en Construcción</h3>
                 <p class="text-gray-400">Esta sección estará disponible próximamente.</p>
             </div>
@@ -807,6 +792,6 @@
 
     </main>
     
-    <script type="module" src="js/main.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
