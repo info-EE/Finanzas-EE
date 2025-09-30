@@ -599,92 +599,157 @@ export function showInvoiceViewer(invoiceId, state) {
     // Guardar el ID de la factura activa en el modal para que las funciones de imprimir/PDF puedan encontrarlo
     elements.invoiceViewerModal.dataset.activeInvoiceId = invoiceId;
 
-    // El contenido visual principal se genera en printInvoice y downloadInvoiceAsPDF
-    // Esta función ahora solo muestra el modal y un contenido base
-    const previewHtml = `
-        <div id="invoice-printable-area" class="p-8 bg-gray-900 text-white">
-            <div class="text-center">
-                <h2 class="text-2xl font-bold mb-4">Previsualización de Factura</h2>
-                <p class="text-gray-400">El diseño final profesional se aplicará al imprimir o descargar como PDF.</p>
-                <div class="mt-8 p-4 border border-gray-700 rounded-lg text-left">
-                    <p><strong>Cliente:</strong> ${escapeHTML(invoice.client)}</p>
-                    <p><strong>Número:</strong> ${escapeHTML(invoice.number)}</p>
-                    <p><strong>Total:</strong> ${formatCurrency(invoice.total, invoice.currency)}</p>
-                </div>
-            </div>
-        </div>`;
-
+    // El contenido de la previsualización ahora se genera con el nuevo diseño profesional
+    // para que sea consistente, pero con el tema oscuro de la app.
+    const previewHtml = generatePrintableInvoiceHTML(invoice, true); // true para modo preview
     elements.invoiceContentArea.innerHTML = previewHtml;
+
     elements.invoiceViewerModal.classList.remove('hidden');
     elements.invoiceViewerModal.classList.add('flex');
 }
-
 
 export function hideInvoiceViewer() {
     elements.invoiceViewerModal.classList.add('hidden');
     elements.invoiceViewerModal.classList.remove('flex');
     elements.invoiceContentArea.innerHTML = '';
-    delete elements.invoiceViewerModal.dataset.activeInvoiceId; // Limpiar el ID activo
+    delete elements.invoiceViewerModal.dataset.activeInvoiceId;
 }
 
-function generatePrintableInvoiceHTML(invoice, state) {
-    const logoBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIbGNtcwIQAABtbnRyUkdCIFhZWiAH4gADABQACQAOAB1hY3NwTVNGVAAAAABzYXdzY3RybAAAAAAAAAAAAAAAAAAAAAAA9tYAAQAAAADTLWhhbmSdkQA9QAAAAAAAABAAAAAAC1h0YWNoAAAAA2ZGVmIAAAAAAAAAAAAAAABjdXJ2AAAAAAAABAAAAAB0AAAA/4AAgAD/2AAwEDAAEAAQAAAAUACQABAAAAAQAAAAEAAAEyAAAABgAAAAcAAAASYwAAACAAAAAQAACvywAAAEwAAAAQAACvywAAvssAAM/LAAAAAwAAARwAAABkAAAAAAAAABZWAAEAAAABAAMABwAAAAEAAAEyAAAAFgABAAMAAAABAAEAAgAAAAEAAAEyAAAAFgABAAMAAAABAAUAAAARAAUAAAABAACgJgARAAUAAAABAACgLgARAAUAAAABAACgMgARAAUAAAABAACgOgARAAUAAAABAACgQgARAAUAAAABAACgSgARAAUAAAABAACgUgASAAUAAAABAAAAAAAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAF-";
+// --- NUEVA FUNCIÓN AUXILIAR PARA GENERAR EL HTML DE LA FACTURA ---
+function generatePrintableInvoiceHTML(invoice, isPreview) {
+    // Logo de la empresa convertido a Base64 para incrustarlo directamente
+    const logoBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIbGNtcwIQAABtbnRyUkdCIFhZWiAH4gADABQACQAOAB1hY3NwTVNGVAAAAABzYXdzY3RybAAAAAAAAAAAAAAAAAAAAAAA9tYAAQAAAADTLWhhbmSdkQA9QAAAAAAAABAAAAAAC1h0YWNoAAAAA2ZGVmIAAAAAAAAAAAAAAABjdXJ2AAAAAAAABAAAAAB0AAAA/4AAgAD/2AAwEDAAEAAQAAAAUACQABAAAAAQAAAAEAAAEyAAAABgAAAAcAAAASYwAAACAAAAAQAACvywAAAEwAAAAQAACvywAAvssAAM/LAAAAAwAAARwAAABkAAAAAAAAABZWAAEAAAABAAMABwAAAAEAAAEyAAAAFgABAAMAAAABAAEAAgAAAAEAAAEyAAAAFgABAAMAAAABAAUAAAARAAUAAAABAACgJgARAAUAAAABAACgLgARAAUAAAABAACgMgARAAUAAAABAACgOgARAAUAAAABAACgQgARAAUAAAABAACgSgARAAUAAAABAACgUgASAAUAAAABAAAAAAAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAF-";
 
-    const axb = contentToPrint.querySelector('#invoice-printable-area');
+    const ivaRate = invoice.operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
+    const isExport = ivaRate === 0;
 
-    if (!axb) return;
+    let itemsHtml = '';
+    invoice.items.forEach(item => {
+        itemsHtml += `
+            <tr>
+                <td>${escapeHTML(item.description)}</td>
+                <td class="text-right">${item.quantity.toFixed(2)}</td>
+                <td class="text-right">${formatCurrency(item.price, invoice.currency)}</td>
+                <td class="text-right">${formatCurrency(item.quantity * item.price, invoice.currency)}</td>
+            </tr>
+        `;
+    });
+
+    const bodyHtml = `
+        <div id="invoice-printable-area" class="${isPreview ? '' : 'invoice-light-theme'}">
+            <header class="invoice-header">
+                <div class="company-details">
+                    <img src="${logoBase64}" alt="Logo Europa Envíos" class="logo">
+                </div>
+                <div class="invoice-details">
+                    <h1 class="invoice-title">FACTURA</h1>
+                    <p><strong>N.º de factura:</strong> ${escapeHTML(invoice.number)}</p>
+                    <p><strong>Fecha:</strong> ${invoice.date}</p>
+                </div>
+            </header>
+
+            <div class="company-address">
+                <p>
+                    <strong>LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</strong><br>
+                    CALLE ESTEBAN SALAZAR CHAPELA, NUM 20, PUERTA 87, NAVE 87<br>
+                    29004 MÁLAGA (ESPAÑA)<br>
+                    NIF: 856340656<br>
+                    Tel: (34) 633 74 08 31
+                </p>
+            </div>
+
+            <div class="client-box">
+                <h3>Facturar a:</h3>
+                <p>
+                    <strong>${escapeHTML(invoice.client)}</strong><br>
+                    ${escapeHTML(invoice.address || '').replace(/\n/g, '<br>')}<br>
+                    NIF/RUC: ${escapeHTML(invoice.nif) || ''}<br>
+                    ${invoice.phone ? `Tel: ${escapeHTML(invoice.phone)}` : ''}
+                </p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Descripción</th>
+                        <th class="text-right">Cantidad</th>
+                        <th class="text-right">Precio Unit.</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+            </table>
+
+            <div class="footer-section">
+                <div class="notes">
+                    <h4>Forma de Pago:</h4>
+                    <p>Transferencia Bancaria</p>
+                    ${isExport ? `
+                    <h4 style="margin-top: 1rem;">Notas:</h4>
+                    <p>Operación no sujeta a IVA por regla de localización: Ley 37/1992</p>
+                    ` : ''}
+                </div>
+                <div class="totals">
+                    <div><span>Subtotal:</span> <span>${formatCurrency(invoice.subtotal, invoice.currency)}</span></div>
+                    <div><span>IVA (${(ivaRate * 100).toFixed(0)}%):</span> <span>${formatCurrency(invoice.iva, invoice.currency)}</span></div>
+                    <div class="total-final">
+                        <span>TOTAL:</span>
+                        <span>${formatCurrency(invoice.total, invoice.currency)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    if (isPreview) {
+        return bodyHtml;
+    }
 
     const styles = `
         <style>
             @page { size: A4; margin: 0; }
             body { 
                 margin: 0; 
-                padding: 0; 
+                -webkit-print-color-adjust: exact;
                 font-family: 'Inter', sans-serif; 
+                font-size: 10pt;
                 background-color: white; 
                 color: #333;
-                -webkit-print-color-adjust: exact;
             }
-            .invoice-container {
-                padding: 40px;
-            }
+            .invoice-container { padding: 1cm; }
             .invoice-header {
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
-                padding-bottom: 2rem;
-                border-bottom: 2px solid #004488;
+                padding-bottom: 1rem;
             }
-            .invoice-company-details { width: 50%; }
-            .invoice-logo { width: 200px; height: auto; }
-            .invoice-title-section { width: 50%; text-align: right; }
-            .invoice-title-section h1 {
+            .logo { width: 220px; }
+            .invoice-details { text-align: right; }
+            .invoice-title {
                 color: #004488;
-                font-size: 2.8rem;
+                font-size: 2.5rem;
                 font-weight: 700;
                 margin: 0;
-                line-height: 1;
             }
-            .invoice-title-section p { margin: 2px 0; }
-            .client-box {
-                border: 1px solid #e5e7eb;
-                background-color: #f9fafb;
-                padding: 15px;
-                border-radius: 8px;
-                margin: 2rem 0;
-            }
-            .client-box h3 { font-weight: 600; margin-bottom: 8px; }
+            .company-address { border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 0.5rem 0; margin-bottom: 2rem; }
+            .client-box { margin-bottom: 2rem; }
+            .client-box h3 { font-weight: 600; margin-bottom: 0.5rem; color: #555; }
+            p { margin: 4px 0; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
             th, td { padding: 10px; text-align: left; }
-            thead tr { background-color: #f3f4f6; }
-            th { font-weight: 600; }
+            thead tr { background-color: #f3f4f6; border-bottom: 2px solid #004488; }
+            th { font-weight: 600; color: #333; }
             tbody tr { border-bottom: 1px solid #e5e7eb; }
-            .totals-container { display: flex; justify-content: space-between; align-items: flex-start; }
-            .notes-section { width: 50%; }
-            .totals-section { width: 40%; }
-            .totals-section > div { display: flex; justify-content: space-between; margin-bottom: 8px; }
-            .totals-section .total-final {
-                font-size: 1.5rem;
+            .text-right { text-align: right; }
+            .footer-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 2rem; }
+            .notes { width: 50%; font-size: 9pt; color: #555; }
+            .notes h4 { margin: 0 0 4px 0; font-weight: 600; color: #333; }
+            .totals { width: 40%; }
+            .totals > div { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .totals .total-final {
+                font-size: 1.4rem;
                 font-weight: 700;
                 color: #004488;
                 border-top: 2px solid #004488;
@@ -694,9 +759,7 @@ function generatePrintableInvoiceHTML(invoice, state) {
         </style>
     `;
 
-    const printWindow = window.open('', '', 'height=800,width=800');
-    
-    const printableHTML = `
+    return `
         <html>
             <head>
                 <title>Factura ${escapeHTML(invoice.number)}</title>
@@ -705,14 +768,21 @@ function generatePrintableInvoiceHTML(invoice, state) {
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
                 ${styles}
             </head>
-            <body>
-                <div class="invoice-container">
-                    ${contentToPrint.innerHTML}
-                </div>
-            </body>
+            <body><div class="invoice-container">${bodyHtml}</div></body>
         </html>
     `;
+}
 
+// --- FUNCIÓN MODIFICADA ---
+export function printInvoice(app) {
+    const invoiceId = elements.invoiceViewerModal.dataset.activeInvoiceId;
+    if (!invoiceId) return;
+    const invoice = app.state.documents.find(doc => doc.id === invoiceId);
+    if (!invoice) return;
+
+    const printableHTML = generatePrintableInvoiceHTML(invoice, false);
+    
+    const printWindow = window.open('', '', 'height=800,width=800');
     printWindow.document.write(printableHTML);
     printWindow.document.close();
     
@@ -723,17 +793,14 @@ function generatePrintableInvoiceHTML(invoice, state) {
 }
 
 // --- FUNCIÓN MODIFICADA ---
-export function downloadInvoiceAsPDF() {
+export function downloadInvoiceAsPDF(app) {
     const invoiceId = elements.invoiceViewerModal.dataset.activeInvoiceId;
     if (!invoiceId) {
         console.error("No se pudo encontrar la factura activa para generar el PDF.");
         return;
     }
-
-    const invoiceElement = document.getElementById('invoice-printable-area');
-    
-    // Añadir clase temporal para aplicar estilos claros
-    invoiceElement.classList.add('invoice-light-theme');
+    const invoice = app.state.documents.find(doc => doc.id === invoiceId);
+    if (!invoice) return;
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({
@@ -741,24 +808,28 @@ export function downloadInvoiceAsPDF() {
         unit: 'pt',
         format: 'a4'
     });
+    
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.innerHTML = generatePrintableInvoiceHTML(invoice, false); // Genera el HTML completo con estilos
+    document.body.appendChild(tempContainer);
+    
+    const content = tempContainer.querySelector('.invoice-container');
 
-    doc.html(invoiceElement, {
+    doc.html(content, {
         callback: function (doc) {
-            // Quitar clase temporal después de generar el PDF
-            invoiceElement.classList.remove('invoice-light-theme');
-            doc.save(`Factura-${invoiceElement.dataset.invoiceNumber || 'factura'}.pdf`);
+            document.body.removeChild(tempContainer);
+            doc.save(`Factura-${invoice.number}.pdf`);
         },
-        x: 0,
-        y: 0,
-        html2canvas: {
-            scale: 0.75 
-        },
-        margin: [40, 40, 40, 40]
+        margin: [0, 0, 0, 0], // El padding ya está en el contenedor
+        width: 595, // Ancho A4 en puntos
+        windowWidth: 650
     });
 }
 
 export function updateModuleVisibility() {
-    // Esta función ya no es necesaria y puede ser eliminada o dejada en blanco.
+    // Esta función ya no es necesaria
 }
 
 export function renderArchives(state) {
