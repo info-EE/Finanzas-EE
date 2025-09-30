@@ -474,18 +474,18 @@ export function handleGenerateInvoice(e, app) {
     e.preventDefault();
     const form = e.target;
     const operationType = form.querySelector('#factura-operation-type').value;
-    const client = form.querySelector('#factura-client').value;
+    const client = form.querySelector('#factura-cliente').value;
     const nif = form.querySelector('#factura-nif').value;
     const number = form.querySelector('#factura-numero').value;
     const date = form.querySelector('#factura-fecha').value;
     const currency = form.querySelector('#factura-currency').value;
 
     const items = [];
-    form.querySelectorAll('.factura-item').forEach(itemEl => {
+    form.querySelectorAll('.factura-item-row').forEach(itemEl => {
         items.push({
-            description: itemEl.querySelector('.item-description').value,
-            quantity: parseFloat(itemEl.querySelector('.item-quantity').value),
-            price: parseFloat(itemEl.querySelector('.item-price').value)
+            description: itemEl.querySelector('.factura-item-concept').value,
+            quantity: parseFloat(itemEl.querySelector('.factura-item-quantity').value),
+            price: parseFloat(itemEl.querySelector('.factura-item-price').value)
         });
     });
 
@@ -526,7 +526,31 @@ export function handleGenerateInvoice(e, app) {
     app.updateFacturaSummary();
 }
 
+/**
+ * Maneja el cambio en el tipo de operación de la factura.
+ * Si es 'Exportación', fija la moneda a USD y la deshabilita.
+ * En caso contrario, la habilita y actualiza el resumen.
+ * @param {object} app - La instancia principal de la aplicación.
+ */
 export function handleOperationTypeChange(app) {
+    const operationTypeSelect = app.elements.facturaOperationType;
+    const currencySelect = app.elements.facturaCurrency;
+    const ivaLabel = app.elements.facturaIvaLabel;
+
+    if (!operationTypeSelect || !currencySelect) {
+        console.error("Elementos del formulario de factura no encontrados.");
+        return;
+    }
+
+    if (operationTypeSelect.value === 'Exportación (Fuera de la UE)') {
+        currencySelect.value = 'USD';
+        currencySelect.disabled = true;
+        if (ivaLabel) ivaLabel.textContent = 'IVA (0% - Exportación):';
+    } else {
+        currencySelect.disabled = false;
+        if (ivaLabel) ivaLabel.textContent = 'IVA (21%):';
+    }
+    
     app.updateFacturaSummary();
 }
 
