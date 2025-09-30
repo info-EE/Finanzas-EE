@@ -589,6 +589,7 @@ export function renderFacturas(state) {
     lucide.createIcons();
 }
 
+// --- FUNCIÓN CORREGIDA ---
 export function showInvoiceViewer(invoiceId, state) {
     const invoice = state.documents.find(doc => doc.id === invoiceId);
     if (!invoice) {
@@ -596,14 +597,24 @@ export function showInvoiceViewer(invoiceId, state) {
         return;
     }
 
-    // Guardar el ID de la factura activa en el modal para que las funciones de imprimir/PDF puedan encontrarlo
     elements.invoiceViewerModal.dataset.activeInvoiceId = invoiceId;
+    
+    // La previsualización en pantalla ahora es más simple, indicando que el diseño final
+    // se verá al imprimir o descargar.
+    const previewHtml = `
+    <div id="invoice-printable-area" class="p-8">
+        <div class="text-center">
+            <h2 class="text-2xl font-bold mb-4 text-white">Previsualización de Factura</h2>
+            <p class="text-gray-400">El diseño final profesional con logo y colores se generará al Imprimir o Descargar en PDF.</p>
+            <div class="mt-8 p-4 border border-gray-700 rounded-lg text-left bg-gray-800/50">
+                <p><strong>Cliente:</strong> ${escapeHTML(invoice.client)}</p>
+                <p><strong>Número:</strong> ${escapeHTML(invoice.number)}</p>
+                <p><strong>Total:</strong> ${formatCurrency(invoice.total, invoice.currency)}</p>
+            </div>
+        </div>
+    </div>`;
 
-    // El contenido de la previsualización ahora se genera con el nuevo diseño profesional
-    // para que sea consistente, pero con el tema oscuro de la app.
-    const previewHtml = generatePrintableInvoiceHTML(invoice, true); // true para modo preview
     elements.invoiceContentArea.innerHTML = previewHtml;
-
     elements.invoiceViewerModal.classList.remove('hidden');
     elements.invoiceViewerModal.classList.add('flex');
 }
@@ -611,14 +622,15 @@ export function showInvoiceViewer(invoiceId, state) {
 export function hideInvoiceViewer() {
     elements.invoiceViewerModal.classList.add('hidden');
     elements.invoiceViewerModal.classList.remove('flex');
-    elements.invoiceContentArea.innerHTML = '';
-    delete elements.invoiceViewerModal.dataset.activeInvoiceId;
+    if (elements.invoiceViewerModal.dataset.activeInvoiceId) {
+        delete elements.invoiceViewerModal.dataset.activeInvoiceId;
+    }
 }
 
 // --- NUEVA FUNCIÓN AUXILIAR PARA GENERAR EL HTML DE LA FACTURA ---
-function generatePrintableInvoiceHTML(invoice, isPreview) {
-    // Logo de la empresa convertido a Base64 para incrustarlo directamente
-    const logoBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIbGNtcwIQAABtbnRyUkdCIFhZWiAH4gADABQACQAOAB1hY3NwTVNGVAAAAABzYXdzY3RybAAAAAAAAAAAAAAAAAAAAAAA9tYAAQAAAADTLWhhbmSdkQA9QAAAAAAAABAAAAAAC1h0YWNoAAAAA2ZGVmIAAAAAAAAAAAAAAABjdXJ2AAAAAAAABAAAAAB0AAAA/4AAgAD/2AAwEDAAEAAQAAAAUACQABAAAAAQAAAAEAAAEyAAAABgAAAAcAAAASYwAAACAAAAAQAACvywAAAEwAAAAQAACvywAAvssAAM/LAAAAAwAAARwAAABkAAAAAAAAABZWAAEAAAABAAMABwAAAAEAAAEyAAAAFgABAAMAAAABAAEAAgAAAAEAAAEyAAAAFgABAAMAAAABAAUAAAARAAUAAAABAACgJgARAAUAAAABAACgLgARAAUAAAABAACgMgARAAUAAAABAACgOgARAAUAAAABAACgQgARAAUAAAABAACgSgARAAUAAAABAACgUgASAAUAAAABAAAAAAAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAF-";
+function generateFinalInvoiceHTML(invoice) {
+    // Logo de la empresa convertido a Base64
+    const logoBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIbGNtcwIQAABtbnRyUkdCIFhZWiAH4gADABQACQAOAB1hY3NwTVNGVAAAAABzYXdzY3RybAAAAAAAAAAAAAAAAAAAAAAA9tYAAQAAAADTLWhhbmSdkQA9QAAAAAAAABAAAAAAC1h0YWNoAAAAA2ZGVmIAAAAAAAAAAAAAAABjdXJ2AAAAAAAABAAAAAB0AAAA/4AAgAD/2AAwEDAAEAAQAAAAUACQABAAAAAQAAAAEAAAEyAAAABgAAAAcAAAASYwAAACAAAAAQAACvywAAAEwAAAAQAACvywAAvssAAM/LAAAAAwAAARwAAABkAAAAAAAAABZWAAEAAAABAAMABwAAAAEAAAEyAAAAFgABAAMAAAABAAEAAgAAAAEAAAEyAAAAFgABAAMAAAABAAUAAAARAAUAAAABAACgJgARAAUAAAABAACgLgARAAUAAAABAACgMgARAAUAAAABAACgOgARAAUAAAABAACgQgARAAUAAAABAACgSgARAAUAAAABAACgUgASAAUAAAABAAAAAAAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAF-";
 
     const ivaRate = invoice.operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
     const isExport = ivaRate === 0;
@@ -636,19 +648,19 @@ function generatePrintableInvoiceHTML(invoice, isPreview) {
     });
 
     const bodyHtml = `
-        <div id="invoice-printable-area" class="${isPreview ? '' : 'invoice-light-theme'}">
+        <div id="invoice-printable-area">
             <header class="invoice-header">
-                <div class="company-details">
-                    <img src="${logoBase64}" alt="Logo Europa Envíos" class="logo">
+                <div class="company-logo">
+                    <img src="${logoBase64}" alt="Logo Europa Envíos">
                 </div>
-                <div class="invoice-details">
+                <div class="invoice-title-section">
                     <h1 class="invoice-title">FACTURA</h1>
                     <p><strong>N.º de factura:</strong> ${escapeHTML(invoice.number)}</p>
                     <p><strong>Fecha:</strong> ${invoice.date}</p>
                 </div>
             </header>
 
-            <div class="company-address">
+            <div class="company-details">
                 <p>
                     <strong>LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</strong><br>
                     CALLE ESTEBAN SALAZAR CHAPELA, NUM 20, PUERTA 87, NAVE 87<br>
@@ -660,12 +672,10 @@ function generatePrintableInvoiceHTML(invoice, isPreview) {
 
             <div class="client-box">
                 <h3>Facturar a:</h3>
-                <p>
-                    <strong>${escapeHTML(invoice.client)}</strong><br>
-                    ${escapeHTML(invoice.address || '').replace(/\n/g, '<br>')}<br>
-                    NIF/RUC: ${escapeHTML(invoice.nif) || ''}<br>
-                    ${invoice.phone ? `Tel: ${escapeHTML(invoice.phone)}` : ''}
-                </p>
+                <p><strong>${escapeHTML(invoice.client)}</strong></p>
+                <p class="whitespace-pre-line">${escapeHTML(invoice.address || '')}</p>
+                <p>NIF/RUC: ${escapeHTML(invoice.nif) || ''}</p>
+                ${invoice.phone ? `<p>Tel: ${escapeHTML(invoice.phone)}</p>` : ''}
             </div>
 
             <table>
@@ -687,7 +697,7 @@ function generatePrintableInvoiceHTML(invoice, isPreview) {
                     <h4>Forma de Pago:</h4>
                     <p>Transferencia Bancaria</p>
                     ${isExport ? `
-                    <h4 style="margin-top: 1rem;">Notas:</h4>
+                    <h4 class="notes-title">Notas:</h4>
                     <p>Operación no sujeta a IVA por regla de localización: Ley 37/1992</p>
                     ` : ''}
                 </div>
@@ -703,87 +713,82 @@ function generatePrintableInvoiceHTML(invoice, isPreview) {
         </div>
     `;
 
-    if (isPreview) {
-        return bodyHtml;
-    }
-
-    const styles = `
-        <style>
-            @page { size: A4; margin: 0; }
-            body { 
-                margin: 0; 
-                -webkit-print-color-adjust: exact;
-                font-family: 'Inter', sans-serif; 
-                font-size: 10pt;
-                background-color: white; 
-                color: #333;
-            }
-            .invoice-container { padding: 1cm; }
-            .invoice-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                padding-bottom: 1rem;
-            }
-            .logo { width: 220px; }
-            .invoice-details { text-align: right; }
-            .invoice-title {
-                color: #004488;
-                font-size: 2.5rem;
-                font-weight: 700;
-                margin: 0;
-            }
-            .company-address { border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 0.5rem 0; margin-bottom: 2rem; }
-            .client-box { margin-bottom: 2rem; }
-            .client-box h3 { font-weight: 600; margin-bottom: 0.5rem; color: #555; }
-            p { margin: 4px 0; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
-            th, td { padding: 10px; text-align: left; }
-            thead tr { background-color: #f3f4f6; border-bottom: 2px solid #004488; }
-            th { font-weight: 600; color: #333; }
-            tbody tr { border-bottom: 1px solid #e5e7eb; }
-            .text-right { text-align: right; }
-            .footer-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 2rem; }
-            .notes { width: 50%; font-size: 9pt; color: #555; }
-            .notes h4 { margin: 0 0 4px 0; font-weight: 600; color: #333; }
-            .totals { width: 40%; }
-            .totals > div { display: flex; justify-content: space-between; margin-bottom: 8px; }
-            .totals .total-final {
-                font-size: 1.4rem;
-                font-weight: 700;
-                color: #004488;
-                border-top: 2px solid #004488;
-                margin-top: 8px;
-                padding-top: 8px;
-            }
-        </style>
-    `;
-
-    return `
-        <html>
-            <head>
-                <title>Factura ${escapeHTML(invoice.number)}</title>
-                <link rel="preconnect" href="https://fonts.googleapis.com">
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-                ${styles}
-            </head>
-            <body><div class="invoice-container">${bodyHtml}</div></body>
-        </html>
-    `;
+    return bodyHtml;
 }
 
 // --- FUNCIÓN MODIFICADA ---
 export function printInvoice(app) {
     const invoiceId = elements.invoiceViewerModal.dataset.activeInvoiceId;
-    if (!invoiceId) return;
+    if (!invoiceId) {
+        console.error("No se pudo encontrar la factura activa para imprimir.");
+        return;
+    }
     const invoice = app.state.documents.find(doc => doc.id === invoiceId);
     if (!invoice) return;
 
-    const printableHTML = generatePrintableInvoiceHTML(invoice, false);
-    
     const printWindow = window.open('', '', 'height=800,width=800');
-    printWindow.document.write(printableHTML);
+    
+    // Contenido HTML de la factura generado por la función auxiliar
+    const invoiceContent = generateFinalInvoiceHTML(invoice);
+
+    const fullHtml = `
+        <html>
+            <head>
+                <title>Factura ${escapeHTML(invoice.number)}</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+                <style>
+                    @page { size: A4; margin: 0; }
+                    body { 
+                        margin: 0; 
+                        -webkit-print-color-adjust: exact;
+                        font-family: 'Inter', sans-serif; 
+                        font-size: 10pt;
+                        background-color: white; 
+                        color: #333;
+                    }
+                    .invoice-container { padding: 1.5cm; }
+                    .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 1rem; border-bottom: 2px solid #004488; }
+                    .logo { width: 200px; height: auto; }
+                    .invoice-title-section { text-align: right; color: #004488; }
+                    .invoice-title { font-size: 2.8rem; font-weight: 700; margin: 0; line-height: 1; }
+                    .invoice-title-section p { margin: 2px 0; font-size: 11pt; color: #333; }
+                    .company-details, .client-box { margin: 2rem 0; }
+                    .client-box h3 { font-weight: 700; margin-bottom: 0.5rem; color: #555; text-transform: uppercase; font-size: 9pt; }
+                    p { margin: 4px 0; line-height: 1.6; }
+                    .whitespace-pre-line { white-space: pre-line; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+                    th, td { padding: 10px; text-align: left; }
+                    thead tr { background-color: #f0f3f8; }
+                    th { font-weight: 700; color: #333; }
+                    tbody tr { border-bottom: 1px solid #e5e7eb; }
+                    .text-right { text-align: right; }
+                    .footer-section { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 2.5rem; }
+                    .notes { width: 50%; font-size: 9pt; color: #555; }
+                    .notes h4 { margin: 0 0 4px 0; font-weight: 700; color: #111; }
+                    .notes-title { margin-top: 1rem; }
+                    .totals { width: 45%; max-width: 280px; }
+                    .totals > div { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 11pt; }
+                    .totals .total-final {
+                        font-size: 1.5rem;
+                        font-weight: 700;
+                        color: #004488;
+                        border-top: 2px solid #004488;
+                        margin-top: 10px;
+                        padding-top: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-container">
+                    ${invoiceContent}
+                </div>
+            </body>
+        </html>
+    `;
+
+    printWindow.document.write(fullHtml);
     printWindow.document.close();
     
     setTimeout(() => {
@@ -791,6 +796,7 @@ export function printInvoice(app) {
         printWindow.close();
     }, 500);
 }
+
 
 // --- FUNCIÓN MODIFICADA ---
 export function downloadInvoiceAsPDF(app) {
@@ -802,34 +808,36 @@ export function downloadInvoiceAsPDF(app) {
     const invoice = app.state.documents.find(doc => doc.id === invoiceId);
     if (!invoice) return;
 
+    // Se crea un div oculto para renderizar la versión final y profesional
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px'; // Lo mueve fuera de la pantalla
+    tempContainer.style.width = '700px'; // Un ancho fijo para el renderizado
+    tempContainer.classList.add('invoice-light-theme'); // Usa los estilos de style.css
+    
+    const invoiceBody = generateFinalInvoiceHTML(invoice);
+    tempContainer.innerHTML = invoiceBody;
+    document.body.appendChild(tempContainer);
+    
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'pt',
         format: 'a4'
     });
-    
-    const tempContainer = document.createElement('div');
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.innerHTML = generatePrintableInvoiceHTML(invoice, false); // Genera el HTML completo con estilos
-    document.body.appendChild(tempContainer);
-    
-    const content = tempContainer.querySelector('.invoice-container');
 
-    doc.html(content, {
+    doc.html(tempContainer, {
         callback: function (doc) {
-            document.body.removeChild(tempContainer);
+            document.body.removeChild(tempContainer); // Limpia el div temporal
             doc.save(`Factura-${invoice.number}.pdf`);
         },
-        margin: [0, 0, 0, 0], // El padding ya está en el contenedor
-        width: 595, // Ancho A4 en puntos
-        windowWidth: 650
+        margin: [40, 40, 40, 40],
     });
 }
 
+
 export function updateModuleVisibility() {
-    // Esta función ya no es necesaria
+    // Esta función ya no es necesaria y puede ser eliminada o dejada en blanco.
 }
 
 export function renderArchives(state) {
