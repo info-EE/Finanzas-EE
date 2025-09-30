@@ -31,7 +31,7 @@ export const elements = {
     facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
     facturaApiResponse: document.getElementById('factura-api-response'),
     facturaOperationType: document.getElementById('factura-operation-type'),
-    facturaSelectCliente: document.getElementById('factura-select-cliente'), // <-- NUEVO
+    facturaSelectCliente: document.getElementById('factura-select-cliente'),
     facturasTableBody: document.getElementById('facturas-table-body'),
     defaultFiltersContainer: document.getElementById('default-filters-container'),
     sociedadesFiltersContainer: document.getElementById('sociedades-filters-container'),
@@ -41,7 +41,6 @@ export const elements = {
     closeInvoiceViewerBtn: document.getElementById('close-invoice-viewer-btn'),
     printInvoiceBtn: document.getElementById('print-invoice-btn'),
     pdfInvoiceBtn: document.getElementById('pdf-invoice-btn'),
-    // Elementos de Clientes
     addClientForm: document.getElementById('add-client-form'),
     clientsTableBody: document.getElementById('clients-table-body'),
 };
@@ -75,7 +74,7 @@ export function updateAll(app) {
     updateInicioKPIs(app.state);
     renderInicioCharts(app.state, app.charts);
     populateSelects(app.state);
-    populateClientSelectForInvoice(app.state); // <-- NUEVO
+    populateClientSelectForInvoice(app.state);
     renderSettings(app.state);
     renderDocuments(app.state);
     renderFacturas(app.state);
@@ -86,20 +85,16 @@ export function updateAll(app) {
     app.saveData();
 }
 
-// NUEVA FUNCIÓN para rellenar el select de clientes en facturación
 export function populateClientSelectForInvoice(state) {
     const select = elements.facturaSelectCliente;
     if (!select) return;
 
-    // Guardar el valor seleccionado actualmente
     const selectedValue = select.value;
 
-    // Limpiar opciones existentes (excepto la primera de "Entrada Manual")
     while (select.options.length > 1) {
         select.remove(1);
     }
 
-    // Añadir clientes
     state.clients.forEach(client => {
         const option = document.createElement('option');
         option.value = client.id;
@@ -107,7 +102,6 @@ export function populateClientSelectForInvoice(state) {
         select.appendChild(option);
     });
 
-    // Restaurar el valor seleccionado si todavía existe
     select.value = selectedValue;
 }
 
@@ -602,108 +596,27 @@ export function showInvoiceViewer(invoiceId, state) {
         return;
     }
 
-    const ivaRate = invoice.operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
-    const isExport = ivaRate === 0;
+    // Guardar el ID de la factura activa en el modal para que las funciones de imprimir/PDF puedan encontrarlo
+    elements.invoiceViewerModal.dataset.activeInvoiceId = invoiceId;
 
-    let itemsHtml = '';
-    invoice.items.forEach(item => {
-        itemsHtml += `
-            <tr class="border-b border-gray-700">
-                <td class="py-2 px-4">${escapeHTML(item.description)}</td>
-                <td class="py-2 px-4 text-right">${item.quantity.toFixed(2)}</td>
-                <td class="py-2 px-4 text-right">${formatCurrency(item.price, invoice.currency)}</td>
-                <td class="py-2 px-4 text-right">${formatCurrency(item.quantity * item.price, invoice.currency)}</td>
-            </tr>
-        `;
-    });
-
-    const invoiceHtml = `
-    <div id="invoice-printable-area" class="p-8 bg-gray-900 text-white">
-        <header class="flex justify-between items-start mb-10">
-            <div class="w-1/2">
-                <h2 class="text-2xl font-bold text-white mb-2">Europa Envíos</h2>
-                <p class="font-semibold text-blue-300">LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</p>
-                <p class="text-gray-400 text-sm">
-                    CALLE ESTEBAN SALAZAR CHAPELA, NUM 20, PUERTA 87, NAVE 87<br>
-                    29004 MÁLAGA (ESPAÑA)<br>
-                    NIF: 856340656<br>
-                    Tel: (34) 633 74 08 31
-                </p>
-            </div>
-
-            <div class="w-1/2 text-right">
-                <h1 class="text-4xl font-bold text-white uppercase tracking-wider">Factura</h1>
-                <div class="mt-2">
-                    <span class="text-gray-400">N.º de factura:</span>
-                    <span class="text-white font-semibold">${escapeHTML(invoice.number)}</span>
-                </div>
-                <div>
-                    <span class="text-gray-400">Fecha:</span>
-                    <span class="text-white font-semibold">${invoice.date}</span>
+    // El contenido visual principal se genera en printInvoice y downloadInvoiceAsPDF
+    // Esta función ahora solo muestra el modal y un contenido base
+    const previewHtml = `
+        <div id="invoice-printable-area" class="p-8 bg-gray-900 text-white">
+            <div class="text-center">
+                <h2 class="text-2xl font-bold mb-4">Previsualización de Factura</h2>
+                <p class="text-gray-400">El diseño final profesional se aplicará al imprimir o descargar como PDF.</p>
+                <div class="mt-8 p-4 border border-gray-700 rounded-lg text-left">
+                    <p><strong>Cliente:</strong> ${escapeHTML(invoice.client)}</p>
+                    <p><strong>Número:</strong> ${escapeHTML(invoice.number)}</p>
+                    <p><strong>Total:</strong> ${formatCurrency(invoice.total, invoice.currency)}</p>
                 </div>
             </div>
-        </header>
+        </div>`;
 
-        <div class="mb-10 p-4 border border-gray-700 rounded-lg bg-gray-800/50">
-            <h3 class="font-semibold text-gray-300 mb-2">Facturar a:</h3>
-            <p class="font-bold text-white">${escapeHTML(invoice.client)}</p>
-            <p class="text-gray-400 text-sm whitespace-pre-line">
-${escapeHTML(invoice.address) || ''}
-NIF/RUC: ${escapeHTML(invoice.nif) || ''}
-${invoice.phone ? `Tel: ${escapeHTML(invoice.phone)}` : ''}
-            </p>
-        </div>
-
-        <table class="w-full text-left mb-10">
-            <thead>
-                <tr class="bg-gray-800 text-gray-300">
-                    <th class="py-2 px-4 rounded-l-lg">Descripción</th>
-                    <th class="py-2 px-4 text-right">Cantidad</th>
-                    <th class="py-2 px-4 text-right">Precio Unit.</th>
-                    <th class="py-2 px-4 text-right rounded-r-lg">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${itemsHtml}
-            </tbody>
-        </table>
-
-        <div class="flex justify-between items-start">
-            <div class="w-1/2 text-sm text-gray-400">
-                <div class="mb-4">
-                    <h4 class="font-semibold text-gray-300 mb-1">Forma de Pago:</h4>
-                    <p>Transferencia Bancaria</p>
-                </div>
-                ${isExport ? `
-                <div>
-                    <h4 class="font-semibold text-gray-300 mb-1">Notas:</h4>
-                    <p>Operación no sujeta a IVA por regla de localización: Ley 37/1992</p>
-                </div>
-                ` : ''}
-            </div>
-
-            <div class="w-1/2 max-w-xs space-y-2">
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Subtotal:</span>
-                    <span class="text-white font-semibold">${formatCurrency(invoice.subtotal, invoice.currency)}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-400">IVA (${(ivaRate * 100).toFixed(0)}%):</span>
-                    <span class="text-white font-semibold">${formatCurrency(invoice.iva, invoice.currency)}</span>
-                </div>
-                <div class="flex justify-between font-bold text-2xl border-t border-gray-600 pt-2 mt-2">
-                    <span class="text-white">TOTAL:</span>
-                    <span class="text-blue-400">${formatCurrency(invoice.total, invoice.currency)}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    `;
-
-    elements.invoiceContentArea.innerHTML = invoiceHtml;
+    elements.invoiceContentArea.innerHTML = previewHtml;
     elements.invoiceViewerModal.classList.remove('hidden');
     elements.invoiceViewerModal.classList.add('flex');
-    lucide.createIcons();
 }
 
 
@@ -711,32 +624,118 @@ export function hideInvoiceViewer() {
     elements.invoiceViewerModal.classList.add('hidden');
     elements.invoiceViewerModal.classList.remove('flex');
     elements.invoiceContentArea.innerHTML = '';
+    delete elements.invoiceViewerModal.dataset.activeInvoiceId; // Limpiar el ID activo
 }
 
-export function printInvoice() {
-    const printContent = elements.invoiceContentArea.innerHTML;
+function generatePrintableInvoiceHTML(invoice, state) {
+    const logoBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIbGNtcwIQAABtbnRyUkdCIFhZWiAH4gADABQACQAOAB1hY3NwTVNGVAAAAABzYXdzY3RybAAAAAAAAAAAAAAAAAAAAAAA9tYAAQAAAADTLWhhbmSdkQA9QAAAAAAAABAAAAAAC1h0YWNoAAAAA2ZGVmIAAAAAAAAAAAAAAABjdXJ2AAAAAAAABAAAAAB0AAAA/4AAgAD/2AAwEDAAEAAQAAAAUACQABAAAAAQAAAAEAAAEyAAAABgAAAAcAAAASYwAAACAAAAAQAACvywAAAEwAAAAQAACvywAAvssAAM/LAAAAAwAAARwAAABkAAAAAAAAABZWAAEAAAABAAMABwAAAAEAAAEyAAAAFgABAAMAAAABAAEAAgAAAAEAAAEyAAAAFgABAAMAAAABAAUAAAARAAUAAAABAACgJgARAAUAAAABAACgLgARAAUAAAABAACgMgARAAUAAAABAACgOgARAAUAAAABAACgQgARAAUAAAABAACgSgARAAUAAAABAACgUgASAAUAAAABAAAAAAAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAFwAUABAAAAAEAAAAF-";
+
+    const axb = contentToPrint.querySelector('#invoice-printable-area');
+
+    if (!axb) return;
+
+    const styles = `
+        <style>
+            @page { size: A4; margin: 0; }
+            body { 
+                margin: 0; 
+                padding: 0; 
+                font-family: 'Inter', sans-serif; 
+                background-color: white; 
+                color: #333;
+                -webkit-print-color-adjust: exact;
+            }
+            .invoice-container {
+                padding: 40px;
+            }
+            .invoice-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                padding-bottom: 2rem;
+                border-bottom: 2px solid #004488;
+            }
+            .invoice-company-details { width: 50%; }
+            .invoice-logo { width: 200px; height: auto; }
+            .invoice-title-section { width: 50%; text-align: right; }
+            .invoice-title-section h1 {
+                color: #004488;
+                font-size: 2.8rem;
+                font-weight: 700;
+                margin: 0;
+                line-height: 1;
+            }
+            .invoice-title-section p { margin: 2px 0; }
+            .client-box {
+                border: 1px solid #e5e7eb;
+                background-color: #f9fafb;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 2rem 0;
+            }
+            .client-box h3 { font-weight: 600; margin-bottom: 8px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+            th, td { padding: 10px; text-align: left; }
+            thead tr { background-color: #f3f4f6; }
+            th { font-weight: 600; }
+            tbody tr { border-bottom: 1px solid #e5e7eb; }
+            .totals-container { display: flex; justify-content: space-between; align-items: flex-start; }
+            .notes-section { width: 50%; }
+            .totals-section { width: 40%; }
+            .totals-section > div { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .totals-section .total-final {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #004488;
+                border-top: 2px solid #004488;
+                margin-top: 8px;
+                padding-top: 8px;
+            }
+        </style>
+    `;
+
     const printWindow = window.open('', '', 'height=800,width=800');
-    printWindow.document.write('<html><head><title>Factura</title>');
-    printWindow.document.write('<link rel="stylesheet" href="style.css">');
-    printWindow.document.write('<style>body { background-color: #111827; color: #d1d5db; } .card { background-color: #1f2937; } @media print { body { background-color: white; color: black; -webkit-print-color-adjust: exact; } .text-white, .text-gray-300, .text-gray-400, .text-blue-300, .text-blue-400 { color: black !important; } .bg-gray-800, .bg-gray-800\/50, .bg-gray-900 { background-color: #f3f4f6 !important; } .border-gray-700 { border-color: #d1d5db !important; } .font-bold { font-weight: bold !important; } }</style>');
-    printWindow.document.write('</head><body>');
-    printWindow.document.write(printContent);
-    printWindow.document.write('</body></html>');
+    
+    const printableHTML = `
+        <html>
+            <head>
+                <title>Factura ${escapeHTML(invoice.number)}</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+                ${styles}
+            </head>
+            <body>
+                <div class="invoice-container">
+                    ${contentToPrint.innerHTML}
+                </div>
+            </body>
+        </html>
+    `;
+
+    printWindow.document.write(printableHTML);
     printWindow.document.close();
+    
     setTimeout(() => {
         printWindow.print();
         printWindow.close();
-    }, 250);
+    }, 500);
 }
 
+// --- FUNCIÓN MODIFICADA ---
 export function downloadInvoiceAsPDF() {
-    const { jsPDF } = window.jspdf;
+    const invoiceId = elements.invoiceViewerModal.dataset.activeInvoiceId;
+    if (!invoiceId) {
+        console.error("No se pudo encontrar la factura activa para generar el PDF.");
+        return;
+    }
+
     const invoiceElement = document.getElementById('invoice-printable-area');
     
-    // Temporalmente cambia el color de fondo a blanco para el PDF
-    const originalBg = invoiceElement.style.backgroundColor;
-    invoiceElement.style.backgroundColor = 'white';
+    // Añadir clase temporal para aplicar estilos claros
+    invoiceElement.classList.add('invoice-light-theme');
 
+    const { jsPDF } = window.jspdf;
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'pt',
@@ -745,14 +744,16 @@ export function downloadInvoiceAsPDF() {
 
     doc.html(invoiceElement, {
         callback: function (doc) {
-            // Restaura el color de fondo original después de generar el PDF
-            invoiceElement.style.backgroundColor = originalBg;
-            doc.save('factura.pdf');
+            // Quitar clase temporal después de generar el PDF
+            invoiceElement.classList.remove('invoice-light-theme');
+            doc.save(`Factura-${invoiceElement.dataset.invoiceNumber || 'factura'}.pdf`);
         },
         x: 0,
         y: 0,
-        width: 595, // Ancho de A4 en puntos
-        windowWidth: 650 // Un poco más ancho para asegurar que todo encaje
+        html2canvas: {
+            scale: 0.75 
+        },
+        margin: [40, 40, 40, 40]
     });
 }
 

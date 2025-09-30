@@ -88,29 +88,61 @@ body {
 .dropdown-content button:hover { background-color: #333; }
 .show { display: block; }
 
-/* Estilos para el toggle switch y tabs de facturación (CORREGIDO) */
-.toggle-bg:after {
-    content: '';
-    position: absolute;
-    top: 0.125rem;
-    left: 0.125rem;
-    background-color: white;
-    border: 1px solid #d1d5db;
-    border-radius: 9999px;
-    height: 1.25rem;
-    width: 1.25rem;
-    transition: all 0.2s ease-in-out;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-input:checked + .toggle-bg:after {
-    transform: translateX(100%);
-    border-color: white;
-}
-input:checked + .toggle-bg {
-    background-color: #2563eb; /* bg-blue-600 */
-    border-color: #2563eb; /* border-blue-600 */
-}
 .tab-button-inner.active {
     border-color: #60a5fa;
     color: #60a5fa;
+}
+
+/* --- ESTILOS ACTUALIZADOS PARA LA VERSIÓN CLARA DE LA FACTURA (PDF) --- */
+.invoice-light-theme {
+    background-color: white !important;
+    color: #111 !important;
+    font-family: 'Inter', sans-serif;
+    padding: 40px;
+}
+/* Forzar la fuente para todos los elementos hijos */
+.invoice-light-theme * {
+    font-family: 'Inter', sans-serif !important;
+    color: #111 !important;
+}
+
+/* Resetear fondos y colores de texto */
+.invoice-light-theme header,
+.invoice-light-theme div,
+.invoice-light-theme p,
+.invoice-light-theme span,
+.invoice-light-theme h1, .invoice-light-theme h2, .invoice-light-theme h3, .invoice-light-theme h4,
+.invoice-light-theme table, .invoice-light-theme tbody, .invoice-light-theme thead, .invoice-light-theme tr {
+    background-color: transparent !important;
+}
+
+/* Colores de la marca */
+.invoice-light-theme .brand-color-text {
+    color: #004488 !important; /* Azul corporativo oscuro */
+}
+.invoice-light-theme .brand-color-bg {
+    background-color: #004488 !important; /* Azul corporativo oscuro */
+}
+
+/* Jerarquía de texto */
+.invoice-light-theme .text-main { color: #111 !important; }
+.invoice-light-theme .text-secondary { color: #555 !important; }
+
+/* Estructura */
+.invoice-light-theme .client-box {
+    border: 1px solid #e5e7eb !important;
+    background-color: #f9fafb !important;
+}
+.invoice-light-theme table thead {
+    background-color: #f3f4f6 !important;
+}
+.invoice-light-theme table th {
+    color: #333 !important;
+}
+.invoice-light-theme table tr {
+    border-color: #e5e7eb !important;
+}
+.invoice-light-theme .totals-section .total-final {
+    color: #004488 !important;
+    border-top: 2px solid #004488 !important;
 }
