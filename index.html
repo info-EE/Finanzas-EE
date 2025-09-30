@@ -338,7 +338,6 @@
                                             <option value="annual">Anual</option>
                                         </select>
                                     </div>
-                                    <!-- Contenedores para cada tipo de selector de fecha -->
                                     <div id="date-input-daily" class="col-span-6 md:col-span-3 hidden">
                                         <label for="report-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
                                         <input type="date" id="report-date" class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm">
@@ -612,6 +611,22 @@
                                 <div class="border-t border-gray-700 pt-4">
                                     <h4 class="font-semibold mb-2">Conceptos</h4>
                                     <div id="factura-items-container" class="space-y-2">
+                                        <div class="grid grid-cols-12 gap-2 factura-item-row items-center">
+                                            <div class="col-span-6">
+                                                <input type="text" class="form-input factura-item-concept" placeholder="Descripción del servicio" required>
+                                            </div>
+                                            <div class="col-span-2">
+                                                <input type="number" class="form-input factura-item-quantity" placeholder="1" value="1" min="1" step="1" required>
+                                            </div>
+                                            <div class="col-span-3">
+                                                <input type="number" class="form-input factura-item-price" placeholder="0.00" value="" min="0" step="0.01" required>
+                                            </div>
+                                            <div class="col-span-1 text-right">
+                                                <button type="button" class="factura-remove-item-btn p-2 text-red-400 hover:text-red-300">
+                                                    <i data-lucide="x-circle" class="w-5 h-5"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                         </div>
                                     <button type="button" id="factura-add-item-btn" class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2">
                                         <i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir concepto
