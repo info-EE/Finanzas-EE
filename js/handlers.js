@@ -533,12 +533,10 @@ export function handleGenerateInvoice(e, app) {
  * @param {object} app - La instancia principal de la aplicación.
  */
 export function handleOperationTypeChange(app) {
-    // Obtenemos las referencias desde el objeto de elementos de la App
     const operationTypeSelect = app.elements.facturaOperationType;
     const currencySelect = app.elements.facturaCurrency;
     const ivaLabel = app.elements.facturaIvaLabel;
 
-    // Verificamos que los elementos existan antes de usarlos
     if (!operationTypeSelect || !currencySelect) {
         console.error("Elementos del formulario de factura no encontrados.");
         return;
@@ -547,13 +545,11 @@ export function handleOperationTypeChange(app) {
     // --- CAMBIO CLAVE ---
     // Verificamos si el valor seleccionado INCLUYE la palabra "Exportación"
     if (operationTypeSelect.value.includes('Exportación')) {
-        // Si es Exportación:
-        currencySelect.value = 'USD';      // 1. Cambiamos la moneda a USD
-        currencySelect.disabled = true;    // 2. Deshabilitamos el campo
+        currencySelect.value = 'USD';
+        currencySelect.disabled = true;
         if (ivaLabel) ivaLabel.textContent = 'IVA (0% - Exportación):';
     } else {
-        // Si es cualquier otra operación:
-        currencySelect.disabled = false;   // 1. Habilitamos el campo
+        currencySelect.disabled = false;
         if (ivaLabel) ivaLabel.textContent = 'IVA (21%):';
     }
     
