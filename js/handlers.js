@@ -528,22 +528,23 @@ export function handleGenerateInvoice(e, app) {
 
 /**
  * Maneja el cambio en el tipo de operación de la factura.
- * Si es 'Exportación', fija la moneda a USD y la deshabilita.
- * En caso contrario, la habilita.
+ * Esta es la versión definitiva y robusta.
  * @param {object} app - La instancia principal de la aplicación.
  */
 export function handleOperationTypeChange(app) {
-    const operationTypeSelect = app.elements.facturaOperationType;
-    const currencySelect = app.elements.facturaCurrency;
-    const ivaLabel = app.elements.facturaIvaLabel;
+    // CAMBIO CLAVE: Obtenemos los elementos directamente del DOM por su ID.
+    // Esto evita depender de otros archivos (como ui.js) y previene errores.
+    const operationTypeSelect = document.getElementById('factura-operation-type');
+    const currencySelect = document.getElementById('factura-currency');
+    const ivaLabel = document.getElementById('factura-iva-label');
 
+    // Verificamos que los elementos realmente existan en la página.
     if (!operationTypeSelect || !currencySelect) {
-        console.error("Elementos del formulario de factura no encontrados.");
+        console.error("Error crítico: No se encontraron los selectores de operación o moneda en el DOM.");
         return;
     }
 
-    // --- CAMBIO CLAVE ---
-    // Verificamos si el valor seleccionado INCLUYE la palabra "Exportación"
+    // Usamos .includes('Exportación') para ser flexibles con el texto exacto.
     if (operationTypeSelect.value.includes('Exportación')) {
         currencySelect.value = 'USD';
         currencySelect.disabled = true;
@@ -553,7 +554,7 @@ export function handleOperationTypeChange(app) {
         if (ivaLabel) ivaLabel.textContent = 'IVA (21%):';
     }
     
-    // Al final, siempre actualizamos el resumen de la factura
+    // Al final, siempre recalculamos los totales de la factura.
     app.updateFacturaSummary();
 }
 
