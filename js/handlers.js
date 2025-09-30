@@ -1,4 +1,4 @@
-import { elements, updateAll, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF } from './ui.js';
+import { elements, updateAll, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice } from './ui.js';
 import { escapeHTML } from './utils.js';
 
 export function bindEventListeners(app) {
@@ -18,14 +18,14 @@ export function bindEventListeners(app) {
         });
     });
 
-    // --- NUEVOS LISTENERS PARA CLIENTES ---
+    // --- LISTENERS PARA CLIENTES ---
     if (elements.addClientForm) {
         elements.addClientForm.addEventListener('submit', (e) => handleAddClient(e, app));
     }
     if (elements.clientsTableBody) {
         elements.clientsTableBody.addEventListener('click', (e) => handleClientsTableClick(e, app));
     }
-    // --- FIN DE NUEVOS LISTENERS ---
+    // --- FIN DE LISTENERS ---
 
     elements.transactionForm.addEventListener('submit', (e) => app.handleTransactionFormSubmit(e));
     elements.transactionsTableBody.addEventListener('click', (e) => app.handleTransactionsTableClick(e));
@@ -82,6 +82,9 @@ export function bindEventListeners(app) {
     elements.facturaAddItemBtn.addEventListener('click', () => app.addFacturaItem());
     elements.nuevaFacturaForm.addEventListener('submit', (e) => app.handleGenerateInvoice(e));
     elements.facturaOperationType.addEventListener('change', () => app.handleOperationTypeChange());
+    if(elements.facturaSelectCliente) { // <-- NUEVO
+        elements.facturaSelectCliente.addEventListener('change', (e) => handleClientSelectionForInvoice(e, app));
+    }
     document.getElementById('factura-currency').addEventListener('change', () => app.updateFacturaSummary());
     document.getElementById('facturas-search').addEventListener('input', () => app.renderFacturas());
     elements.facturasTableBody.addEventListener('click', (e) => app.handleFacturasTableClick(e));
@@ -93,7 +96,37 @@ export function bindEventListeners(app) {
     elements.fiscalParamsForm.addEventListener('submit', (e) => app.handleFiscalParamsSave(e));
 }
 
-// --- NUEVAS FUNCIONES PARA CLIENTES ---
+// --- NUEVA FUNCIÓN ---
+export function handleClientSelectionForInvoice(e, app) {
+    const clientId = e.target.value;
+    const form = elements.nuevaFacturaForm;
+    const nameInput = form.querySelector('#factura-cliente');
+    const nifInput = form.querySelector('#factura-nif');
+    const addressInput = form.querySelector('#factura-cliente-direccion');
+    const phoneInput = form.querySelector('#factura-cliente-telefono');
+
+    if (clientId) {
+        const client = app.state.clients.find(c => c.id === clientId);
+        if (client) {
+            nameInput.value = client.name;
+            nifInput.value = client.taxId;
+            addressInput.value = client.address;
+            phoneInput.value = `${client.phoneMobilePrefix} ${client.phoneMobile}`;
+            
+            // Opcional: deshabilitar campos para evitar edición manual
+            [nameInput, nifInput, addressInput, phoneInput].forEach(input => input.disabled = true);
+        }
+    } else {
+        // Si se selecciona "Entrada Manual", limpiar y habilitar los campos
+        [nameInput, nifInput, addressInput, phoneInput].forEach(input => {
+            input.value = '';
+            input.disabled = false;
+        });
+    }
+}
+
+
+// --- FUNCIONES PARA CLIENTES ---
 export function handleAddClient(e, app) {
     e.preventDefault();
     const form = e.target;
@@ -168,7 +201,7 @@ export function handleClientsTableClick(e, app) {
     }
 }
 
-// --- FIN DE NUEVAS FUNCIONES ---
+// --- FIN DE FUNCIONES DE CLIENTES ---
 
 
 export function handleTransactionFormSubmit(e, app) {
@@ -563,16 +596,16 @@ export function handleGenerateInvoice(e, app) {
     const operationType = form.querySelector('#factura-operation-type').value;
     const client = form.querySelector('#factura-cliente').value;
     const nif = form.querySelector('#factura-nif').value;
-    const address = form.querySelector('#factura-cliente-direccion').value; // <-- NUEVO
-    const phone = form.querySelector('#factura-cliente-telefono').value; // <-- NUEVO
+    const address = form.querySelector('#factura-cliente-direccion').value; 
+    const phone = form.querySelector('#factura-cliente-telefono').value; 
     const number = form.querySelector('#factura-numero').value;
     const date = form.querySelector('#factura-fecha').value;
     const currency = form.querySelector('#factura-currency').value;
 
     const items = [];
-    form.querySelectorAll('.factura-item').forEach(itemEl => { // Corregido el selector si es necesario
+    form.querySelectorAll('.factura-item').forEach(itemEl => { 
         items.push({
-            description: itemEl.querySelector('.item-description').value, // Asegúrate de que las clases coincidan
+            description: itemEl.querySelector('.item-description').value,
             quantity: parseFloat(itemEl.querySelector('.item-quantity').value),
             price: parseFloat(itemEl.querySelector('.item-price').value)
         });
@@ -589,8 +622,8 @@ export function handleGenerateInvoice(e, app) {
         id: crypto.randomUUID(),
         type: 'Factura',
         date, number, client, nif,
-        address, // <-- NUEVO
-        phone, // <-- NUEVO
+        address, 
+        phone, 
         amount: total,
         currency,
         status: 'Adeudada',

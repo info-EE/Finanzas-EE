@@ -581,7 +581,14 @@
                                     <select id="factura-operation-type" class="form-input">
                                         </select>
                                 </div>
+
                                 <div class="border-t border-b border-gray-700 py-4 space-y-4">
+                                    <div>
+                                        <label for="factura-select-cliente" class="block text-sm font-medium text-gray-400 mb-1">Seleccionar Cliente Existente</label>
+                                        <select id="factura-select-cliente" class="form-input">
+                                            <option value="">-- Entrada Manual --</option>
+                                        </select>
+                                    </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
@@ -601,6 +608,7 @@
                                         <input type="text" id="factura-cliente-telefono" class="form-input" placeholder="Ej: (59) 597 4688 738">
                                     </div>
                                 </div>
+
                                 <div class="grid grid-cols-12 gap-4">
                                     <div class="col-span-4">
                                         <label for="factura-numero" class="block text-sm text-gray-400 mb-1">Nº Factura</label>

@@ -31,6 +31,7 @@ export const elements = {
     facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
     facturaApiResponse: document.getElementById('factura-api-response'),
     facturaOperationType: document.getElementById('factura-operation-type'),
+    facturaSelectCliente: document.getElementById('factura-select-cliente'), // <-- NUEVO
     facturasTableBody: document.getElementById('facturas-table-body'),
     defaultFiltersContainer: document.getElementById('default-filters-container'),
     sociedadesFiltersContainer: document.getElementById('sociedades-filters-container'),
@@ -40,7 +41,7 @@ export const elements = {
     closeInvoiceViewerBtn: document.getElementById('close-invoice-viewer-btn'),
     printInvoiceBtn: document.getElementById('print-invoice-btn'),
     pdfInvoiceBtn: document.getElementById('pdf-invoice-btn'),
-    // NUEVO: Elementos de Clientes
+    // Elementos de Clientes
     addClientForm: document.getElementById('add-client-form'),
     clientsTableBody: document.getElementById('clients-table-body'),
 };
@@ -74,17 +75,43 @@ export function updateAll(app) {
     updateInicioKPIs(app.state);
     renderInicioCharts(app.state, app.charts);
     populateSelects(app.state);
+    populateClientSelectForInvoice(app.state); // <-- NUEVO
     renderSettings(app.state);
     renderDocuments(app.state);
     renderFacturas(app.state);
     renderInvestments(app.state);
-    renderClients(app.state); // <-- NUEVO
+    renderClients(app.state);
     updateModuleVisibility();
     renderArchives(app.state);
     app.saveData();
 }
 
-// NUEVA FUNCIÓN
+// NUEVA FUNCIÓN para rellenar el select de clientes en facturación
+export function populateClientSelectForInvoice(state) {
+    const select = elements.facturaSelectCliente;
+    if (!select) return;
+
+    // Guardar el valor seleccionado actualmente
+    const selectedValue = select.value;
+
+    // Limpiar opciones existentes (excepto la primera de "Entrada Manual")
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+
+    // Añadir clientes
+    state.clients.forEach(client => {
+        const option = document.createElement('option');
+        option.value = client.id;
+        option.textContent = client.name;
+        select.appendChild(option);
+    });
+
+    // Restaurar el valor seleccionado si todavía existe
+    select.value = selectedValue;
+}
+
+
 export function renderClients(state) {
     const tbody = elements.clientsTableBody;
     if (!tbody) return;
