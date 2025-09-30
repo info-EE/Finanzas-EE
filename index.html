@@ -581,17 +581,27 @@
                                     <select id="factura-operation-type" class="form-input">
                                         </select>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-        <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
-        <input type="text" id="factura-cliente" class="form-input" placeholder="Nombre del Cliente" required>
-    </div>
-    <div>
-        <label for="factura-nif" class="block text-sm text-gray-400 mb-1">NIF/CIF</label>
-        <input type="text" id="factura-nif" class="form-input" placeholder="NIF/CIF del Cliente" required>
-    </div>
-</div>
-                                <div class="grid grid-cols-12 gap-4 mb-4">
+                                <div class="border-t border-b border-gray-700 py-4 space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
+                                            <input type="text" id="factura-cliente" class="form-input" placeholder="Nombre del Cliente" required>
+                                        </div>
+                                        <div>
+                                            <label for="factura-nif" class="block text-sm text-gray-400 mb-1">NIF/CIF</label>
+                                            <input type="text" id="factura-nif" class="form-input" placeholder="NIF/CIF del Cliente" required>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="factura-cliente-direccion" class="block text-sm text-gray-400 mb-1">Dirección del Cliente</label>
+                                        <textarea id="factura-cliente-direccion" rows="2" class="form-input" placeholder="Ej: PALMA 915, ASUNCIÓN (PARAGUAY)" required></textarea>
+                                    </div>
+                                    <div>
+                                        <label for="factura-cliente-telefono" class="block text-sm text-gray-400 mb-1">Teléfono del Cliente</label>
+                                        <input type="text" id="factura-cliente-telefono" class="form-input" placeholder="Ej: (59) 597 4688 738">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-12 gap-4">
                                     <div class="col-span-4">
                                         <label for="factura-numero" class="block text-sm text-gray-400 mb-1">Nº Factura</label>
                                         <input type="text" id="factura-numero" class="form-input" value="2024-0001" required>
@@ -611,22 +621,6 @@
                                 <div class="border-t border-gray-700 pt-4">
                                     <h4 class="font-semibold mb-2">Conceptos</h4>
                                     <div id="factura-items-container" class="space-y-2">
-                                        <div class="grid grid-cols-12 gap-2 factura-item-row items-center">
-                                            <div class="col-span-6">
-                                                <input type="text" class="form-input factura-item-concept" placeholder="Descripción del servicio" required>
-                                            </div>
-                                            <div class="col-span-2">
-                                                <input type="number" class="form-input factura-item-quantity" placeholder="1" value="1" min="1" step="1" required>
-                                            </div>
-                                            <div class="col-span-3">
-                                                <input type="number" class="form-input factura-item-price" placeholder="0.00" value="" min="0" step="0.01" required>
-                                            </div>
-                                            <div class="col-span-1 text-right">
-                                                <button type="button" class="factura-remove-item-btn p-2 text-red-400 hover:text-red-300">
-                                                    <i data-lucide="x-circle" class="w-5 h-5"></i>
-                                                </button>
-                                            </div>
-                                        </div>
                                         </div>
                                     <button type="button" id="factura-add-item-btn" class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2">
                                         <i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir concepto
@@ -789,7 +783,7 @@
                         <button id="close-invoice-viewer-btn" class="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold"><i data-lucide="x" class="w-5 h-5"></i></button>
                     </div>
                 </div>
-                <div id="invoice-content-area" class="p-8 overflow-y-auto">
+                <div id="invoice-content-area" class="overflow-y-auto">
                     </div>
             </div>
         </div>

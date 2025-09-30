@@ -534,13 +534,14 @@ export function showInvoiceViewer(invoiceId, state) {
     }
 
     const ivaRate = invoice.operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
+    const isExport = ivaRate === 0;
 
     let itemsHtml = '';
     invoice.items.forEach(item => {
         itemsHtml += `
             <tr class="border-b border-gray-700">
                 <td class="py-2 px-4">${escapeHTML(item.description)}</td>
-                <td class="py-2 px-4 text-right">${item.quantity}</td>
+                <td class="py-2 px-4 text-right">${item.quantity.toFixed(2)}</td>
                 <td class="py-2 px-4 text-right">${formatCurrency(item.price, invoice.currency)}</td>
                 <td class="py-2 px-4 text-right">${formatCurrency(item.quantity * item.price, invoice.currency)}</td>
             </tr>
@@ -548,56 +549,86 @@ export function showInvoiceViewer(invoiceId, state) {
     });
 
     const invoiceHtml = `
-        <div id="invoice-printable-area">
-            <header class="flex justify-between items-start mb-8 p-8">
+    <div id="invoice-printable-area" class="p-8 bg-gray-900 text-white">
+        <header class="flex justify-between items-start mb-10">
+            <div class="w-1/2">
+                <h2 class="text-2xl font-bold text-white mb-2">Europa Envíos</h2>
+                <p class="font-semibold text-blue-300">LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</p>
+                <p class="text-gray-400 text-sm">
+                    CALLE ESTEBAN SALAZAR CHAPELA, NUM 20, PUERTA 87, NAVE 87<br>
+                    29004 MÁLAGA (ESPAÑA)<br>
+                    NIF: 856340656<br>
+                    Tel: (34) 633 74 08 31
+                </p>
+            </div>
+
+            <div class="w-1/2 text-right">
+                <h1 class="text-4xl font-bold text-white uppercase tracking-wider">Factura</h1>
+                <div class="mt-2">
+                    <span class="text-gray-400">N.º de factura:</span>
+                    <span class="text-white font-semibold">${escapeHTML(invoice.number)}</span>
+                </div>
                 <div>
-                    <h1 class="text-3xl font-bold text-white">FACTURA</h1>
-                    <p class="text-gray-400">Nº: ${escapeHTML(invoice.number)}</p>
-                    <p class="text-gray-400">Fecha: ${invoice.date}</p>
+                    <span class="text-gray-400">Fecha:</span>
+                    <span class="text-white font-semibold">${invoice.date}</span>
                 </div>
-                <div class="text-right">
-                    <h2 class="text-xl font-semibold text-blue-300">Tu Empresa/Nombre</h2>
-                    <p class="text-gray-400">Tu Dirección</p>
-                    <p class="text-gray-400">Tu NIF/CIF</p>
+            </div>
+        </header>
+
+        <div class="mb-10 p-4 border border-gray-700 rounded-lg bg-gray-800/50">
+            <h3 class="font-semibold text-gray-300 mb-2">Facturar a:</h3>
+            <p class="font-bold text-white">${escapeHTML(invoice.client)}</p>
+            <p class="text-gray-400 text-sm whitespace-pre-line">
+${escapeHTML(invoice.address) || ''}
+NIF/RUC: ${escapeHTML(invoice.nif) || ''}
+${invoice.phone ? `Tel: ${escapeHTML(invoice.phone)}` : ''}
+            </p>
+        </div>
+
+        <table class="w-full text-left mb-10">
+            <thead>
+                <tr class="bg-gray-800 text-gray-300">
+                    <th class="py-2 px-4 rounded-l-lg">Descripción</th>
+                    <th class="py-2 px-4 text-right">Cantidad</th>
+                    <th class="py-2 px-4 text-right">Precio Unit.</th>
+                    <th class="py-2 px-4 text-right rounded-r-lg">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itemsHtml}
+            </tbody>
+        </table>
+
+        <div class="flex justify-between items-start">
+            <div class="w-1/2 text-sm text-gray-400">
+                <div class="mb-4">
+                    <h4 class="font-semibold text-gray-300 mb-1">Forma de Pago:</h4>
+                    <p>Transferencia Bancaria</p>
                 </div>
-            </header>
-            <div class="p-8">
-                <div class="mb-8">
-                    <h3 class="font-semibold text-gray-300 mb-2">Facturar a:</h3>
-                    <p>${escapeHTML(invoice.client)}</p>
-                    <p>${escapeHTML(invoice.nif)}</p>
+                ${isExport ? `
+                <div>
+                    <h4 class="font-semibold text-gray-300 mb-1">Notas:</h4>
+                    <p>Operación no sujeta a IVA por regla de localización: Ley 37/1992</p>
                 </div>
-                <table class="w-full text-left mb-8">
-                    <thead>
-                        <tr class="bg-gray-800 text-gray-300">
-                            <th class="py-2 px-4">Concepto</th>
-                            <th class="py-2 px-4 text-right">Cantidad</th>
-                            <th class="py-2 px-4 text-right">Precio Unit.</th>
-                            <th class="py-2 px-4 text-right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itemsHtml}
-                    </tbody>
-                </table>
-                <div class="flex justify-end">
-                    <div class="w-full max-w-xs space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-gray-400">Subtotal:</span>
-                            <span>${formatCurrency(invoice.subtotal, invoice.currency)}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-400">IVA (${(ivaRate * 100).toFixed(0)}%):</span>
-                            <span>${formatCurrency(invoice.iva, invoice.currency)}</span>
-                        </div>
-                        <div class="flex justify-between font-bold text-xl border-t border-gray-600 pt-2 mt-2">
-                            <span>TOTAL:</span>
-                            <span>${formatCurrency(invoice.total, invoice.currency)}</span>
-                        </div>
-                    </div>
+                ` : ''}
+            </div>
+
+            <div class="w-1/2 max-w-xs space-y-2">
+                <div class="flex justify-between">
+                    <span class="text-gray-400">Subtotal:</span>
+                    <span class="text-white font-semibold">${formatCurrency(invoice.subtotal, invoice.currency)}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">IVA (${(ivaRate * 100).toFixed(0)}%):</span>
+                    <span class="text-white font-semibold">${formatCurrency(invoice.iva, invoice.currency)}</span>
+                </div>
+                <div class="flex justify-between font-bold text-2xl border-t border-gray-600 pt-2 mt-2">
+                    <span class="text-white">TOTAL:</span>
+                    <span class="text-blue-400">${formatCurrency(invoice.total, invoice.currency)}</span>
                 </div>
             </div>
         </div>
+    </div>
     `;
 
     elements.invoiceContentArea.innerHTML = invoiceHtml;
@@ -605,6 +636,7 @@ export function showInvoiceViewer(invoiceId, state) {
     elements.invoiceViewerModal.classList.add('flex');
     lucide.createIcons();
 }
+
 
 export function hideInvoiceViewer() {
     elements.invoiceViewerModal.classList.add('hidden');
@@ -617,7 +649,7 @@ export function printInvoice() {
     const printWindow = window.open('', '', 'height=800,width=800');
     printWindow.document.write('<html><head><title>Factura</title>');
     printWindow.document.write('<link rel="stylesheet" href="style.css">');
-    printWindow.document.write('<style>body { background-color: #111827; color: #d1d5db; } .card { background-color: #1f2937; } @media print { body { background-color: white; color: black; } .text-white { color: black !important; } .text-gray-300 { color: #4b5563 !important; } .text-gray-400 { color: #6b7280 !important; } .bg-gray-800 { background-color: #f3f4f6 !important; } .border-gray-700 { border-color: #d1d5db !important; } }</style>');
+    printWindow.document.write('<style>body { background-color: #111827; color: #d1d5db; } .card { background-color: #1f2937; } @media print { body { background-color: white; color: black; -webkit-print-color-adjust: exact; } .text-white, .text-gray-300, .text-gray-400, .text-blue-300, .text-blue-400 { color: black !important; } .bg-gray-800, .bg-gray-800\/50, .bg-gray-900 { background-color: #f3f4f6 !important; } .border-gray-700 { border-color: #d1d5db !important; } .font-bold { font-weight: bold !important; } }</style>');
     printWindow.document.write('</head><body>');
     printWindow.document.write(printContent);
     printWindow.document.write('</body></html>');
@@ -631,6 +663,11 @@ export function printInvoice() {
 export function downloadInvoiceAsPDF() {
     const { jsPDF } = window.jspdf;
     const invoiceElement = document.getElementById('invoice-printable-area');
+    
+    // Temporalmente cambia el color de fondo a blanco para el PDF
+    const originalBg = invoiceElement.style.backgroundColor;
+    invoiceElement.style.backgroundColor = 'white';
+
     const doc = new jsPDF({
         orientation: 'p',
         unit: 'pt',
@@ -639,12 +676,14 @@ export function downloadInvoiceAsPDF() {
 
     doc.html(invoiceElement, {
         callback: function (doc) {
+            // Restaura el color de fondo original después de generar el PDF
+            invoiceElement.style.backgroundColor = originalBg;
             doc.save('factura.pdf');
         },
-        x: 10,
-        y: 10,
-        width: 575,
-        windowWidth: invoiceElement.scrollWidth
+        x: 0,
+        y: 0,
+        width: 595, // Ancho de A4 en puntos
+        windowWidth: 650 // Un poco más ancho para asegurar que todo encaje
     });
 }
 
