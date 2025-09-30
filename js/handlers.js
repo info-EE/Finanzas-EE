@@ -474,18 +474,18 @@ export function handleGenerateInvoice(e, app) {
     e.preventDefault();
     const form = e.target;
     const operationType = form.querySelector('#factura-operation-type').value;
-    const client = form.querySelector('#factura-client').value;
+    const client = form.querySelector('#factura-cliente').value;
     const nif = form.querySelector('#factura-nif').value;
     const number = form.querySelector('#factura-numero').value;
     const date = form.querySelector('#factura-fecha').value;
     const currency = form.querySelector('#factura-currency').value;
 
     const items = [];
-    form.querySelectorAll('.factura-item').forEach(itemEl => {
+    form.querySelectorAll('.factura-item-row').forEach(itemEl => {
         items.push({
-            description: itemEl.querySelector('.item-description').value,
-            quantity: parseFloat(itemEl.querySelector('.item-quantity').value),
-            price: parseFloat(itemEl.querySelector('.item-price').value)
+            description: itemEl.querySelector('.factura-item-concept').value,
+            quantity: parseFloat(itemEl.querySelector('.factura-item-quantity').value),
+            price: parseFloat(itemEl.querySelector('.factura-item-price').value)
         });
     });
 
@@ -526,9 +526,38 @@ export function handleGenerateInvoice(e, app) {
     app.updateFacturaSummary();
 }
 
+/**
+ * Maneja el cambio en el tipo de operación de la factura.
+ * Esta es la versión definitiva y robusta.
+ * @param {object} app - La instancia principal de la aplicación.
+ */
 export function handleOperationTypeChange(app) {
+    // CAMBIO CLAVE: Obtenemos los elementos directamente del DOM por su ID.
+    // Esto evita depender de otros archivos (como ui.js) y previene errores.
+    const operationTypeSelect = document.getElementById('factura-operation-type');
+    const currencySelect = document.getElementById('factura-currency');
+    const ivaLabel = document.getElementById('factura-iva-label');
+
+    // Verificamos que los elementos realmente existan en la página.
+    if (!operationTypeSelect || !currencySelect) {
+        console.error("Error crítico: No se encontraron los selectores de operación o moneda en el DOM.");
+        return;
+    }
+
+    // Usamos .includes('Exportación') para ser flexibles con el texto exacto.
+    if (operationTypeSelect.value.includes('Exportación')) {
+        currencySelect.value = 'USD';
+        currencySelect.disabled = true;
+        if (ivaLabel) ivaLabel.textContent = 'IVA (0% - Exportación):';
+    } else {
+        currencySelect.disabled = false;
+        if (ivaLabel) ivaLabel.textContent = 'IVA (21%):';
+    }
+    
+    // Al final, siempre recalculamos los totales de la factura.
     app.updateFacturaSummary();
 }
+
 
 export function handleFacturasTableClick(e, app) {
     const target = e.target;

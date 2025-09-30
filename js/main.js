@@ -52,7 +52,7 @@ import {
     handleReportGeneration,
     handleCloseYear,
     handleGenerateInvoice,
-    handleOperationTypeChange,
+    handleOperationTypeChange, // Asegúrate de que esta función esté en handlers.js
     handleFacturasTableClick,
     handleAeatConfigSave,
     handleFiscalParamsSave
@@ -91,15 +91,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // UI Rendering
         renderTransactions() { renderTransactions(this.state); },
         renderAccountsTab() { renderAccountsTab(this.state); },
-        renderBalanceLegendAndChart() { renderBalanceLegendAndChart(this.state); },
+        renderBalanceLegendAndChart() { renderBalanceLegendAndChart(this); },
         updateInicioKPIs() { updateInicioKPIs(this.state); },
-        renderInicioCharts() { renderInicioCharts(this.state, this.charts); },
+        renderInicioCharts() { renderInicioCharts(this); },
         populateSelects() { populateSelects(this.state); },
-        renderSettings() { renderSettings(this.state); },
+        renderSettings() { renderSettings(this); },
         renderDocuments() { renderDocuments(this.state); },
         renderFacturas() { renderFacturas(this.state); },
         renderInvestments() { renderInvestments(this.state); },
-        updateModuleVisibility,
+        updateModuleVisibility() { updateModuleVisibility(this.state); },
         renderArchives() { renderArchives(this.state); },
         renderAeatConfig() { renderAeatSettings(this.state); },
         renderFiscalParams() { renderFiscalParams(this.state); },
@@ -124,7 +124,13 @@ document.addEventListener('DOMContentLoaded', () => {
         handleReportGeneration(e) { handleReportGeneration(e, this); },
         handleCloseYear() { handleCloseYear(this); },
         handleGenerateInvoice(e) { handleGenerateInvoice(e, this); },
-        handleOperationTypeChange() { handleOperationTypeChange(this); },
+        
+        // --- FUNCIÓN CORREGIDA ---
+        handleOperationTypeChange() {
+            handleOperationTypeChange(this); // Llama a la función importada desde handlers.js
+            this.updateFacturaSummary();     // Llama a la función que recalcula los totales
+        },
+        
         handleFacturasTableClick(e) { handleFacturasTableClick(e, this); },
         handleAeatConfigSave(e) { handleAeatConfigSave(e, this); },
         handleFiscalParamsSave(e) { handleFiscalParamsSave(e, this); },
@@ -153,9 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         },
         showInvoiceViewer(invoiceId) { showInvoiceViewer(invoiceId, this.state); },
-        hideInvoiceViewer,
-        printInvoice,
-        downloadInvoiceAsPDF,
+        hideInvoiceViewer() { hideInvoiceViewer(); },
+        printInvoice() { printInvoice(); },
+        downloadInvoiceAsPDF() { downloadInvoiceAsPDF(); },
 
         // Modals
         showConfirmationModal(title, message, onConfirm) {
