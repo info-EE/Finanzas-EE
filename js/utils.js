@@ -1,13 +1,15 @@
+// js/utils.js
+
+export function formatCurrency(n, cur) {
+    const fmt = cur === 'EUR' ? { style: 'currency', currency: 'EUR' } : { style: 'currency', currency: 'USD' };
+    return new Intl.NumberFormat('es-ES', fmt).format(Number(n) || 0);
+}
+
 export function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
     const p = document.createElement('p');
     p.appendChild(document.createTextNode(str));
     return p.innerHTML;
-}
-
-export function formatCurrency(amount, currency = 'USD') {
-    const symbol = currency === 'EUR' ? '€' : '$';
-    const locale = currency === 'EUR' ? 'de-DE' : 'en-US';
-    return `${symbol}${amount.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function getCurrencySymbol(currency) {
