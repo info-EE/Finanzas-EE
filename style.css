@@ -114,3 +114,29 @@ input:checked + .toggle-bg {
     border-color: #60a5fa;
     color: #60a5fa;
 }
+
+/* --- NUEVO: ESTILOS PARA LA VERSIÓN CLARA DE LA FACTURA (PDF) --- */
+.invoice-light-theme {
+    background-color: white !important;
+    color: #111 !important;
+}
+.invoice-light-theme .text-white,
+.invoice-light-theme .text-gray-300,
+.invoice-light-theme .text-gray-400 {
+    color: #333 !important;
+}
+.invoice-light-theme .font-bold {
+    color: #000 !important;
+}
+.invoice-light-theme .text-blue-300,
+.invoice-light-theme .text-blue-400 {
+    color: #1e3a8a !important;
+}
+.invoice-light-theme .border-gray-700,
+.invoice-light-theme .border-gray-600 {
+    border-color: #e5e7eb !important;
+}
+.invoice-light-theme .bg-gray-800,
+.invoice-light-theme .bg-gray-800\/50 {
+    background-color: #f9fafb !important;
+}

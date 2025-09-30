@@ -31,7 +31,7 @@ export const elements = {
     facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
     facturaApiResponse: document.getElementById('factura-api-response'),
     facturaOperationType: document.getElementById('factura-operation-type'),
-    facturaSelectCliente: document.getElementById('factura-select-cliente'), // <-- NUEVO
+    facturaSelectCliente: document.getElementById('factura-select-cliente'),
     facturasTableBody: document.getElementById('facturas-table-body'),
     defaultFiltersContainer: document.getElementById('default-filters-container'),
     sociedadesFiltersContainer: document.getElementById('sociedades-filters-container'),
@@ -41,7 +41,6 @@ export const elements = {
     closeInvoiceViewerBtn: document.getElementById('close-invoice-viewer-btn'),
     printInvoiceBtn: document.getElementById('print-invoice-btn'),
     pdfInvoiceBtn: document.getElementById('pdf-invoice-btn'),
-    // Elementos de Clientes
     addClientForm: document.getElementById('add-client-form'),
     clientsTableBody: document.getElementById('clients-table-body'),
 };
@@ -75,7 +74,7 @@ export function updateAll(app) {
     updateInicioKPIs(app.state);
     renderInicioCharts(app.state, app.charts);
     populateSelects(app.state);
-    populateClientSelectForInvoice(app.state); // <-- NUEVO
+    populateClientSelectForInvoice(app.state);
     renderSettings(app.state);
     renderDocuments(app.state);
     renderFacturas(app.state);
@@ -86,20 +85,16 @@ export function updateAll(app) {
     app.saveData();
 }
 
-// NUEVA FUNCIÓN para rellenar el select de clientes en facturación
 export function populateClientSelectForInvoice(state) {
     const select = elements.facturaSelectCliente;
     if (!select) return;
 
-    // Guardar el valor seleccionado actualmente
     const selectedValue = select.value;
 
-    // Limpiar opciones existentes (excepto la primera de "Entrada Manual")
     while (select.options.length > 1) {
         select.remove(1);
     }
 
-    // Añadir clientes
     state.clients.forEach(client => {
         const option = document.createElement('option');
         option.value = client.id;
@@ -107,7 +102,6 @@ export function populateClientSelectForInvoice(state) {
         select.appendChild(option);
     });
 
-    // Restaurar el valor seleccionado si todavía existe
     select.value = selectedValue;
 }
 
@@ -714,13 +708,62 @@ export function hideInvoiceViewer() {
 }
 
 export function printInvoice() {
-    const printContent = elements.invoiceContentArea.innerHTML;
+    const printContent = elements.invoiceContentArea.querySelector('#invoice-printable-area');
     const printWindow = window.open('', '', 'height=800,width=800');
+    
+    // NUEVO: Estilos profesionales para la versión de impresión/PDF
+    const styles = `
+        <style>
+            body { 
+                font-family: 'Inter', sans-serif; 
+                background-color: white; 
+                color: #111;
+                margin: 0;
+                padding: 20px;
+                -webkit-print-color-adjust: exact;
+            }
+            .print-header {
+                background-color: #2563eb !important; /* Un azul profesional */
+                color: white !important;
+                padding: 20px;
+                border-radius: 8px;
+            }
+            .print-header h1, .print-header p { color: white !important; }
+            .factura-title {
+                font-size: 2.5rem;
+                font-weight: bold;
+                text-align: right;
+                color: #1e3a8a; /* Azul oscuro */
+            }
+            .client-box {
+                border: 1px solid #e5e7eb;
+                background-color: #f9fafb;
+                padding: 15px;
+                border-radius: 8px;
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 10px 8px; text-align: left; }
+            thead { background-color: #f3f4f6 !important; }
+            th { font-weight: bold; }
+            tbody tr { border-bottom: 1px solid #e5e7eb; }
+            .totals-section { text-align: right; }
+            .totals-section .total-final {
+                font-size: 1.5rem;
+                font-weight: bold;
+                color: #1e3a8a; /* Azul oscuro */
+                border-top: 2px solid #1e3a8a;
+                padding-top: 8px;
+            }
+        </style>
+    `;
+
     printWindow.document.write('<html><head><title>Factura</title>');
-    printWindow.document.write('<link rel="stylesheet" href="style.css">');
-    printWindow.document.write('<style>body { background-color: #111827; color: #d1d5db; } .card { background-color: #1f2937; } @media print { body { background-color: white; color: black; -webkit-print-color-adjust: exact; } .text-white, .text-gray-300, .text-gray-400, .text-blue-300, .text-blue-400 { color: black !important; } .bg-gray-800, .bg-gray-800\/50, .bg-gray-900 { background-color: #f3f4f6 !important; } .border-gray-700 { border-color: #d1d5db !important; } .font-bold { font-weight: bold !important; } }</style>');
+    printWindow.document.write('<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">');
+    printWindow.document.write(styles);
     printWindow.document.write('</head><body>');
-    printWindow.document.write(printContent);
+    printWindow.document.write(printContent.innerHTML); // Usar innerHTML del contenido imprimible
     printWindow.document.write('</body></html>');
     printWindow.document.close();
     setTimeout(() => {
@@ -731,11 +774,10 @@ export function printInvoice() {
 
 export function downloadInvoiceAsPDF() {
     const { jsPDF } = window.jspdf;
-    const invoiceElement = document.getElementById('invoice-printable-area');
+    const invoiceElement = elements.invoiceContentArea.querySelector('#invoice-printable-area');
     
-    // Temporalmente cambia el color de fondo a blanco para el PDF
-    const originalBg = invoiceElement.style.backgroundColor;
-    invoiceElement.style.backgroundColor = 'white';
+    // Añadir clase temporal para aplicar estilos claros
+    invoiceElement.classList.add('invoice-light-theme');
 
     const doc = new jsPDF({
         orientation: 'p',
@@ -745,14 +787,15 @@ export function downloadInvoiceAsPDF() {
 
     doc.html(invoiceElement, {
         callback: function (doc) {
-            // Restaura el color de fondo original después de generar el PDF
-            invoiceElement.style.backgroundColor = originalBg;
+            // Quitar clase temporal después de generar el PDF
+            invoiceElement.classList.remove('invoice-light-theme');
             doc.save('factura.pdf');
         },
         x: 0,
         y: 0,
-        width: 595, // Ancho de A4 en puntos
-        windowWidth: 650 // Un poco más ancho para asegurar que todo encaje
+        width: 595,
+        windowWidth: 650,
+        margin: [40, 40, 40, 40]
     });
 }
 
