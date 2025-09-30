@@ -31,6 +31,7 @@ export const elements = {
     facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
     facturaApiResponse: document.getElementById('factura-api-response'),
     facturaOperationType: document.getElementById('factura-operation-type'),
+    facturasSearch: document.getElementById('facturas-search'),
     facturasTableBody: document.getElementById('facturas-table-body'),
     defaultFiltersContainer: document.getElementById('default-filters-container'),
     sociedadesFiltersContainer: document.getElementById('sociedades-filters-container'),
@@ -695,9 +696,45 @@ export function renderInvestments(state) {
     }
 }
 
-export function renderFiscalParams(state) {
-    const rateInput = document.getElementById('corporate-tax-rate');
-    if (rateInput) {
-        rateInput.value = state.settings.fiscalParameters.corporateTaxRate;
-    }
+export function renderFiscalParams(fiscalParams) {
+    document.getElementById('corporate-tax-rate').value = fiscalParams.corporateTaxRate || 25;
+}
+
+/**
+ * Renderiza la tabla de facturas.
+ * @param {object} state - El estado de la aplicación.
+ */
+export function renderFacturas(state) {
+    const searchTerm = document.getElementById('facturas-search').value.toLowerCase();
+    const filteredFacturas = state.documents
+        .filter(doc => doc.type === 'Factura')
+        .filter(factura =>
+            factura.client.toLowerCase().includes(searchTerm) ||
+            factura.number.toLowerCase().includes(searchTerm) ||
+            factura.operationType.toLowerCase().includes(searchTerm)
+        );
+
+    elements.facturasTableBody.innerHTML = filteredFacturas.map(factura => `
+        <tr class="border-b border-gray-700 hover:bg-gray-700/50">
+            <td class="p-3">${escapeHTML(factura.date)}</td>
+            <td class="p-3">${escapeHTML(factura.number)}</td>
+            <td class="p-3">${escapeHTML(factura.client)}</td>
+            <td class="p-3">${escapeHTML(factura.operationType)}</td>
+            <td class="p-3 text-right">${formatCurrency(factura.total, factura.currency)}</td>
+            <td class="p-3 text-center">
+                <span class="status-btn cursor-pointer px-2 py-1 text-xs rounded-full ${factura.status === 'Pagada' ? 'bg-green-500 text-white' : 'bg-yellow-500 text-black'}" data-id="${factura.id}">
+                    ${factura.status}
+                </span>
+            </td>
+            <td class="p-3 text-center">
+                <button class="view-invoice-btn p-1 text-gray-400 hover:text-white" data-id="${factura.id}" title="Ver Factura">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+                <button class="delete-doc-btn p-1 text-gray-400 hover:text-red-500" data-id="${factura.id}" title="Eliminar Factura">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    lucide.createIcons();
 }

@@ -7,6 +7,7 @@ export function bindEventListeners(app) {
         elements.sidebar.classList.toggle('w-20');
         elements.mainContent.classList.toggle('ml-64');
         elements.mainContent.classList.toggle('ml-20');
+        elements.facturasTableBody.addEventListener('click', (e) => app.handleFacturasTableClick(e));
         document.querySelectorAll('.nav-text').forEach(text => text.classList.toggle('hidden'));
     });
 

@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recalculateAllBalances(this.state);
             updateAll(this);
             switchPage('inicio', this);
+            this.renderFacturas();
             this.setDateDefaults();
             this.updateDateInputForReports();
             this.toggleReportFilters();

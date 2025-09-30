@@ -582,15 +582,15 @@
                                         </select>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-        <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
-        <input type="text" id="factura-cliente" class="form-input" placeholder="Nombre del Cliente" required>
-    </div>
-    <div>
-        <label for="factura-nif" class="block text-sm text-gray-400 mb-1">NIF/CIF</label>
-        <input type="text" id="factura-nif" class="form-input" placeholder="NIF/CIF del Cliente" required>
-    </div>
-</div>
+                                    <div>
+                                        <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
+                                        <input type="text" id="factura-cliente" class="form-input" placeholder="Nombre del Cliente" required>
+                                    </div>
+                                    <div>
+                                        <label for="factura-nif" class="block text-sm text-gray-400 mb-1">NIF/CIF</label>
+                                        <input type="text" id="factura-nif" class="form-input" placeholder="NIF/CIF del Cliente" required>
+                                    </div>
+                                </div>
                                 <div class="grid grid-cols-12 gap-4 mb-4">
                                     <div class="col-span-4">
                                         <label for="factura-numero" class="block text-sm text-gray-400 mb-1">Nº Factura</label>
@@ -627,7 +627,7 @@
                                                 </button>
                                             </div>
                                         </div>
-                                        </div>
+                                    </div>
                                     <button type="button" id="factura-add-item-btn" class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2">
                                         <i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir concepto
                                     </button>
@@ -658,17 +658,17 @@
 
             <div id="facturacion-content-listado" class="hidden">
                 <div class="card p-6 rounded-xl">
-                    <h3 class="font-semibold mb-4">Listado de Facturas</h3>
-                    <div class="mb-4">
-                        <input type="text" id="facturas-search" class="form-input" placeholder="Buscar por N° de factura o cliente...">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-lg">Listado de Facturas</h3>
+                        <input type="text" id="facturas-search" class="form-input max-w-xs" placeholder="Buscar por N° o cliente...">
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left min-w-[700px]">
                             <thead>
                                 <tr class="text-gray-400 border-b border-gray-700">
-                                    <th class="py-2 px-3">Fecha</th>
                                     <th class="py-2 px-3">N° Factura</th>
                                     <th class="py-2 px-3">Cliente</th>
+                                    <th class="py-2 px-3">Fecha</th>
                                     <th class="py-2 px-3 text-right">Monto</th>
                                     <th class="py-2 px-3 text-center">Estado</th>
                                     <th class="py-2 px-3 text-center">Acciones</th>
