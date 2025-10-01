@@ -125,10 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
         handleCloseYear() { handleCloseYear(this); },
         handleGenerateInvoice(e) { handleGenerateInvoice(e, this); },
         
-        // --- FUNCIÓN CORREGIDA ---
         handleOperationTypeChange() {
             handleOperationTypeChange(this); // Llama a la función importada desde handlers.js
-            this.updateFacturaSummary();     // Llama a la función que recalcula los totales
         },
         
         handleFacturasTableClick(e) { handleFacturasTableClick(e, this); },
