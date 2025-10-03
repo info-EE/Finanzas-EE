@@ -1,8 +1,9 @@
-import { escapeHTML, formatCurrency } from './utils.js';
-import { CHART_COLORS, ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
-import { store } from './store.js';
+import { getState } from './store.js';
+import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
+import { CHART_COLORS } from './config.js';
 
-// --- Element Cache ---
+// --- Almacenamiento de Referencias a Elementos del DOM y Gráficos ---
+
 export const elements = {
     sidebar: document.getElementById('sidebar'),
     mainContent: document.getElementById('main-content'),
@@ -24,10 +25,9 @@ export const elements = {
     expenseCategoriesList: document.getElementById('expense-categories-list'),
     operationTypesList: document.getElementById('operation-types-list'),
     proformasTableBody: document.getElementById('proformas-table-body'),
-    pageProformas: document.getElementById('page-proformas'),
     aeatSettingsCard: document.getElementById('aeat-settings-card'),
     aeatToggleContainer: document.getElementById('aeat-toggle-container'),
-    aeatConfigForm: document.getElementById('aeat-config-form'),
+    aeatConfigForm: document.getElementById('aeat-config-form'), 
     nuevaFacturaForm: document.getElementById('nueva-factura-form'),
     facturaItemsContainer: document.getElementById('factura-items-container'),
     facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
@@ -45,35 +45,23 @@ export const elements = {
     pdfInvoiceBtn: document.getElementById('pdf-invoice-btn'),
     addClientForm: document.getElementById('add-client-form'),
     clientsTableBody: document.getElementById('clients-table-body'),
+    investmentsTableBody: document.getElementById('investments-table-body'),
 };
 
-export const charts = {
+const charts = {
     accountsBalanceChartEUR: null,
     accountsBalanceChartUSD: null,
     annualFlowChart: null,
 };
 
 
-// --- Navigation ---
-
-export function switchPage(pageId) {
-    elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
-    elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
-
-    // Lazy rendering for charts, now correctly accessing the store
-    if (pageId === 'cuentas') setTimeout(() => renderBalanceLegendAndChart(store.getState()), 0);
-    if (pageId === 'inicio') setTimeout(() => renderInicioCharts(store.getState(), charts), 50);
-}
-
-
-// --- DOM Element Creators ---
+// --- Funciones Creadoras de Elementos ---
 
 function createTransactionRow(t) {
     const row = document.createElement('tr');
     row.className = 'border-b border-gray-800 hover:bg-gray-800/50 transition-colors';
     const amountColor = t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400';
     const sign = t.type === 'Ingreso' ? '+' : '-';
-
     row.innerHTML = `
         <td class="py-3 px-3">${t.date}</td>
         <td class="py-3 px-3">${escapeHTML(t.description)}</td>
@@ -109,6 +97,35 @@ function createAccountCard(account) {
     return card;
 }
 
+function createDocumentRow(doc, type) {
+    const row = document.createElement('tr');
+    row.className = "border-b border-gray-800 hover:bg-gray-800/50";
+    const statusClass = doc.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
+    let actionsHtml = `
+        <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${doc.id}" title="Eliminar">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>`;
+    if (type === 'Factura') {
+        actionsHtml = `
+        <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${doc.id}" title="Ver Factura">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+        </button>` + actionsHtml;
+    }
+
+    row.innerHTML = `
+        <td class="py-3 px-3">${doc.date}</td>
+        <td class="py-2 px-3">${escapeHTML(doc.number)}</td>
+        <td class="py-2 px-3">${escapeHTML(doc.client)}</td>
+        <td class="py-2 px-3 text-right">${formatCurrency(doc.amount, doc.currency)}</td>
+        <td class="py-2 px-3 text-center">
+            <button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${doc.id}">${doc.status}</button>
+        </td>
+        <td class="py-2 px-3">
+            <div class="flex items-center justify-center gap-2">${actionsHtml}</div>
+        </td>`;
+    return row;
+}
+
 function createClientRow(client) {
     const row = document.createElement('tr');
     row.className = 'border-b border-gray-800 hover:bg-gray-800/50';
@@ -130,153 +147,107 @@ function createClientRow(client) {
     return row;
 }
 
-function createDocumentRow(doc) {
+function createInvestmentRow(t) {
     const row = document.createElement('tr');
     row.className = "border-b border-gray-800 hover:bg-gray-800/50";
-    const statusClass = doc.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
-    const isFactura = doc.type === 'Factura';
-
     row.innerHTML = `
-        <td class="py-3 px-3">${doc.date}</td>
-        <td class="py-2 px-3">${escapeHTML(doc.number)}</td>
-        <td class="py-2 px-3">${escapeHTML(doc.client)}</td>
-        <td class="py-2 px-3 text-right">${formatCurrency(doc.amount, doc.currency)}</td>
-        <td class="py-2 px-3 text-center">
-            <button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${doc.id}">${doc.status}</button>
-        </td>
-        <td class="py-2 px-3">
-            <div class="flex items-center justify-center gap-2">
-                ${isFactura ? `
-                <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${doc.id}" title="Ver Factura">
-                    <i data-lucide="eye" class="w-4 h-4"></i>
-                </button>` : ''}
-                <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${doc.id}" title="Eliminar">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </td>`;
+        <td class="py-3 px-3">${t.date}</td>
+        <td class="py-2 px-3">${escapeHTML(t.description)}</td>
+        <td class="py-2 px-3">${escapeHTML(t.account)}</td>
+        <td class="py-2 px-3 text-right">${formatCurrency(t.amount, t.currency)}</td>`;
     return row;
 }
 
-// --- Main Render Functions ---
+// --- Funciones de Renderizado Principales ---
 
-function renderTransactions(state) {
+function renderTransactions() {
+    const { transactions } = getState();
     const tbody = elements.transactionsTableBody;
     tbody.innerHTML = '';
-    const operationalTransactions = state.transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
-    if (operationalTransactions.length === 0) {
+    const fragment = document.createDocumentFragment();
+    
+    let filteredTransactions = transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
+    const searchTerm = document.getElementById('cashflow-search').value.toLowerCase();
+    if (searchTerm) {
+        filteredTransactions = filteredTransactions.filter(t => 
+            t.description.toLowerCase().includes(searchTerm) ||
+            t.account.toLowerCase().includes(searchTerm) ||
+            t.category.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    if (filteredTransactions.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-gray-500">No hay movimientos.</td></tr>`;
-        return;
+    } else {
+        filteredTransactions
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .forEach(t => fragment.appendChild(createTransactionRow(t)));
+        tbody.appendChild(fragment);
     }
+}
+
+function renderAccountsTab() {
+    const { accounts } = getState();
+    const accountsGrid = document.getElementById('accounts-grid');
+    accountsGrid.innerHTML = '';
     const fragment = document.createDocumentFragment();
-    operationalTransactions
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .forEach(t => fragment.appendChild(createTransactionRow(t)));
-    tbody.appendChild(fragment);
-    lucide.createIcons();
+    accounts.forEach(account => fragment.appendChild(createAccountCard(account)));
+    accountsGrid.appendChild(fragment);
 }
 
-function renderAccountsTab(state) {
-    const grid = document.getElementById('accounts-grid');
-    grid.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-    state.accounts.forEach(account => fragment.appendChild(createAccountCard(account)));
-    grid.appendChild(fragment);
-    lucide.createIcons();
-}
-
-function renderClients(state) {
-    const tbody = elements.clientsTableBody;
-    tbody.innerHTML = '';
-    if (state.clients.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay clientes registrados.</td></tr>`;
-        return;
-    }
-    const fragment = document.createDocumentFragment();
-    state.clients.forEach(client => fragment.appendChild(createClientRow(client)));
-    tbody.appendChild(fragment);
-    lucide.createIcons();
-}
-
-function renderDocuments(state, type, tbody, searchTerm) {
-    tbody.innerHTML = '';
-    const documents = state.documents.filter(d => d.type === type && (
-        d.number.toLowerCase().includes(searchTerm) ||
-        d.client.toLowerCase().includes(searchTerm)
-    ));
-
-    if (documents.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay ${type.toLowerCase()}s que coincidan.</td></tr>`;
-        return;
-    }
-    const fragment = document.createDocumentFragment();
-    documents
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .forEach(doc => fragment.appendChild(createDocumentRow(doc)));
-    tbody.appendChild(fragment);
-    lucide.createIcons();
-}
-
-function renderProformas(state) {
-    const searchTerm = elements.pageProformas.querySelector('#proformas-search').value.toLowerCase();
-    renderDocuments(state, 'Proforma', elements.proformasTableBody, searchTerm);
-}
-
-function renderFacturas(state) {
-    const searchTerm = document.getElementById('facturas-search').value.toLowerCase();
-    renderDocuments(state, 'Factura', elements.facturasTableBody, searchTerm);
-}
-
-// --- Chart Rendering ---
-
-function renderBalanceLegendAndChart(state) {
+function renderBalanceLegendAndChart() {
+    const { accounts } = getState();
     const totalsContainer = document.getElementById('balance-totals');
-    const { accounts } = state;
     const totalEUR = accounts.filter(a => a.currency === 'EUR').reduce((sum, a) => sum + a.balance, 0);
     const totalUSD = accounts.filter(a => a.currency === 'USD').reduce((sum, a) => sum + a.balance, 0);
     totalsContainer.innerHTML = `
         <div><p class="text-gray-400 text-sm">Saldo Total en Euros</p><p class="text-2xl font-bold text-white">${formatCurrency(totalEUR, 'EUR')}</p></div>
-        <div><p class="text-gray-400 text-sm">Saldo Total en Dólares</p><p class="text-2xl font-bold text-white">${formatCurrency(totalUSD, 'USD')}</p></div>
-    `;
-    renderSingleCurrencyChart(state, 'EUR', totalEUR, 'accountsBalanceChartEUR', 'balance-legend-eur', 'eur-chart-container');
-    renderSingleCurrencyChart(state, 'USD', totalUSD, 'accountsBalanceChartUSD', 'balance-legend-usd', 'usd-chart-container');
+        <div><p class="text-gray-400 text-sm">Saldo Total en Dólares</p><p class="text-2xl font-bold text-white">${formatCurrency(totalUSD, 'USD')}</p></div>`;
+    
+    renderSingleCurrencyChart('EUR', totalEUR, 'accountsBalanceChartEUR', 'balance-legend-eur', 'eur-chart-container');
+    renderSingleCurrencyChart('USD', totalUSD, 'accountsBalanceChartUSD', 'balance-legend-usd', 'usd-chart-container');
 }
 
-function renderSingleCurrencyChart(state, currency, totalBalance, canvasId, legendId, containerId) {
+function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, containerId) {
+    const { accounts } = getState();
     const container = document.getElementById(containerId);
-    const legend = document.getElementById(legendId);
-    const ctx = document.getElementById(canvasId)?.getContext('2d');
-    const accounts = state.accounts.filter(a => a.currency === currency && a.balance > 0);
-
-    if (!container || !legend || !ctx || accounts.length === 0) {
-        if (container) container.classList.add('hidden');
-        if (charts[canvasId]) charts[canvasId].destroy();
+    const accountsForChart = accounts.filter(a => a.currency === currency && a.balance > 0);
+    
+    if (accountsForChart.length === 0) {
+        container.classList.add('hidden');
         return;
     }
     container.classList.remove('hidden');
-
+    
+    const legendContainer = document.getElementById(legendId);
+    const chartCtx = document.getElementById(canvasId)?.getContext('2d');
+    if (!legendContainer || !chartCtx) return;
+    
     if (charts[canvasId]) charts[canvasId].destroy();
 
-    const backgroundColors = accounts.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]);
+    const backgroundColors = accountsForChart.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]);
     
-    legend.innerHTML = accounts.map((account, index) => `
-        <div class="flex items-center justify-between py-2 text-sm border-b border-gray-800 last:border-b-0">
-            <div class="flex items-center gap-3">
-                <span class="w-3 h-3 rounded-full" style="background-color: ${backgroundColors[index]};"></span>
-                <span>${escapeHTML(account.name)}</span>
-            </div>
-            <div class="text-right">
-                <span class="font-semibold">${totalBalance > 0 ? ((account.balance / totalBalance) * 100).toFixed(1) : 0}%</span>
-                <span class="text-xs text-gray-400 block">${formatCurrency(account.balance, account.currency)}</span>
-            </div>
-        </div>`).join('');
+    legendContainer.innerHTML = accountsForChart.map((account, index) => {
+        const percentage = totalBalance > 0 ? ((account.balance / totalBalance) * 100).toFixed(1) : 0;
+        return `
+            <div class="flex items-center justify-between py-2 text-sm border-b border-gray-800 last:border-b-0">
+                <div class="flex items-center gap-3">
+                    <span class="w-3 h-3 rounded-full" style="background-color: ${backgroundColors[index]};"></span>
+                    <span>${escapeHTML(account.name)}</span>
+                </div>
+                <div class="text-right">
+                    <span class="font-semibold">${percentage}%</span>
+                    <span class="text-xs text-gray-400 block">${formatCurrency(account.balance, account.currency)}</span>
+                </div>
+            </div>`;
+    }).join('');
 
-    charts[canvasId] = new Chart(ctx, { 
+    charts[canvasId] = new Chart(chartCtx, { 
         type: 'doughnut', 
         data: { 
-            labels: accounts.map(a => a.name), 
+            labels: accountsForChart.map(a => a.name), 
             datasets: [{ 
-                data: accounts.map(a => a.balance), 
+                data: accountsForChart.map(a => a.balance), 
                 backgroundColor: backgroundColors,
                 borderColor: '#0a0a0a', borderWidth: 5, borderRadius: 10,
             }] 
@@ -288,138 +259,381 @@ function renderSingleCurrencyChart(state, currency, totalBalance, canvasId, lege
     });
 }
 
-function renderInicioCharts(state, charts) {
+function updateInicioKPIs() {
+    const { accounts } = getState();
+    const totalEUR = accounts.filter(a => a.currency === 'EUR').reduce((s, a) => s + a.balance, 0);
+    const totalUSD = accounts.filter(a => a.currency === 'USD').reduce((s, a) => s + a.balance, 0);
+    document.getElementById('total-eur').textContent = formatCurrency(totalEUR, 'EUR');
+    document.getElementById('total-usd').textContent = formatCurrency(totalUSD, 'USD');
+}
+
+function renderInicioCharts() {
+    const { transactions } = getState();
     const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
     if (!annualCtx) return;
+
     if (charts.annualFlowChart) charts.annualFlowChart.destroy();
     
-    // El resto de la lógica del gráfico de inicio... (la mantenemos igual por ahora)
     const selectedCurrency = document.getElementById('inicio-chart-currency').value;
-    const currencySymbol = selectedCurrency === 'EUR' ? '€' : '$';
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     const currentYear = new Date().getFullYear();
     const incomeData = Array(12).fill(0);
     const expenseData = Array(12).fill(0);
 
-    state.transactions
-        .filter(t => t.currency === selectedCurrency)
+    transactions
+        .filter(t => new Date(t.date).getFullYear() === currentYear && t.currency === selectedCurrency)
         .forEach(t => {
-            const tDate = new Date(t.date);
-            if (tDate.getFullYear() === currentYear) {
-                const month = tDate.getMonth();
-                if (t.type === 'Ingreso') incomeData[month] += t.amount;
-                else if (t.type === 'Egreso') expenseData[month] += t.amount;
-            }
+            const month = new Date(t.date).getMonth();
+            if (t.type === 'Ingreso') incomeData[month] += t.amount;
+            else if (t.type === 'Egreso') expenseData[month] += t.amount;
         });
+    
     const incomeGradient = annualCtx.createLinearGradient(0, 0, 0, 320);
     incomeGradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
     incomeGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
     const expenseGradient = annualCtx.createLinearGradient(0, 0, 0, 320);
     expenseGradient.addColorStop(0, 'rgba(239, 68, 68, 0.5)');
     expenseGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
     charts.annualFlowChart = new Chart(annualCtx, {
         type: 'line',
         data: {
             labels: months,
             datasets: [
-                { label: `Ingresos (${currencySymbol})`, data: incomeData, borderColor: 'rgba(59, 130, 246, 1)', backgroundColor: incomeGradient, fill: true, tension: 0.4 },
-                { label: `Egresos (${currencySymbol})`, data: expenseData, borderColor: 'rgba(239, 68, 68, 1)', backgroundColor: expenseGradient, fill: true, tension: 0.4 }
+                { label: `Ingresos (${getCurrencySymbol(selectedCurrency)})`, data: incomeData, borderColor: 'rgba(59, 130, 246, 1)', backgroundColor: incomeGradient, fill: true, tension: 0.4 },
+                { label: `Egresos (${getCurrencySymbol(selectedCurrency)})`, data: expenseData, borderColor: 'rgba(239, 68, 68, 1)', backgroundColor: expenseGradient, fill: true, tension: 0.4 }
             ]
         },
         options: { 
             responsive: true, maintainAspectRatio: false, 
-            scales: { 
-                y: { 
-                    beginAtZero: true,
-                    ticks: { callback: value => currencySymbol + value.toLocaleString(selectedCurrency === 'EUR' ? 'de-DE' : 'en-US') }
-                } 
-            },
+            scales: { y: { beginAtZero: true } },
             plugins: { legend: { position: 'bottom' } }
         }
     });
 }
 
-// --- Settings & Form Population ---
+function renderDocuments(type, tableBody, searchInputId) {
+    const { documents } = getState();
+    const filteredDocs = documents.filter(d => d.type === type);
+    const searchTerm = document.getElementById(searchInputId).value.toLowerCase();
+    let displayDocs = filteredDocs;
+    
+    if (searchTerm) {
+        displayDocs = filteredDocs.filter(d =>
+            d.number.toLowerCase().includes(searchTerm) ||
+            d.client.toLowerCase().includes(searchTerm)
+        );
+    }
 
-function populateSelect(element, options) {
-    if (!element) return;
-    const currentValue = element.value;
-    element.innerHTML = options.map(o => `<option value="${escapeHTML(o.value)}">${escapeHTML(o.text)}</option>`).join('');
-    element.value = currentValue;
-}
-
-function populateAllSelects(state) {
-    const accountOptions = state.accounts.map(acc => ({ value: acc.name, text: acc.name }));
-    populateSelect(document.getElementById('transaction-account'), accountOptions);
-    populateSelect(document.getElementById('transfer-from'), accountOptions);
-    populateSelect(document.getElementById('transfer-to'), accountOptions);
-    populateSelect(document.getElementById('update-account-select'), accountOptions);
-    populateSelect(document.getElementById('report-account'), [{value: 'all', text: 'Todas las Cuentas'}, ...accountOptions]);
-    populateSelect(elements.facturaSelectCliente, [{value: '', text: '-- Entrada Manual --'}, ...state.clients.map(c => ({value: c.id, text: c.name}))]);
-    populateSelect(elements.facturaOperationType, state.invoiceOperationTypes.map(o => ({value: o, text: o})));
-    populateCategories(state);
-}
-
-function populateCategories(state) {
-    const type = document.getElementById('transaction-type').value;
-    const categories = type === 'Ingreso' ? state.incomeCategories : state.expenseCategories;
-    populateSelect(document.getElementById('transaction-category'), categories.map(c => ({value: c, text: c})));
-}
-
-function renderSettings(state) {
-    const renderList = (container, items, isEssentialCheck) => {
-        container.innerHTML = '';
+    tableBody.innerHTML = '';
+    if (displayDocs.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay ${type.toLowerCase()}s.</td></tr>`;
+    } else {
         const fragment = document.createDocumentFragment();
-        items.forEach(item => {
+        displayDocs.sort((a, b) => new Date(b.date) - new Date(a.date))
+                   .forEach(doc => fragment.appendChild(createDocumentRow(doc, type)));
+        tableBody.appendChild(fragment);
+    }
+}
+
+function renderClients() {
+    const { clients } = getState();
+    const tbody = elements.clientsTableBody;
+    tbody.innerHTML = '';
+    
+    if (clients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay clientes registrados.</td></tr>`;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    clients.forEach(client => fragment.appendChild(createClientRow(client)));
+    tbody.appendChild(fragment);
+}
+
+function renderInvestments() {
+    const { transactions } = getState();
+    const investmentsData = transactions.filter(t => t.category === 'Inversión');
+    const tbody = elements.investmentsTableBody;
+    tbody.innerHTML = '';
+    
+    const totalInvestedEUR = investmentsData.filter(t => t.currency === 'EUR').reduce((sum, t) => sum + t.amount, 0);
+    const totalInvestedUSD = investmentsData.filter(t => t.currency === 'USD').reduce((sum, t) => sum + t.amount, 0);
+    document.getElementById('total-invested-eur').textContent = formatCurrency(totalInvestedEUR, 'EUR');
+    document.getElementById('total-invested-usd').textContent = formatCurrency(totalInvestedUSD, 'USD');
+
+    if (investmentsData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">No hay movimientos de inversión.</td></tr>`;
+    } else {
+        const fragment = document.createDocumentFragment();
+        investmentsData.sort((a, b) => new Date(b.date) - new Date(a.date))
+                       .forEach(t => fragment.appendChild(createInvestmentRow(t)));
+        tbody.appendChild(fragment);
+    }
+}
+
+function renderSettings() {
+    const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, settings } = getState();
+    
+    // Render accounts list
+    elements.settingsAccountsList.innerHTML = '';
+    accounts.forEach(acc => {
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between bg-gray-800/50 p-2 rounded";
+        div.innerHTML = `
+            <div class="flex items-center gap-2 text-sm">${acc.logoHtml || ''}<span>${escapeHTML(acc.name)}</span></div>
+            <button class="delete-account-btn p-1 text-red-400 hover:text-red-300" data-name="${escapeHTML(acc.name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+        elements.settingsAccountsList.appendChild(div);
+    });
+
+    // Render category lists
+    const renderCategoryList = (listEl, categories, essentialCategories) => {
+        listEl.innerHTML = '';
+        categories.forEach(cat => {
             const div = document.createElement('div');
             div.className = "flex items-center justify-between bg-gray-800/50 p-2 rounded text-sm";
-            const name = typeof item === 'object' ? item.name : item;
-            const isEssential = isEssentialCheck(name);
-            const deleteButton = isEssential
-                ? `<span class="p-1 text-gray-600 cursor-not-allowed" title="Elemento esencial no se puede eliminar"><i data-lucide="lock" class="w-4 h-4"></i></span>`
-                : `<button class="delete-category-btn p-1 text-red-400 hover:text-red-300" data-name="${escapeHTML(name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
-            
-            const logo = typeof item === 'object' && item.logoHtml ? `<div class="flex items-center gap-2 text-sm">${item.logoHtml}<span>${escapeHTML(name)}</span></div>` : `<span>${escapeHTML(name)}</span>`;
-            
-            div.innerHTML = `${logo} ${deleteButton}`;
-            fragment.appendChild(div);
+            const isEssential = essentialCategories.includes(cat);
+            const deleteButtonHtml = isEssential 
+                ? `<span class="p-1 text-gray-600 cursor-not-allowed" title="Categoría esencial"><i data-lucide="lock" class="w-4 h-4"></i></span>`
+                : `<button class="delete-category-btn p-1 text-red-400 hover:text-red-300" data-name="${escapeHTML(cat)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            div.innerHTML = `<span>${escapeHTML(cat)}</span> ${deleteButtonHtml}`;
+            listEl.appendChild(div);
         });
-        container.appendChild(fragment);
     };
+    renderCategoryList(elements.incomeCategoriesList, incomeCategories, []);
+    renderCategoryList(elements.expenseCategoriesList, expenseCategories, []);
+    renderCategoryList(elements.operationTypesList, invoiceOperationTypes, []);
 
-    renderList(elements.settingsAccountsList, state.accounts, () => false);
-    renderList(elements.incomeCategoriesList, state.incomeCategories, (name) => ESSENTIAL_INCOME_CATEGORIES.includes(name));
-    renderList(elements.expenseCategoriesList, state.expenseCategories, (name) => ESSENTIAL_EXPENSE_CATEGORIES.includes(name));
-    renderList(elements.operationTypesList, state.invoiceOperationTypes, (name) => ESSENTIAL_OPERATION_TYPES.includes(name));
+    // Render AEAT settings
+    const isActive = settings.aeatModuleActive;
+    elements.aeatToggleContainer.innerHTML = isActive
+        ? `<button class="aeat-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg"><i data-lucide="check-circle" class="w-4 h-4"></i> Activado</button>`
+        : `<button class="aeat-toggle-btn border border-blue-800 text-blue-400 font-bold py-2 px-3 rounded-lg">Activar</button>`;
+    
+    // Render fiscal params
+    elements.fiscalParamsForm.querySelector('#corporate-tax-rate').value = settings.fiscalParameters.corporateTaxRate;
+}
 
+// --- Funciones de Utilidad y Ayuda para la UI ---
+
+export function switchPage(pageId, subpageId = null) {
+    elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
+    elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
+    
+    // Lógica específica al cambiar de página
+    if (pageId === 'cuentas') renderBalanceLegendAndChart();
+    if (pageId === 'inicio') renderInicioCharts();
+    if (pageId === 'facturacion' && subpageId) {
+        document.querySelectorAll('.tab-button-inner').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`facturacion-tab-${subpageId}`).classList.add('active');
+        ['crear', 'listado', 'config'].forEach(id => {
+            document.getElementById(`facturacion-content-${id}`).classList.toggle('hidden', id !== subpageId);
+        });
+    }
+
+    // Siempre refrescar los datos de la página activa
+    renderAll();
     lucide.createIcons();
 }
 
-function updateInicioKPIs(state) {
-    const totalEUR = state.accounts.filter(a => a.currency === 'EUR').reduce((s, a) => s + a.balance, 0);
-    const totalUSD = state.accounts.filter(a => a.currency === 'USD').reduce((s, a) => s + a.balance, 0);
-    document.getElementById('total-eur').textContent = formatCurrency(totalEUR, 'EUR');
-    document.getElementById('total-usd').textContent = formatCurrency(totalUSD, 'USD');
+export function populateSelects() {
+    const { accounts } = getState();
+    const optionsHtml = accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
+    ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select'].forEach(id => {
+        document.getElementById(id).innerHTML = optionsHtml;
+    });
+    populateCategories();
+    populateOperationTypesSelect();
+    populateReportAccounts();
+    populateClientSelectForInvoice();
+}
+
+export function populateCategories() {
+    const { incomeCategories, expenseCategories } = getState();
+    const type = elements.transactionForm.querySelector('#transaction-type').value;
+    const categories = type === 'Ingreso' ? incomeCategories : expenseCategories;
+    elements.transactionForm.querySelector('#transaction-category').innerHTML = categories.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join('');
+}
+
+function populateOperationTypesSelect() {
+    const { invoiceOperationTypes } = getState();
+    elements.facturaOperationType.innerHTML = invoiceOperationTypes.map(type => `<option value="${escapeHTML(type)}">${escapeHTML(type)}</option>`).join('');
+}
+
+function populateReportAccounts() {
+    const { accounts } = getState();
+    const select = document.getElementById('report-account');
+    select.innerHTML = '<option value="all">Todas las Cuentas</option>';
+    select.innerHTML += accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
+}
+
+export function populateClientSelectForInvoice() {
+    const { clients } = getState();
+    const select = elements.facturaSelectCliente;
+    if (!select) return;
+    const selectedValue = select.value;
+    while (select.options.length > 1) select.remove(1);
+    clients.forEach(client => {
+        const option = document.createElement('option');
+        option.value = client.id;
+        option.textContent = client.name;
+        select.appendChild(option);
+    });
+    select.value = selectedValue;
+}
+
+export function updateCurrencySymbol() {
+    const { accounts } = getState();
+    const accountName = elements.transactionForm.querySelector('#transaction-account').value;
+    const account = accounts.find(acc => acc.name === accountName);
+    if (account) {
+        document.getElementById('amount-currency-symbol').textContent = getCurrencySymbol(account.currency);
+    }
+}
+
+export function updateTransferFormUI() {
+    const { accounts } = getState();
+    const fromAccount = accounts.find(a => a.name === document.getElementById('transfer-from').value);
+    const toAccount = accounts.find(a => a.name === document.getElementById('transfer-to').value);
+    if (!fromAccount || !toAccount) return;
+
+    document.getElementById('transfer-amount-currency-symbol').textContent = getCurrencySymbol(fromAccount.currency);
+    document.getElementById('transfer-fee-source-currency-symbol').textContent = getCurrencySymbol(fromAccount.currency);
+    document.getElementById('transfer-extra-currency-symbol').textContent = getCurrencySymbol(toAccount.currency);
+    
+    if (fromAccount.currency !== toAccount.currency) {
+        document.getElementById('transfer-extra-label').textContent = `Monto a Recibir (${getCurrencySymbol(toAccount.currency)})`;
+        document.getElementById('transfer-extra-field').required = true;
+    } else {
+        document.getElementById('transfer-extra-label').textContent = "Comisión Destino (Opcional)";
+        document.getElementById('transfer-extra-field').required = false;
+    }
+}
+
+export function resetTransactionForm() {
+    elements.transactionForm.reset();
+    elements.transactionForm.querySelector('#transaction-id').value = '';
+    elements.transactionForm.querySelector('#form-title').textContent = 'Agregar Nuevo Movimiento';
+    elements.transactionForm.querySelector('#form-submit-button-text').textContent = 'Guardar';
+    elements.transactionForm.querySelector('#form-cancel-button').classList.add('hidden');
+    document.getElementById('transaction-date').value = new Date().toISOString().slice(0, 10);
+    populateCategories();
+    updateCurrencySymbol();
+}
+
+export function showConfirmationModal(title, message, onConfirm) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-message').textContent = message;
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    const modal = document.getElementById('confirmation-modal');
+    
+    const confirmHandler = () => {
+        onConfirm();
+        modal.classList.add('hidden');
+        confirmBtn.removeEventListener('click', confirmHandler);
+    };
+    
+    confirmBtn.onclick = confirmHandler; // Usar onclick para sobreescribir listeners previos
+    document.getElementById('modal-cancel-btn').onclick = () => modal.classList.add('hidden');
+    modal.classList.remove('hidden');
+}
+
+export function showAlertModal(title, message) {
+    document.getElementById('alert-modal-title').textContent = title;
+    document.getElementById('alert-modal-message').textContent = message;
+    const modal = document.getElementById('alert-modal');
+    document.getElementById('alert-modal-ok-btn').onclick = () => modal.classList.add('hidden');
+    modal.classList.remove('hidden');
+}
+
+export function showInvoiceViewer(invoiceId) {
+    const { documents } = getState();
+    const invoice = documents.find(doc => doc.id === invoiceId);
+    if (!invoice) return;
+
+    const itemsHtml = invoice.items.map(item => `
+        <tr class="border-b border-gray-700">
+            <td class="py-2 px-4">${escapeHTML(item.description)}</td>
+            <td class="py-2 px-4 text-right">${item.quantity.toFixed(2)}</td>
+            <td class="py-2 px-4 text-right">${formatCurrency(item.price, invoice.currency)}</td>
+            <td class="py-2 px-4 text-right">${formatCurrency(item.quantity * item.price, invoice.currency)}</td>
+        </tr>`).join('');
+
+    elements.invoiceContentArea.innerHTML = `
+    <div id="invoice-printable-area" class="p-8 bg-gray-900 text-white">
+        <header class="flex justify-between items-start mb-10">
+            <div class="w-1/2">
+                <h2 class="text-2xl font-bold text-white mb-2">Europa Envíos</h2>
+                <p class="font-semibold text-blue-300">LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</p>
+            </div>
+            <div class="w-1/2 text-right">
+                <h1 class="text-4xl font-bold text-white uppercase tracking-wider">Factura</h1>
+                <div><span>Nº:</span> <span>${escapeHTML(invoice.number)}</span></div>
+                <div><span>Fecha:</span> <span>${invoice.date}</span></div>
+            </div>
+        </header>
+        <div class="mb-10 p-4 border border-gray-700 rounded-lg bg-gray-800/50">
+            <h3 class="font-semibold text-gray-300 mb-2">Facturar a:</h3>
+            <p class="font-bold text-white">${escapeHTML(invoice.client)}</p>
+            <p>${escapeHTML(invoice.address || '')}</p>
+            <p>NIF/RUC: ${escapeHTML(invoice.nif || '')}</p>
+            <p>${invoice.phone ? `Tel: ${escapeHTML(invoice.phone)}` : ''}</p>
+        </div>
+        <table class="w-full text-left mb-10">
+            <thead><tr class="bg-gray-800 text-gray-300"><th class="py-2 px-4">Descripción</th><th class="py-2 px-4 text-right">Cantidad</th><th class="py-2 px-4 text-right">Precio Unit.</th><th class="py-2 px-4 text-right">Total</th></tr></thead>
+            <tbody>${itemsHtml}</tbody>
+        </table>
+        <div class="flex justify-end">
+            <div class="w-1/2 max-w-xs space-y-2">
+                <div class="flex justify-between"><span>Subtotal:</span> <span>${formatCurrency(invoice.subtotal, invoice.currency)}</span></div>
+                <div class="flex justify-between"><span>IVA (${(invoice.ivaRate * 100 || 21)}%):</span> <span>${formatCurrency(invoice.iva, invoice.currency)}</span></div>
+                <div class="flex justify-between font-bold text-2xl border-t border-gray-600 pt-2 mt-2"><span>TOTAL:</span> <span class="text-blue-400">${formatCurrency(invoice.total, invoice.currency)}</span></div>
+            </div>
+        </div>
+    </div>`;
+    elements.invoiceViewerModal.classList.remove('hidden');
+}
+
+export function hideInvoiceViewer() {
+    elements.invoiceViewerModal.classList.add('hidden');
+}
+
+export function printInvoice() {
+    const printContent = elements.invoiceContentArea.innerHTML;
+    const printWindow = window.open('', '', 'height=800,width=800');
+    printWindow.document.write(`<html><head><title>Factura</title><link rel="stylesheet" href="style.css"></head><body>${printContent}</body></html>`);
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+}
+
+export function downloadInvoiceAsPDF() {
+    const { jsPDF } = window.jspdf;
+    const invoiceElement = document.getElementById('invoice-printable-area');
+    const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+    doc.html(invoiceElement, {
+        callback: (doc) => doc.save('factura.pdf'),
+        x: 0, y: 0, width: 595, windowWidth: 650
+    });
 }
 
 
-// --- THE RENDER ALL FUNCTION ---
-export function renderAll(state, charts) {
-    // Renderizado de listas y tablas
-    renderTransactions(state);
-    renderAccountsTab(state);
-    renderClients(state);
-    renderProformas(state);
-    renderFacturas(state);
-    renderSettings(state);
+// --- Función Agregadora de Renderizado ---
+export function renderAll() {
+    const state = getState();
+    if (!state.accounts) return; // Salir si el estado no está listo
 
-    // Renderizado de KPIs y Gráficos
-    updateInicioKPIs(state);
-    renderBalanceLegendAndChart(state); 
-    renderInicioCharts(state, charts); 
+    // Llamar a todas las funciones de renderizado
+    updateInicioKPIs();
+    renderTransactions();
+    renderAccountsTab();
+    renderDocuments('Proforma', elements.proformasTableBody, 'proformas-search');
+    renderDocuments('Factura', elements.facturasTableBody, 'facturas-search');
+    renderClients();
+    renderInvestments();
+    renderSettings();
+    populateSelects();
 
-    // Actualización de formularios
-    populateAllSelects(state);
-
-    lucide.createIcons(); // Vuelve a inicializar los iconos después de cada renderizado
+    // Iconos
+    lucide.createIcons();
 }
+

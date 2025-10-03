@@ -1,40 +1,31 @@
-import { store } from './store.js';
-import { initApp } from './actions.js';
-import { renderAll, charts } from './ui.js';
+import { subscribe, initState } from './store.js';
 import { bindEventListeners } from './handlers.js';
+import { renderAll, switchPage } from './ui.js';
 
-/**
- * Clase principal de la aplicación.
- * Encapsula la inicialización y el flujo de datos principal.
- */
-class App {
-    constructor() {
-        this.store = store;
-        this.charts = charts;
-    }
+// --- App Initialization ---
 
-    /**
-     * Inicializa la aplicación.
-     */
-    init() {
-        // Crea los iconos de Lucide en la carga inicial.
-        lucide.createIcons();
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Inicializa el estado de la aplicación (carga desde localStorage o usa el default)
+    initState();
 
-        // Suscribe la función de renderizado principal a los cambios del estado.
-        // Cada vez que el estado se actualice, `renderAll` será llamado con el nuevo estado.
-        this.store.subscribe(() => {
-            renderAll(this.store.getState(), this.charts);
-        });
+    // 2. Vincula todos los event listeners a los elementos del DOM
+    bindEventListeners();
 
-        // Vincula todos los manejadores de eventos a los elementos del DOM una sola vez.
-        bindEventListeners();
+    // 3. Se suscribe a los cambios del estado.
+    // Cada vez que el estado cambie (setState), la función renderAll se ejecutará.
+    subscribe(renderAll);
 
-        // Despacha la acción inicial para cargar los datos y configurar la aplicación.
-        this.store.dispatch(initApp());
-    }
-}
+    // 4. Establece la página inicial y realiza el primer renderizado completo
+    switchPage('inicio');
 
-// Inicializa y arranca la aplicación.
-const app = new App();
-app.init();
+    // 5. Establece valores por defecto en campos de fecha
+    const today = new Date().toISOString().slice(0, 10);
+    ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = today;
+    });
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const monthInput = document.getElementById('report-month');
+    if(monthInput) monthInput.value = currentMonth;
+});
 

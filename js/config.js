@@ -7,5 +7,5 @@ export const ESSENTIAL_EXPENSE_CATEGORIES = ['Operaciones', 'Marketing', 'Salari
 export const ESSENTIAL_OPERATION_TYPES = ['Nacional / Intracomunitaria (UE)', 'Exportación (Fuera de la UE)'];
 
 // --- Gráficos ---
-export const CHART_COLORS = [ '#FFC3A0', '#FF7A85', '#D4A5A5', '#A5D4D4', '#CDB4DB', '#FFC8DD', '#A2D2FF', '#BDE0FE' ];
+export const CHART_COLORS = ['#FFC3A0', '#FF7A85', '#D4A5A5', '#A5D4D4', '#CDB4DB', '#FFC8DD', '#A2D2FF', '#BDE0FE'];
 
