@@ -1,5 +1,11 @@
 import { getDefaultState } from './state.js';
 import { escapeHTML, formatCurrency } from './utils.js';
+import { 
+    CHART_COLOR_PALETTE,
+    ESSENTIAL_INCOME_CATEGORIES, 
+    ESSENTIAL_EXPENSE_CATEGORIES,
+    ESSENTIAL_OPERATION_TYPES
+} from './config.js';
 
 export const elements = {
     sidebar: document.getElementById('sidebar'),
@@ -273,7 +279,7 @@ export function renderSingleCurrencyChart(state, currency, totalBalance, canvasI
         charts[chartInstanceName].destroy();
     }
 
-    const colorPairs = [ ['#FFC3A0', '#FF7A85'], ['#D4A5A5', '#A5D4D4'], ['#CDB4DB', '#FFC8DD'], ['#A2D2FF', '#BDE0FE'], ['#FBC2EB', '#A6C1EE'], ['#FDDB6D', '#F1C40F'] ];
+    const colorPairs = CHART_COLOR_PALETTE;
     const backgroundColors = [];
     
     accounts.forEach((account, index) => {
@@ -471,12 +477,12 @@ export function renderSettings(state) {
         return fragment;
     };
     incomeList.innerHTML = '';
-    incomeList.appendChild(renderCategoryList(state.incomeCategories, ['Transferencia', 'Comisiones', 'Ajuste de Saldo', 'Inversión', 'Otros Ingresos']));
+    incomeList.appendChild(renderCategoryList(state.incomeCategories, ESSENTIAL_INCOME_CATEGORIES));
     expenseList.innerHTML = '';
-    expenseList.appendChild(renderCategoryList(state.expenseCategories, ['Transferencia', 'Comisiones', 'Ajuste de Saldo', 'Inversión', 'Otros Gastos']));
+    expenseList.appendChild(renderCategoryList(state.expenseCategories, ESSENTIAL_EXPENSE_CATEGORIES));
 
     operationTypesList.innerHTML = '';
-    operationTypesList.appendChild(renderCategoryList(state.invoiceOperationTypes, ['Nacional / Intracomunitaria (UE)', 'Exportación (Fuera de la UE)']));
+    operationTypesList.appendChild(renderCategoryList(state.invoiceOperationTypes, ESSENTIAL_OPERATION_TYPES));
 
     
     renderAeatSettings(state);

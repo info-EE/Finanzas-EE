@@ -1,5 +1,11 @@
 import { elements } from './ui.js';
 import { escapeHTML } from './utils.js';
+import { 
+    STORAGE_KEY, 
+    ESSENTIAL_INCOME_CATEGORIES, 
+    ESSENTIAL_EXPENSE_CATEGORIES, 
+    ESSENTIAL_OPERATION_TYPES 
+} from './config.js';
 
 export function getDefaultState() {
     return {
@@ -14,9 +20,9 @@ export function getDefaultState() {
         transactions: [],
         documents: [],
         clients: [], // <-- NUEVO
-        incomeCategories: ['Ventas', 'Servicios', 'Otros Ingresos', 'Transferencia', 'Ajuste de Saldo'],
-        expenseCategories: ['Operaciones', 'Marketing', 'Salarios', 'Software', 'Impuestos', 'Otros Gastos', 'Inversión', 'Transferencia', 'Comisiones', 'Ajuste de Saldo'],
-        invoiceOperationTypes: ['Nacional / Intracomunitaria (UE)', 'Exportación (Fuera de la UE)'],
+        incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
+        expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
+        invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
         modules: [],
         archivedData: {},
         activeReport: { type: null, data: [] },
@@ -36,7 +42,7 @@ export function getDefaultState() {
 }
 
 export function loadData(app) {
-    const savedData = localStorage.getItem('financeDashboardData');
+    const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
         try {
             const parsedData = JSON.parse(savedData);
@@ -88,7 +94,7 @@ export function loadData(app) {
 export function saveData(state) {
     try {
         const stateToSave = { ...state, activeReport: { type: null, data: [] } };
-        localStorage.setItem('financeDashboardData', JSON.stringify(stateToSave));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (error) {
         console.error("Error al guardar datos en localStorage:", error);
     }

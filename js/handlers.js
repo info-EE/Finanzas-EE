@@ -1,5 +1,10 @@
 import { elements, updateAll, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice } from './ui.js';
 import { escapeHTML } from './utils.js';
+import { 
+    ESSENTIAL_INCOME_CATEGORIES, 
+    ESSENTIAL_EXPENSE_CATEGORIES,
+    ESSENTIAL_OPERATION_TYPES
+} from './config.js';
 
 export function bindEventListeners(app) {
     document.getElementById('sidebar-toggle').addEventListener('click', () => {
@@ -486,8 +491,20 @@ export function handleDeleteCategory(e, type, app) {
     const deleteBtn = e.target.closest('.delete-category-btn');
     if (deleteBtn) {
         const categoryName = deleteBtn.dataset.name;
-        const list = type === 'income' ? app.state.incomeCategories : (type === 'expense' ? app.state.expenseCategories : app.state.invoiceOperationTypes);
-        const essentialCategories = type === 'income' ? ['Transferencia', 'Comisiones', 'Ajuste de Saldo', 'Inversión'] : ['Transferencia', 'Comisiones', 'Ajuste de Saldo', 'Inversión'];
+        
+        let list;
+        let essentialCategories;
+
+        if (type === 'income') {
+            list = app.state.incomeCategories;
+            essentialCategories = ESSENTIAL_INCOME_CATEGORIES;
+        } else if (type === 'expense') {
+            list = app.state.expenseCategories;
+            essentialCategories = ESSENTIAL_EXPENSE_CATEGORIES;
+        } else { // operationType
+            list = app.state.invoiceOperationTypes;
+            essentialCategories = ESSENTIAL_OPERATION_TYPES;
+        }
         
         if (essentialCategories.includes(categoryName)) {
             app.showAlertModal('Error', 'No se puede eliminar una categoría esencial.');
