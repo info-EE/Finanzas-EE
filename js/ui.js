@@ -1,5 +1,6 @@
 import { escapeHTML, formatCurrency } from './utils.js';
-import { CHART_COLORS } from './config.js';
+import { CHART_COLORS, ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
+import { store } from './store.js';
 
 // --- Element Cache ---
 export const elements = {
@@ -26,7 +27,7 @@ export const elements = {
     pageProformas: document.getElementById('page-proformas'),
     aeatSettingsCard: document.getElementById('aeat-settings-card'),
     aeatToggleContainer: document.getElementById('aeat-toggle-container'),
-    aeatConfigForm: document.getElementById('aeat-config-form'), 
+    aeatConfigForm: document.getElementById('aeat-config-form'),
     nuevaFacturaForm: document.getElementById('nueva-factura-form'),
     facturaItemsContainer: document.getElementById('factura-items-container'),
     facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
@@ -58,10 +59,10 @@ export const charts = {
 export function switchPage(pageId) {
     elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
     elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
-    
-    // Lazy rendering for charts
-    if (pageId === 'cuentas') setTimeout(() => renderBalanceLegendAndChart(window.App.store.getState()), 0);
-    if (pageId === 'inicio') setTimeout(() => renderInicioCharts(window.App.store.getState(), charts), 50);
+
+    // Lazy rendering for charts, now correctly accessing the store
+    if (pageId === 'cuentas') setTimeout(() => renderBalanceLegendAndChart(store.getState()), 0);
+    if (pageId === 'inicio') setTimeout(() => renderInicioCharts(store.getState(), charts), 50);
 }
 
 
@@ -249,6 +250,7 @@ function renderSingleCurrencyChart(state, currency, totalBalance, canvasId, lege
 
     if (!container || !legend || !ctx || accounts.length === 0) {
         if (container) container.classList.add('hidden');
+        if (charts[canvasId]) charts[canvasId].destroy();
         return;
     }
     container.classList.remove('hidden');
@@ -291,14 +293,59 @@ function renderInicioCharts(state, charts) {
     if (!annualCtx) return;
     if (charts.annualFlowChart) charts.annualFlowChart.destroy();
     
-    // El resto de la lógica del gráfico de inicio...
+    // El resto de la lógica del gráfico de inicio... (la mantenemos igual por ahora)
+    const selectedCurrency = document.getElementById('inicio-chart-currency').value;
+    const currencySymbol = selectedCurrency === 'EUR' ? '€' : '$';
+    const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const currentYear = new Date().getFullYear();
+    const incomeData = Array(12).fill(0);
+    const expenseData = Array(12).fill(0);
+
+    state.transactions
+        .filter(t => t.currency === selectedCurrency)
+        .forEach(t => {
+            const tDate = new Date(t.date);
+            if (tDate.getFullYear() === currentYear) {
+                const month = tDate.getMonth();
+                if (t.type === 'Ingreso') incomeData[month] += t.amount;
+                else if (t.type === 'Egreso') expenseData[month] += t.amount;
+            }
+        });
+    const incomeGradient = annualCtx.createLinearGradient(0, 0, 0, 320);
+    incomeGradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+    incomeGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    const expenseGradient = annualCtx.createLinearGradient(0, 0, 0, 320);
+    expenseGradient.addColorStop(0, 'rgba(239, 68, 68, 0.5)');
+    expenseGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+    charts.annualFlowChart = new Chart(annualCtx, {
+        type: 'line',
+        data: {
+            labels: months,
+            datasets: [
+                { label: `Ingresos (${currencySymbol})`, data: incomeData, borderColor: 'rgba(59, 130, 246, 1)', backgroundColor: incomeGradient, fill: true, tension: 0.4 },
+                { label: `Egresos (${currencySymbol})`, data: expenseData, borderColor: 'rgba(239, 68, 68, 1)', backgroundColor: expenseGradient, fill: true, tension: 0.4 }
+            ]
+        },
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            scales: { 
+                y: { 
+                    beginAtZero: true,
+                    ticks: { callback: value => currencySymbol + value.toLocaleString(selectedCurrency === 'EUR' ? 'de-DE' : 'en-US') }
+                } 
+            },
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
 }
 
 // --- Settings & Form Population ---
 
 function populateSelect(element, options) {
     if (!element) return;
+    const currentValue = element.value;
     element.innerHTML = options.map(o => `<option value="${escapeHTML(o.value)}">${escapeHTML(o.text)}</option>`).join('');
+    element.value = currentValue;
 }
 
 function populateAllSelects(state) {
@@ -320,7 +367,7 @@ function populateCategories(state) {
 }
 
 function renderSettings(state) {
-    const renderList = (container, items, isEssentialCheck = () => false) => {
+    const renderList = (container, items, isEssentialCheck) => {
         container.innerHTML = '';
         const fragment = document.createDocumentFragment();
         items.forEach(item => {
@@ -332,7 +379,7 @@ function renderSettings(state) {
                 ? `<span class="p-1 text-gray-600 cursor-not-allowed" title="Elemento esencial no se puede eliminar"><i data-lucide="lock" class="w-4 h-4"></i></span>`
                 : `<button class="delete-category-btn p-1 text-red-400 hover:text-red-300" data-name="${escapeHTML(name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
             
-            const logo = item.logoHtml ? `<div class="flex items-center gap-2 text-sm">${item.logoHtml}<span>${escapeHTML(name)}</span></div>` : `<span>${escapeHTML(name)}</span>`;
+            const logo = typeof item === 'object' && item.logoHtml ? `<div class="flex items-center gap-2 text-sm">${item.logoHtml}<span>${escapeHTML(name)}</span></div>` : `<span>${escapeHTML(name)}</span>`;
             
             div.innerHTML = `${logo} ${deleteButton}`;
             fragment.appendChild(div);
@@ -340,10 +387,10 @@ function renderSettings(state) {
         container.appendChild(fragment);
     };
 
-    renderList(elements.settingsAccountsList, state.accounts, (name) => false); // Las cuentas no son "esenciales" en el mismo sentido
-    renderList(elements.incomeCategoriesList, state.incomeCategories, (name) => state.essentialIncomeCategories?.includes(name));
-    renderList(elements.expenseCategoriesList, state.expenseCategories, (name) => state.essentialExpenseCategories?.includes(name));
-    renderList(elements.operationTypesList, state.invoiceOperationTypes, (name) => state.essentialOperationTypes?.includes(name));
+    renderList(elements.settingsAccountsList, state.accounts, () => false);
+    renderList(elements.incomeCategoriesList, state.incomeCategories, (name) => ESSENTIAL_INCOME_CATEGORIES.includes(name));
+    renderList(elements.expenseCategoriesList, state.expenseCategories, (name) => ESSENTIAL_EXPENSE_CATEGORIES.includes(name));
+    renderList(elements.operationTypesList, state.invoiceOperationTypes, (name) => ESSENTIAL_OPERATION_TYPES.includes(name));
 
     lucide.createIcons();
 }
@@ -357,11 +404,6 @@ function updateInicioKPIs(state) {
 
 
 // --- THE RENDER ALL FUNCTION ---
-/**
- * La función principal que se llama cada vez que cambia el estado.
- * Se encarga de llamar a todas las demás funciones de renderizado.
- * **Esta es la función que debe ser exportada.**
- */
 export function renderAll(state, charts) {
     // Renderizado de listas y tablas
     renderTransactions(state);
@@ -379,6 +421,5 @@ export function renderAll(state, charts) {
     // Actualización de formularios
     populateAllSelects(state);
 
-    lucide.createIcons(); // Vuelve a inicializar los iconos
+    lucide.createIcons(); // Vuelve a inicializar los iconos después de cada renderizado
 }
-
