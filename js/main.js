@@ -1,251 +1,73 @@
-import {
-    elements,
-    charts,
-    switchPage,
-    updateAll,
-    renderTransactions,
-    renderAccountsTab,
-    renderBalanceLegendAndChart,
-    updateInicioKPIs,
-    renderInicioCharts,
-    populateSelects,
-    renderSettings,
-    renderDocuments,
-    renderFacturas,
-    showInvoiceViewer,
-    hideInvoiceViewer,
-    printInvoice,
-    downloadInvoiceAsPDF,
-    updateModuleVisibility,
-    renderArchives,
-    renderInvestments,
-    renderFiscalParams,
-    populateCategories,
-    updateCurrencySymbol,
-    updateTransferFormUI,
-    populateReportAccounts,
-    renderAeatSettings
-} from './ui.js';
+import { elements, charts, switchPage, renderAll } from './ui.js';
+import { bindEventListeners } from './handlers.js';
+import { store } from './store.js';
+import { storageService } from './storage.js';
+import { loadInitialData } from './actions.js';
+import { 
+    ESSENTIAL_INCOME_CATEGORIES, 
+    ESSENTIAL_EXPENSE_CATEGORIES, 
+    ESSENTIAL_OPERATION_TYPES 
+} from './config.js';
 
-import {
-    getDefaultState,
-    loadData,
-    saveData,
-    recalculateAllBalances,
-    addFacturaItem,
-    updateFacturaSummary,
-    switchFacturacionTab
-} from './state.js';
 
-import {
-    bindEventListeners,
-    handleTransactionFormSubmit,
-    handleTransactionsTableClick,
-    handleTransferFormSubmit,
-    handleProformaSubmit,
-    handleProformasTableClick,
-    handleAddAccount,
-    handleSettingsListClick,
-    handleUpdateBalance,
-    handleAddCategory,
-    handleDeleteCategory,
-    handleReportGeneration,
-    handleCloseYear,
-    handleGenerateInvoice,
-    handleOperationTypeChange,
-    handleFacturasTableClick,
-    handleAeatConfigSave,
-    handleFiscalParamsSave
-} from './handlers.js';
-
-import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
-
-document.addEventListener('DOMContentLoaded', () => {
-    const App = {
-        state: null,
-        elements: elements,
-        charts: charts,
-
-        init() {
-            this.state = getDefaultState();
-            lucide.createIcons();
-            loadData(this); // Ahora usa la lógica de state.js que a su vez usa storage.js
-            bindEventListeners(this);
-            recalculateAllBalances(this.state);
-            updateAll(this);
-            switchPage('inicio', this);
-            this.setDateDefaults();
-            this.updateDateInputForReports();
-            this.toggleReportFilters();
-        },
-
-        // Métodos principales de la App
-        saveData() { saveData(this.state); }, // Ahora usa la lógica de state.js que a su vez usa storage.js
-        loadData() { loadData(this); },
-        getDefaultState,
-        setDefaultState() { this.state = getDefaultState(); },
-        switchPage(pageId) { switchPage(pageId, this); },
-        updateAll() { updateAll(this); },
-        recalculateAllBalances() { recalculateAllBalances(this.state); },
-        
-        // UI Rendering
-        renderTransactions() { renderTransactions(this.state); },
-        renderAccountsTab() { renderAccountsTab(this.state); },
-        renderBalanceLegendAndChart() { renderBalanceLegendAndChart(this); },
-        updateInicioKPIs() { updateInicioKPIs(this.state); },
-        renderInicioCharts() { renderInicioCharts(this); },
-        populateSelects() { populateSelects(this.state); },
-        renderSettings() { renderSettings(this); },
-        renderDocuments() { renderDocuments(this.state); },
-        renderFacturas() { renderFacturas(this.state); },
-        renderInvestments() { renderInvestments(this.state); },
-        updateModuleVisibility() { updateModuleVisibility(this.state); },
-        renderArchives() { renderArchives(this.state); },
-        renderAeatConfig() { renderAeatSettings(this.state); },
-        renderFiscalParams() { renderFiscalParams(this.state); },
-
-        // UI Helpers
-        populateCategories() { populateCategories(this.state); },
-        updateCurrencySymbol() { updateCurrencySymbol(this.state); },
-        updateTransferFormUI() { updateTransferFormUI(this.state); },
-        populateReportAccounts() { populateReportAccounts(this.state); },
-
-        // Handlers
-        handleTransactionFormSubmit(e) { handleTransactionFormSubmit(e, this); },
-        handleTransactionsTableClick(e) { handleTransactionsTableClick(e, this); },
-        handleTransferFormSubmit(e) { handleTransferFormSubmit(e, this); },
-        handleProformaSubmit(e) { handleProformaSubmit(e, this); },
-        handleProformasTableClick(e) { handleProformasTableClick(e, this); },
-        handleAddAccount(e) { handleAddAccount(e, this); },
-        handleSettingsListClick(e) { handleSettingsListClick(e, this); },
-        handleUpdateBalance(e) { handleUpdateBalance(e, this); },
-        handleAddCategory(e, type) { handleAddCategory(e, type, this); },
-        handleDeleteCategory(e, type) { handleDeleteCategory(e, type, this); },
-        handleReportGeneration(e) { handleReportGeneration(e, this); },
-        handleCloseYear() { handleCloseYear(this); },
-        handleGenerateInvoice(e) { handleGenerateInvoice(e, this); },
-        
-        handleOperationTypeChange() {
-            handleOperationTypeChange(this); 
-        },
-        
-        handleFacturasTableClick(e) { handleFacturasTableClick(e, this); },
-        handleAeatConfigSave(e) { handleAeatConfigSave(e, this); },
-        handleFiscalParamsSave(e) { handleFiscalParamsSave(e, this); },
-
-        // Facturación
-        addFacturaItem() { addFacturaItem(this); },
-        updateFacturaSummary() { updateFacturaSummary(this); },
-        switchFacturacionTab(tabId) { switchFacturacionTab(tabId, this); },
-        
-        // Documentos
-        toggleDocumentStatus(docId) {
-            const doc = this.state.documents.find(d => d.id === docId);
-            if (doc) {
-                doc.status = doc.status === 'Adeudada' ? 'Cobrada' : 'Adeudada';
-                this.updateAll();
-            }
-        },
-        deleteDocument(docId) {
-            this.showConfirmationModal(
-                'Eliminar Documento',
-                '¿Seguro que quieres eliminar este documento?',
-                () => {
-                    this.state.documents = this.state.documents.filter(d => d.id !== docId);
-                    this.updateAll();
-                }
-            );
-        },
-        showInvoiceViewer(invoiceId) { showInvoiceViewer(invoiceId, this.state); },
-        hideInvoiceViewer() { hideInvoiceViewer(); },
-        printInvoice() { printInvoice(); },
-        downloadInvoiceAsPDF() { downloadInvoiceAsPDF(); },
-
-        // Modals
-        showConfirmationModal(title, message, onConfirm) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-message').textContent = message;
-            const confirmBtn = document.getElementById('modal-confirm-btn');
-            const cancelBtn = document.getElementById('modal-cancel-btn');
-            const modal = document.getElementById('confirmation-modal');
-            
-            const confirmHandler = () => {
-                onConfirm();
-                modal.classList.add('hidden');
-                confirmBtn.removeEventListener('click', confirmHandler);
-            };
-            
-            confirmBtn.onclick = confirmHandler;
-            cancelBtn.onclick = () => modal.classList.add('hidden');
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        },
-
-        showAlertModal(title, message) {
-            document.getElementById('alert-modal-title').textContent = title;
-            document.getElementById('alert-modal-message').textContent = message;
-            const okBtn = document.getElementById('alert-modal-ok-btn');
-            const modal = document.getElementById('alert-modal');
-            
-            okBtn.onclick = () => modal.classList.add('hidden');
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        },
-
-        // Date and Report Helpers
-        setDateDefaults() {
-            const today = new Date().toISOString().slice(0, 10);
-            ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = today;
-            });
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            const monthInput = document.getElementById('report-month');
-            if(monthInput) monthInput.value = currentMonth;
-        },
-
-        updateDateInputForReports() {
-            const period = document.getElementById('report-period').value;
-            ['daily', 'weekly', 'monthly', 'annual'].forEach(p => {
-                const container = document.getElementById(`date-input-${p}`);
-                if(container) container.classList.toggle('hidden', p !== period);
-            });
-        },
-
-        toggleReportFilters() {
-            const reportType = document.getElementById('report-type').value;
-            const isSociedades = reportType === 'sociedades';
-            this.elements.defaultFiltersContainer.classList.toggle('hidden', isSociedades);
-            this.elements.sociedadesFiltersContainer.classList.toggle('hidden', !isSociedades);
-        },
-
-        // Report Generation
-        generateMovimientosReport() {
-            // ... (lógica de generación de reporte de movimientos)
-            return { data: [], title: '', columns: [] };
-        },
-
-        generateSociedadesReport() {
-            // ... (lógica de generación de reporte de sociedades)
-            return { data: [], title: '', columns: [] };
-        },
-
-        renderReport(title, columns, data) {
-            // ... (lógica de renderizado de reporte)
-        },
-
-        viewSelectedArchive() {
-            // ... (lógica para ver archivos)
-        },
-
-        toggleAeatModule() {
-            this.state.settings.aeatModuleActive = !this.state.settings.aeatModuleActive;
-            this.renderAeatSettings();
-            this.saveData();
+/**
+ * Devuelve el estado inicial por defecto de la aplicación.
+ * Se mantiene en main.js para que sea el punto de entrada principal y evitar referencias circulares.
+ */
+export function getDefaultState() {
+     return {
+        accounts: [
+            { id: crypto.randomUUID(), name: 'CAIXA Bank', currency: 'EUR', symbol: '€', balance: 0.00, logoHtml: `<svg viewBox="0 0 80 60" class="w-6 h-6"><path d="M48.4,0L22.8,27.3c-0.3,0.3-0.3,0.8,0,1.1L48.4,56c1,1.1,2.8,0.4,2.8-1.1V36.8c0-1,0.8-1.7,1.7-1.7h11.2c8.8,0,15.9-7.1,15.9-15.9S83.1,2.3,74.3,2.3H64c-1,0-1.7-0.8-1.7-1.7V1.1C62.3,0.1,49.1-0.7,48.4,0z" fill="#0073B7"></path><circle cx="23.3" cy="28" r="5.5" fill="#FFC107"></circle><circle cx="23.3" cy="44.6" r="6.8" fill="#E6532B"></circle></svg>` },
+            { id: crypto.randomUUID(), name: 'Banco WISE', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" class="w-6 h-6"><path fill="#a3e635" d="M50.9 64H64L33 20.6L24 34.3l15.1 21.7-10.8-16L18.3 56 33 34.3 43 20.6 11.7 64h13.2L4 39.1l2.8 3.8-6.4 7.6L33 26.3 0 64h12.9L33 36l17.9 28z"></path></svg>` },
+            { id: crypto.randomUUID(), name: 'Caja Chica', currency: 'EUR', symbol: '€', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzIDIiPjxwYXRoIGZpbGw9IiNDNjBCMUUiIGQ9Ik0wIDBoM3YySDB6Ii8+PHBhdGggZmlsbD0iI0ZGQzQwMCIgZD0iTTAgLjVoM3YxSDB6Ii8+PC9zdmc+" alt="Bandera de España" class="w-6 h-6 rounded-sm border border-gray-600">` },
+            { id: crypto.randomUUID(), name: 'Caja Eu', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjMDAzMzk5IiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48ZyBmaWxsPSIjRkZDQzAwIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0NTAgMzAwKSI+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDkwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDEyMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMTUwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDE4MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGnpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjEwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDI0MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjcwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMzMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjwvZz48L3N2Zz4=" alt="Bandera de la Unión Europea" class="w-6 h-6 rounded-sm border border-gray-600">` },
+            { id: crypto.randomUUID(), name: 'Caja Arg.', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5IDYiPjxyZWN0IGZpbGw9IiM3NEFDREYiIHdpZHRoPSI5IiBoZWlnaHQ9IjMiLz48cmVjdCB5PSIzIiBmaWxsPSIjNzRBQ0RGIiB3aWR0aD0iOSIgaGVpZHRoPSIzIi8+PHJlY3QgeT0iMiIgZmlsbD0iI0ZGRiIgd2lkdGg9IjkiIGhlaWdodD0iMiIvPjwvc3ZnPg==" alt="Bandera de Argentina" class="w-6 h-6 rounded-sm border border-gray-600">` },
+            { id: crypto.randomUUID(), name: 'Caja Py', currency: 'USD', symbol: '$', balance: 0.00, logoHtml: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMSA2Ij48cGF0aCBmaWxsPSIjRDUyQjFFIiBkPSJNMCAwaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjRkZGIiBkPSJNMCAyaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjMDAzOEE4IiBkPSJNMCA0aDExdjJIMHoiLz48L3N2Zz4=" alt="Bandera de Paraguay" class="w-6 h-6 rounded-sm border border-gray-600">` }
+        ],
+        transactions: [],
+        documents: [],
+        clients: [],
+        incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
+        expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
+        invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
+        modules: [],
+        archivedData: {},
+        activeReport: { type: null, data: [] },
+        settings: {
+            aeatModuleActive: false,
+            aeatConfig: { certPath: '', certPass: '', endpoint: 'https://www2.agenciatributaria.gob.es/ws/VERIFACTU...', apiKey: '' },
+            fiscalParameters: { corporateTaxRate: 17 }
         }
     };
+}
 
-    App.init();
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Inicializar el estado de la aplicación
+    loadInitialData();
+
+    // 2. Suscribir el renderizado de la UI a los cambios de estado
+    store.subscribe((state) => renderAll(state, charts));
+
+    // 3. Suscribir el guardado de datos a los cambios de estado
+    store.subscribe((state) => storageService.saveState(state));
+
+    // 4. Vincular los event listeners de la UI una sola vez
+    bindEventListeners();
+    
+    // 5. Renderizado inicial y configuración
+    renderAll(store.getState(), charts);
+    switchPage('inicio');
+    lucide.createIcons();
+
+    // 6. Configuración inicial de fechas en formularios
+    const today = new Date().toISOString().slice(0, 10);
+    ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = today;
+    });
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const monthInput = document.getElementById('report-month');
+    if(monthInput) monthInput.value = currentMonth;
 });
+
