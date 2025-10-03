@@ -39,11 +39,18 @@ export function loadInitialData() {
             
             store.setState(mergedState);
             recalculateAllBalances(); // Recalcular saldos después de cargar
-        } catch (error) {
+        } catch (error)
+        {
             console.error("Error al fusionar datos guardados. Usando estado por defecto.", error);
+            // Si hay un error, inicializamos con el estado por defecto para asegurar que la app funcione
+            store.setState(getDefaultState());
         }
+    } else {
+        // Si no hay datos guardados, inicializa con el estado por defecto
+        store.setState(getDefaultState());
     }
 }
+
 
 // --- Balance Calculation ---
 
@@ -101,7 +108,7 @@ export function addAccount({ name, currency, balance, logo }) {
         name,
         currency,
         symbol: currency === 'EUR' ? '€' : '$',
-        balance: balance,
+        balance: 0, // El balance inicial se gestiona con una transacción
         logoHtml: logo.trim()
     };
 
@@ -113,7 +120,7 @@ export function addAccount({ name, currency, balance, logo }) {
         addOrUpdateTransaction({
             date: new Date().toISOString().slice(0, 10),
             description: 'Saldo Inicial',
-            type: 'Ingreso',
+            type: 'Ingreso', // Se maneja como ingreso para simplificar
             part: 'A',
             account: name,
             category: 'Ajuste de Saldo',
@@ -134,6 +141,30 @@ export function deleteAccount(accountName) {
     recalculateAllBalances();
 }
 
+export function createBalanceAdjustment(accountName, newBalance) {
+    const state = store.getState();
+    const account = state.accounts.find(acc => acc.name === accountName);
+    if (!account) return;
+
+    const currentBalance = account.balance;
+    const difference = newBalance - currentBalance;
+
+    if (difference !== 0) {
+        addOrUpdateTransaction({
+            date: new Date().toISOString().slice(0, 10),
+            description: 'Ajuste de saldo manual',
+            type: difference > 0 ? 'Ingreso' : 'Egreso',
+            part: 'A',
+            account: accountName,
+            category: 'Ajuste de Saldo',
+            amount: Math.abs(difference),
+            currency: account.currency,
+            isInitialBalance: false
+        });
+    }
+}
+
+
 // --- Category Actions ---
 
 export function addCategory(type, categoryName) {
@@ -145,7 +176,7 @@ export function addCategory(type, categoryName) {
     const stateKey = keyMap[type];
     
     store.setState(state => {
-        if (!state[stateKey].includes(categoryName)) {
+        if (!state[stateKey].find(c => c.toLowerCase() === categoryName.toLowerCase())) {
             return { [stateKey]: [...state[stateKey], categoryName] };
         }
         return state; // No change if category already exists
@@ -250,7 +281,8 @@ export function createTransfer(transferData) {
     if (fromAccount.currency !== toAccount.currency) {
         if (extraField <= 0) {
            console.error('Monto a recibir requerido para transferencias multidivisa.');
-           return;
+           // Devolvemos una alerta o manejo de error a la UI
+           return { error: 'Monto a recibir requerido para transferencias multidivisa.' };
         }
         receivedAmount = extraField;
     }
@@ -286,4 +318,49 @@ export function createTransfer(transferData) {
         transactions: [...state.transactions, ...transactionsToAdd]
     }));
     recalculateAllBalances();
+    return { success: true };
 }
+
+export function performAnnualClosing(startDate, endDate) {
+    const year = new Date(endDate).getFullYear();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    store.setState(state => {
+        const transactionsToKeep = [];
+        const transactionsToArchive = [];
+        state.transactions.forEach(t => {
+            const tDate = new Date(t.date);
+            if (tDate >= start && tDate <= end) {
+                transactionsToArchive.push(t);
+            } else {
+                transactionsToKeep.push(t);
+            }
+        });
+
+        const documentsToKeep = [];
+        const documentsToArchive = [];
+        state.documents.forEach(d => {
+            const dDate = new Date(d.date);
+            if (dDate >= start && dDate <= end) {
+                documentsToArchive.push(d);
+            } else {
+                documentsToKeep.push(d);
+            }
+        });
+
+        const newArchivedData = { ...state.archivedData };
+        if (!newArchivedData[year]) {
+            newArchivedData[year] = { transactions: [], documents: [] };
+        }
+        newArchivedData[year].transactions.push(...transactionsToArchive);
+        newArchivedData[year].documents.push(...documentsToArchive);
+        
+        return {
+            transactions: transactionsToKeep,
+            documents: documentsToKeep,
+            archivedData: newArchivedData
+        };
+    });
+}
+
