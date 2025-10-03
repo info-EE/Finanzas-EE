@@ -19,7 +19,7 @@ function getDefaultState() {
         expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
         invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
         archivedData: {},
-        activeReport: { type: null, data: [] },
+        activeReport: { type: null, data: [], title: '', columns: [] },
         settings: {
             aeatModuleActive: false,
             aeatConfig: {
@@ -80,7 +80,7 @@ export function setState(newState) {
  * Inicializa el store, cargando el estado desde el almacenamiento
  * o usando el estado por defecto si no hay nada guardado.
  */
-export function initializeStore() {
+export function initState() {
     const loadedState = loadStateFromStorage();
     // Usamos el estado cargado, o el estado por defecto si no hay nada
     state = loadedState || getDefaultState();

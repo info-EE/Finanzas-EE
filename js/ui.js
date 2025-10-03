@@ -215,6 +215,10 @@ function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, c
     
     if (accountsForChart.length === 0) {
         container.classList.add('hidden');
+        if (charts[canvasId]) {
+            charts[canvasId].destroy();
+            charts[canvasId] = null;
+        }
         return;
     }
     container.classList.remove('hidden');
@@ -375,7 +379,6 @@ function renderInvestments() {
 function renderSettings() {
     const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, settings } = getState();
     
-    // Render accounts list
     elements.settingsAccountsList.innerHTML = '';
     accounts.forEach(acc => {
         const div = document.createElement('div');
@@ -386,7 +389,6 @@ function renderSettings() {
         elements.settingsAccountsList.appendChild(div);
     });
 
-    // Render category lists
     const renderCategoryList = (listEl, categories, essentialCategories) => {
         listEl.innerHTML = '';
         categories.forEach(cat => {
@@ -404,14 +406,43 @@ function renderSettings() {
     renderCategoryList(elements.expenseCategoriesList, expenseCategories, []);
     renderCategoryList(elements.operationTypesList, invoiceOperationTypes, []);
 
-    // Render AEAT settings
     const isActive = settings.aeatModuleActive;
     elements.aeatToggleContainer.innerHTML = isActive
         ? `<button class="aeat-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg"><i data-lucide="check-circle" class="w-4 h-4"></i> Activado</button>`
         : `<button class="aeat-toggle-btn border border-blue-800 text-blue-400 font-bold py-2 px-3 rounded-lg">Activar</button>`;
     
-    // Render fiscal params
     elements.fiscalParamsForm.querySelector('#corporate-tax-rate').value = settings.fiscalParameters.corporateTaxRate;
+}
+
+function renderReport() {
+    const { activeReport } = getState();
+    if (!activeReport || !activeReport.type) {
+        elements.reportDisplayArea.innerHTML = `<div class="text-center text-gray-500 flex flex-col items-center justify-center h-full"><i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i><h3 class="font-semibold text-lg">Seleccione filtros</h3></div>`;
+        return;
+    }
+
+    const { title, columns, data } = activeReport;
+    let tableHtml = `<table class="w-full text-left"><thead><tr class="border-b border-gray-700">`;
+    columns.forEach(col => tableHtml += `<th class="py-2 px-3 text-sm font-semibold text-gray-400">${col}</th>`);
+    tableHtml += `</tr></thead><tbody>`;
+
+    data.forEach(row => {
+        tableHtml += `<tr class="border-b border-gray-800">`;
+        row.forEach((cell, index) => {
+            const isNumeric = typeof cell === 'number';
+            const currency = columns[index] === 'Importe' ? 'EUR' : undefined;
+            tableHtml += `<td class="py-2 px-3 text-sm ${isNumeric ? 'text-right' : ''}">${currency ? formatCurrency(cell, currency) : escapeHTML(String(cell))}</td>`;
+        });
+        tableHtml += `</tr>`;
+    });
+    tableHtml += `</tbody></table>`;
+
+    elements.reportDisplayArea.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+            <h3 class="font-semibold text-lg">${title}</h3>
+            <button id="report-download-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Descargar</button>
+        </div>
+        ${tableHtml}`;
 }
 
 // --- Funciones de Utilidad y Ayuda para la UI ---
@@ -420,7 +451,6 @@ export function switchPage(pageId, subpageId = null) {
     elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
     elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
     
-    // Lógica específica al cambiar de página
     if (pageId === 'cuentas') renderBalanceLegendAndChart();
     if (pageId === 'inicio') renderInicioCharts();
     if (pageId === 'facturacion' && subpageId) {
@@ -431,7 +461,6 @@ export function switchPage(pageId, subpageId = null) {
         });
     }
 
-    // Siempre refrescar los datos de la página activa
     renderAll();
     lucide.createIcons();
 }
@@ -463,8 +492,10 @@ function populateOperationTypesSelect() {
 function populateReportAccounts() {
     const { accounts } = getState();
     const select = document.getElementById('report-account');
-    select.innerHTML = '<option value="all">Todas las Cuentas</option>';
-    select.innerHTML += accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
+    if(select) {
+        select.innerHTML = '<option value="all">Todas las Cuentas</option>';
+        select.innerHTML += accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
+    }
 }
 
 export function populateClientSelectForInvoice() {
@@ -522,10 +553,10 @@ export function resetTransactionForm() {
 }
 
 export function showConfirmationModal(title, message, onConfirm) {
+    const modal = document.getElementById('confirmation-modal');
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-message').textContent = message;
     const confirmBtn = document.getElementById('modal-confirm-btn');
-    const modal = document.getElementById('confirmation-modal');
     
     const confirmHandler = () => {
         onConfirm();
@@ -533,17 +564,19 @@ export function showConfirmationModal(title, message, onConfirm) {
         confirmBtn.removeEventListener('click', confirmHandler);
     };
     
-    confirmBtn.onclick = confirmHandler; // Usar onclick para sobreescribir listeners previos
+    confirmBtn.onclick = confirmHandler;
     document.getElementById('modal-cancel-btn').onclick = () => modal.classList.add('hidden');
     modal.classList.remove('hidden');
+    modal.classList.add('flex');
 }
 
 export function showAlertModal(title, message) {
+    const modal = document.getElementById('alert-modal');
     document.getElementById('alert-modal-title').textContent = title;
     document.getElementById('alert-modal-message').textContent = message;
-    const modal = document.getElementById('alert-modal');
     document.getElementById('alert-modal-ok-btn').onclick = () => modal.classList.add('hidden');
     modal.classList.remove('hidden');
+    modal.classList.add('flex');
 }
 
 export function showInvoiceViewer(invoiceId) {
@@ -562,15 +595,8 @@ export function showInvoiceViewer(invoiceId) {
     elements.invoiceContentArea.innerHTML = `
     <div id="invoice-printable-area" class="p-8 bg-gray-900 text-white">
         <header class="flex justify-between items-start mb-10">
-            <div class="w-1/2">
-                <h2 class="text-2xl font-bold text-white mb-2">Europa Envíos</h2>
-                <p class="font-semibold text-blue-300">LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</p>
-            </div>
-            <div class="w-1/2 text-right">
-                <h1 class="text-4xl font-bold text-white uppercase tracking-wider">Factura</h1>
-                <div><span>Nº:</span> <span>${escapeHTML(invoice.number)}</span></div>
-                <div><span>Fecha:</span> <span>${invoice.date}</span></div>
-            </div>
+            <div class="w-1/2"><h2 class="text-2xl font-bold text-white mb-2">Europa Envíos</h2><p class="font-semibold text-blue-300">LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</p></div>
+            <div class="w-1/2 text-right"><h1 class="text-4xl font-bold text-white uppercase tracking-wider">Factura</h1><div><span>Nº:</span> <span>${escapeHTML(invoice.number)}</span></div><div><span>Fecha:</span> <span>${invoice.date}</span></div></div>
         </header>
         <div class="mb-10 p-4 border border-gray-700 rounded-lg bg-gray-800/50">
             <h3 class="font-semibold text-gray-300 mb-2">Facturar a:</h3>
@@ -583,15 +609,14 @@ export function showInvoiceViewer(invoiceId) {
             <thead><tr class="bg-gray-800 text-gray-300"><th class="py-2 px-4">Descripción</th><th class="py-2 px-4 text-right">Cantidad</th><th class="py-2 px-4 text-right">Precio Unit.</th><th class="py-2 px-4 text-right">Total</th></tr></thead>
             <tbody>${itemsHtml}</tbody>
         </table>
-        <div class="flex justify-end">
-            <div class="w-1/2 max-w-xs space-y-2">
-                <div class="flex justify-between"><span>Subtotal:</span> <span>${formatCurrency(invoice.subtotal, invoice.currency)}</span></div>
-                <div class="flex justify-between"><span>IVA (${(invoice.ivaRate * 100 || 21)}%):</span> <span>${formatCurrency(invoice.iva, invoice.currency)}</span></div>
-                <div class="flex justify-between font-bold text-2xl border-t border-gray-600 pt-2 mt-2"><span>TOTAL:</span> <span class="text-blue-400">${formatCurrency(invoice.total, invoice.currency)}</span></div>
-            </div>
-        </div>
+        <div class="flex justify-end"><div class="w-1/2 max-w-xs space-y-2">
+            <div class="flex justify-between"><span>Subtotal:</span> <span>${formatCurrency(invoice.subtotal, invoice.currency)}</span></div>
+            <div class="flex justify-between"><span>IVA (${(invoice.ivaRate * 100).toFixed(0)}%):</span> <span>${formatCurrency(invoice.iva, invoice.currency)}</span></div>
+            <div class="flex justify-between font-bold text-2xl border-t border-gray-600 pt-2 mt-2"><span>TOTAL:</span> <span class="text-blue-400">${formatCurrency(invoice.total, invoice.currency)}</span></div>
+        </div></div>
     </div>`;
     elements.invoiceViewerModal.classList.remove('hidden');
+    elements.invoiceViewerModal.classList.add('flex');
 }
 
 export function hideInvoiceViewer() {
@@ -599,9 +624,9 @@ export function hideInvoiceViewer() {
 }
 
 export function printInvoice() {
-    const printContent = elements.invoiceContentArea.innerHTML;
+    const printContent = document.getElementById('invoice-printable-area').innerHTML;
     const printWindow = window.open('', '', 'height=800,width=800');
-    printWindow.document.write(`<html><head><title>Factura</title><link rel="stylesheet" href="style.css"></head><body>${printContent}</body></html>`);
+    printWindow.document.write(`<html><head><title>Factura</title><link rel="stylesheet" href="style.css"><style>@media print{body{background-color:white !important;color:black !important;}.text-white,.text-gray-300,.text-gray-400,.text-blue-300,.text-blue-400{color:black !important;}.bg-gray-800,.bg-gray-800\/50,.bg-gray-900{background-color:#f3f4f6 !important;}.border-gray-700{border-color:#d1d5db !important;}}</style></head><body>${printContent}</body></html>`);
     printWindow.document.close();
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
 }
@@ -620,9 +645,8 @@ export function downloadInvoiceAsPDF() {
 // --- Función Agregadora de Renderizado ---
 export function renderAll() {
     const state = getState();
-    if (!state.accounts) return; // Salir si el estado no está listo
+    if (!state.accounts) return;
 
-    // Llamar a todas las funciones de renderizado
     updateInicioKPIs();
     renderTransactions();
     renderAccountsTab();
@@ -631,9 +655,9 @@ export function renderAll() {
     renderClients();
     renderInvestments();
     renderSettings();
+    renderReport();
     populateSelects();
 
-    // Iconos
     lucide.createIcons();
 }
 

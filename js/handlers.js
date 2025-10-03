@@ -27,8 +27,7 @@ function handleTransactionFormSubmit(e) {
         account: accountName,
         category: form.querySelector('#transaction-category').value,
         amount: parseFloat(form.querySelector('#transaction-amount').value),
-        currency: account.currency,
-        isInitialBalance: false,
+        currency: account.currency
     };
 
     actions.saveTransaction(transactionData, id);
@@ -49,7 +48,7 @@ function handleTransactionsTableClick(e) {
             form.querySelector('#transaction-date').value = transaction.date;
             form.querySelector('#transaction-description').value = transaction.description;
             form.querySelector('#transaction-type').value = transaction.type;
-            populateCategories(); // Actualiza las categorías según el tipo
+            populateCategories();
             form.querySelector('#transaction-category').value = transaction.category;
             form.querySelector('#transaction-part').value = transaction.part;
             form.querySelector('#transaction-account').value = transaction.account;
@@ -127,12 +126,10 @@ function handleTransferFormSubmit(e) {
 
     const { accounts } = getState();
     const fromAccount = accounts.find(a => a.name === fromAccountName);
-    const toAccount = accounts.find(a => a.name === toAccountName);
-
-    let receivedAmount = parseFloat(form.querySelector('#transfer-amount').value);
+    const amount = parseFloat(form.querySelector('#transfer-amount').value);
+    let receivedAmount = amount;
     
-    // Si las monedas son diferentes, el monto recibido es el del campo extra.
-    if (fromAccount.currency !== toAccount.currency) {
+    if (fromAccount.currency !== accounts.find(a=>a.name === toAccountName).currency) {
         receivedAmount = parseFloat(form.querySelector('#transfer-extra-field').value);
         if (!receivedAmount || receivedAmount <= 0) {
             showAlertModal('Error', 'Debes especificar el monto a recibir para transferencias entre monedas diferentes.');
@@ -144,7 +141,7 @@ function handleTransferFormSubmit(e) {
         date: form.querySelector('#transfer-date').value,
         fromAccountName,
         toAccountName,
-        amount: parseFloat(form.querySelector('#transfer-amount').value),
+        amount: amount,
         feeSource: parseFloat(form.querySelector('#transfer-fee-source').value) || 0,
         receivedAmount: receivedAmount,
     };
@@ -310,13 +307,19 @@ function handleGenerateInvoice(e) {
     const form = e.target;
     
     const items = [];
-    form.querySelectorAll('.factura-item').forEach(itemEl => { 
-        items.push({
-            description: itemEl.querySelector('.item-description').value,
-            quantity: parseFloat(itemEl.querySelector('.item-quantity').value),
-            price: parseFloat(itemEl.querySelector('.item-price').value)
-        });
+    form.querySelectorAll('.factura-item').forEach(itemEl => {
+        const description = itemEl.querySelector('.item-description').value;
+        const quantity = parseFloat(itemEl.querySelector('.item-quantity').value);
+        const price = parseFloat(itemEl.querySelector('.item-price').value);
+        if (description && !isNaN(quantity) && !isNaN(price)) {
+            items.push({ description, quantity, price });
+        }
     });
+
+    if (items.length === 0) {
+        showAlertModal('Factura Vacía', 'Debes añadir al menos un concepto a la factura.');
+        return;
+    }
 
     const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
     const operationType = form.querySelector('#factura-operation-type').value;
@@ -339,24 +342,18 @@ function handleGenerateInvoice(e) {
         items,
         subtotal,
         iva,
-        total
+        total,
+        ivaRate
     };
     
     actions.addDocument(newInvoice);
     
     form.reset();
     elements.facturaItemsContainer.innerHTML = '';
-    // Re-añadir un item inicial
-    const itemDiv = document.createElement('div');
-    itemDiv.className = 'grid grid-cols-12 gap-2 items-center factura-item';
-    itemDiv.innerHTML = `
-        <div class="col-span-6"><input type="text" class="form-input item-description" required></div>
-        <div class="col-span-2"><input type="number" value="1" class="form-input item-quantity" required></div>
-        <div class="col-span-3"><input type="number" class="form-input item-price" required></div>
-        <div class="col-span-1"></div>`;
-    elements.facturaItemsContainer.appendChild(itemDiv);
+    document.getElementById('factura-add-item-btn').click(); // Add one initial item
 
     showAlertModal('Éxito', `La factura Nº ${escapeHTML(newInvoice.number)} ha sido creada.`);
+    switchPage('facturacion', 'listado');
 }
 
 function handleAeatConfigSave(e) {
@@ -384,11 +381,42 @@ function handleFiscalParamsSave(e) {
     }
 }
 
+function handleReportGeneration(e) {
+    e.preventDefault();
+    const form = e.target;
+    const type = form.querySelector('#report-type').value;
+
+    if (type === 'sociedades') {
+        const filters = {
+            type,
+            year: form.querySelector('#report-year-sociedades').value,
+            period: form.querySelector('#report-periodo-sociedades').value,
+        };
+        actions.generateReport(filters);
+    } else {
+        // Implementar para otros reportes si es necesario
+    }
+}
+
+function handleCloseYear() {
+    const startDate = document.getElementById('cierre-start-date').value;
+    const endDate = document.getElementById('cierre-end-date').value;
+
+    if (!startDate || !endDate) {
+        showAlertModal('Error', 'Debes seleccionar una fecha de inicio y de cierre.');
+        return;
+    }
+    const year = new Date(endDate).getFullYear();
+    showConfirmationModal('Confirmar Cierre Anual', `Estás a punto de archivar todos los datos del ${startDate} al ${endDate} bajo el año ${year}. Esta acción no se puede deshacer. ¿Continuar?`, () => {
+        actions.closeYear(startDate, endDate);
+        showAlertModal('Éxito', `Se ha completado el cierre para el año ${year}.`);
+    });
+}
+
 
 // --- Vinculación de Eventos (Event Binding) ---
 
 export function bindEventListeners() {
-    // Navegación y Sidebar
     elements.sidebar.querySelector('#sidebar-toggle').addEventListener('click', () => {
         elements.sidebar.classList.toggle('w-64');
         elements.sidebar.classList.toggle('w-20');
@@ -404,26 +432,22 @@ export function bindEventListeners() {
         });
     });
 
-    // Cash Flow
     elements.transactionForm.addEventListener('submit', handleTransactionFormSubmit);
     elements.transactionsTableBody.addEventListener('click', handleTransactionsTableClick);
     elements.transactionForm.querySelector('#transaction-type').addEventListener('change', populateCategories);
     elements.transactionForm.querySelector('#transaction-account').addEventListener('change', updateCurrencySymbol);
     elements.transactionForm.querySelector('#form-cancel-button').addEventListener('click', resetTransactionForm);
-    document.getElementById('cashflow-search').addEventListener('input', () => switchPage('cashflow')); // Re-render on search
+    document.getElementById('cashflow-search').addEventListener('input', () => switchPage('cashflow'));
 
-    // Transferencias
     elements.transferForm.addEventListener('submit', handleTransferFormSubmit);
     ['transfer-from', 'transfer-to'].forEach(id => {
         document.getElementById(id).addEventListener('change', updateTransferFormUI);
     });
 
-    // Proformas
     elements.proformaForm.addEventListener('submit', (e) => handleDocumentSubmit(e, 'Proforma'));
     elements.proformasTableBody.addEventListener('click', handleDocumentsTableClick);
-    document.getElementById('proformas-search').addEventListener('input', () => switchPage('proformas')); // Re-render
+    document.getElementById('proformas-search').addEventListener('input', () => switchPage('proformas'));
 
-    // Ajustes
     elements.addAccountForm.addEventListener('submit', handleAddAccount);
     elements.settingsAccountsList.addEventListener('click', handleSettingsAccountsListClick);
     elements.updateBalanceForm.addEventListener('submit', handleUpdateBalance);
@@ -434,7 +458,6 @@ export function bindEventListeners() {
     elements.expenseCategoriesList.addEventListener('click', (e) => handleDeleteCategory(e, 'expense', ESSENTIAL_EXPENSE_CATEGORIES));
     elements.operationTypesList.addEventListener('click', (e) => handleDeleteCategory(e, 'operationType', ESSENTIAL_OPERATION_TYPES));
     
-    // Clientes
     elements.addClientForm.addEventListener('submit', handleClientFormSubmit);
     elements.clientsTableBody.addEventListener('click', handleClientsTableClick);
     elements.addClientForm.querySelector('#client-form-cancel-btn').addEventListener('click', () => {
@@ -444,7 +467,6 @@ export function bindEventListeners() {
         document.getElementById('client-form-cancel-btn').classList.add('hidden');
     });
 
-    // Facturación
     document.getElementById('facturacion-tab-crear').addEventListener('click', () => switchPage('facturacion', 'crear'));
     document.getElementById('facturacion-tab-listado').addEventListener('click', () => switchPage('facturacion', 'listado'));
     document.getElementById('facturacion-tab-config').addEventListener('click', () => switchPage('facturacion', 'config'));
@@ -476,9 +498,11 @@ export function bindEventListeners() {
     });
     elements.fiscalParamsForm.addEventListener('submit', handleFiscalParamsSave);
 
-    // Visor de Factura
     elements.closeInvoiceViewerBtn.addEventListener('click', hideInvoiceViewer);
     elements.printInvoiceBtn.addEventListener('click', printInvoice);
     elements.pdfInvoiceBtn.addEventListener('click', downloadInvoiceAsPDF);
+
+    elements.reportForm.addEventListener('submit', handleReportGeneration);
+    document.getElementById('close-year-btn').addEventListener('click', handleCloseYear);
 }
 
