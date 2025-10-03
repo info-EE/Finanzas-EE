@@ -164,3 +164,126 @@ export function deleteCategory(type, categoryName) {
         [stateKey]: state[stateKey].filter(cat => cat !== categoryName)
     }));
 }
+
+// --- Client Actions ---
+
+export function addOrUpdateClient(clientData) {
+    if (clientData.id) {
+        store.setState(state => ({
+            clients: state.clients.map(c => c.id === clientData.id ? { ...c, ...clientData } : c)
+        }));
+    } else {
+        store.setState(state => ({
+            clients: [...state.clients, { ...clientData, id: crypto.randomUUID() }]
+        }));
+    }
+}
+
+export function deleteClient(clientId) {
+    store.setState(state => ({
+        clients: state.clients.filter(c => c.id !== clientId)
+    }));
+}
+
+// --- Document Actions (Proformas, Invoices) ---
+
+export function addDocument(docData) {
+    store.setState(state => ({
+        documents: [...state.documents, { ...docData, id: crypto.randomUUID() }]
+    }));
+}
+
+export function deleteDocument(docId) {
+    store.setState(state => ({
+        documents: state.documents.filter(d => d.id !== docId)
+    }));
+}
+
+export function toggleDocumentStatus(docId) {
+    store.setState(state => ({
+        documents: state.documents.map(d => {
+            if (d.id === docId) {
+                return { ...d, status: d.status === 'Adeudada' ? 'Cobrada' : 'Adeudada' };
+            }
+            return d;
+        })
+    }));
+}
+
+// --- Settings Actions ---
+
+export function updateAeatConfig(config) {
+    store.setState(state => ({
+        settings: { ...state.settings, aeatConfig: config }
+    }));
+}
+
+export function updateFiscalParams(params) {
+    store.setState(state => ({
+        settings: { ...state.settings, fiscalParameters: params }
+    }));
+}
+
+export function toggleAeatModule() {
+    store.setState(state => ({
+        settings: { ...state.settings, aeatModuleActive: !state.settings.aeatModuleActive }
+    }));
+}
+
+// --- Complex Actions ---
+
+export function createTransfer(transferData) {
+    const { date, fromAccount, toAccount, amount, feeSource, extraField } = transferData;
+    let transactionsToAdd = [];
+
+    // Egreso de la cuenta origen
+    transactionsToAdd.push({
+        id: crypto.randomUUID(), date,
+        description: `Transferencia a ${toAccount.name}`,
+        type: 'Egreso', part: 'A', account: fromAccount.name,
+        category: 'Transferencia', amount: amount, currency: fromAccount.currency,
+        isInitialBalance: false
+    });
+
+    // Ingreso en la cuenta destino
+    let receivedAmount = amount;
+    if (fromAccount.currency !== toAccount.currency) {
+        if (extraField <= 0) {
+           console.error('Monto a recibir requerido para transferencias multidivisa.');
+           return;
+        }
+        receivedAmount = extraField;
+    }
+    transactionsToAdd.push({
+        id: crypto.randomUUID(), date,
+        description: `Transferencia desde ${fromAccount.name}`,
+        type: 'Ingreso', part: 'A', account: toAccount.name,
+        category: 'Transferencia', amount: receivedAmount, currency: toAccount.currency,
+        isInitialBalance: false
+    });
+
+    // Comisiones
+    if (feeSource > 0) {
+        transactionsToAdd.push({
+            id: crypto.randomUUID(), date,
+            description: `Comisión por transferencia a ${toAccount.name}`,
+            type: 'Egreso', part: 'A', account: fromAccount.name,
+            category: 'Comisiones', amount: feeSource, currency: fromAccount.currency,
+            isInitialBalance: false
+        });
+    }
+    if (fromAccount.currency === toAccount.currency && extraField > 0) {
+        transactionsToAdd.push({
+            id: crypto.randomUUID(), date,
+            description: `Comisión por transferencia desde ${fromAccount.name}`,
+            type: 'Egreso', part: 'A', account: toAccount.name,
+            category: 'Comisiones', amount: extraField, currency: toAccount.currency,
+            isInitialBalance: false
+        });
+    }
+
+    store.setState(state => ({
+        transactions: [...state.transactions, ...transactionsToAdd]
+    }));
+    recalculateAllBalances();
+}
