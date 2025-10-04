@@ -674,13 +674,10 @@ export function showInvoiceViewer(invoiceId) {
         </table>
 
         <div class="flex justify-between items-start">
-            <div class="w-1/2 text-sm text-gray-600">
+             <div class="w-1/2 text-sm text-gray-600">
                 ${invoice.operationType.toLowerCase().includes('exportación') ? `
                 <h4 class="font-semibold text-gray-800 mb-2">Notas</h4>
                 <p class="mb-4">Operación no sujeta a IVA por regla de localización: Ley 37/1992.</p>` : ''}
-                <h4 class="font-semibold text-gray-800 mb-2">Datos de Pago</h4>
-                <p><strong>Banco:</strong> CAIXA Bank</p>
-                <p><strong>IBAN:</strong> ESXX XXXX XXXX XXXX XXXX XXXX</p>
             </div>
             <div class="w-1/2 max-w-sm ml-auto space-y-3">
                 <div class="flex justify-between">
@@ -713,7 +710,26 @@ export function hideInvoiceViewer() {
 export function printInvoice() {
     const printContent = document.getElementById('invoice-printable-area').innerHTML;
     const printWindow = window.open('', '', 'height=800,width=800');
-    printWindow.document.write(`<html><head><title>Factura ${new Date().toISOString()}</title><script src="https://cdn.tailwindcss.com"><\/script></head><body>${printContent}</body></html>`);
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Factura</title>
+                <script src="https://cdn.tailwindcss.com"><\/script>
+                <style>
+                    @page { 
+                        size: auto;
+                        margin: 0mm;
+                    }
+                    body {
+                        margin: 1.6cm;
+                    }
+                </style>
+            </head>
+            <body>
+                ${printContent}
+            </body>
+        </html>
+    `);
     printWindow.document.close();
     setTimeout(() => { 
         printWindow.focus();
@@ -725,13 +741,16 @@ export function printInvoice() {
 export function downloadInvoiceAsPDF() {
     const { jsPDF } = window.jspdf;
     const invoiceElement = document.getElementById('invoice-printable-area');
+    const { documents } = getState();
+    // This is a bit of a hack to get the invoice number, ideally it should be passed to the function
+    const currentInvoiceNumber = invoiceElement.querySelector('strong').textContent;
+    const invoice = documents.find(doc => doc.number === currentInvoiceNumber);
+
     const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
     
     doc.html(invoiceElement, {
         callback: (doc) => {
-            const { activeReport } = getState();
-            const invoiceNumber = activeReport ? activeReport.number : 'factura';
-            doc.save(`Factura-${invoiceNumber}.pdf`);
+            doc.save(`Factura-${invoice ? invoice.number : '0001'}.pdf`);
         },
         margin: [40, 30, 40, 30],
         autoPaging: 'text',
