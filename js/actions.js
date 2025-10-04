@@ -237,6 +237,24 @@ export function deleteDocument(docId) {
     setState({ documents: updatedDocuments });
 }
 
+export function savePaymentDetails(invoiceId, paymentData) {
+    const { documents } = getState();
+    let updatedInvoice = null;
+    const updatedDocuments = documents.map(doc => {
+        if (doc.id === invoiceId) {
+            updatedInvoice = { ...doc, paymentDetails: paymentData };
+            return updatedInvoice;
+        }
+        return doc;
+    });
+
+    if (updatedInvoice) {
+        setState({ documents: updatedDocuments });
+    }
+    
+    return updatedInvoice;
+}
+
 export function saveAeatConfig(aeatConfig) {
     const { settings } = getState();
     const updatedSettings = { ...settings, aeatConfig };
@@ -402,4 +420,3 @@ export function closeYear(startDate, endDate) {
         archivedData: newArchivedData
     });
 }
-
