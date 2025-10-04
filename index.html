@@ -904,8 +904,41 @@
             </div>
         </div>
 
+        <div id="payment-details-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+            <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+            <div class="card rounded-xl p-8 z-10 w-full max-w-md">
+                <h3 class="text-xl font-bold text-white mb-4">Detalles del Pago</h3>
+                <p class="text-gray-300 mb-6">Completa la información del pago para generar el recibo.</p>
+                <form id="payment-details-form" class="space-y-4">
+                    <input type="hidden" id="payment-details-invoice-id">
+                    <div>
+                        <label for="payment-method" class="block text-sm font-medium text-gray-400 mb-1">Método de Pago</label>
+                        <select id="payment-method" class="form-input" required>
+                            <option>Transferencia Bancaria</option>
+                            <option>Efectivo</option>
+                            <option>Tarjeta de Crédito/Débito</option>
+                            <option>Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="payment-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha de Pago</label>
+                        <input type="date" id="payment-date" class="form-input" required>
+                    </div>
+                    <div>
+                        <label for="payment-reference" class="block text-sm font-medium text-gray-400 mb-1">Referencia (Opcional)</label>
+                        <input type="text" id="payment-reference" class="form-input" placeholder="Ej: ID de transferencia">
+                    </div>
+                    <div class="flex justify-end gap-4 pt-4">
+                        <button type="button" id="payment-details-cancel-btn" class="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Generar Recibo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </main>
     
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
+

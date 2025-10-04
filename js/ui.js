@@ -46,6 +46,9 @@ export const elements = {
     addClientForm: document.getElementById('add-client-form'),
     clientsTableBody: document.getElementById('clients-table-body'),
     investmentsTableBody: document.getElementById('investments-table-body'),
+    paymentDetailsModal: document.getElementById('payment-details-modal'),
+    paymentDetailsForm: document.getElementById('payment-details-form'),
+    paymentDetailsCancelBtn: document.getElementById('payment-details-cancel-btn'),
 };
 
 const charts = {
@@ -101,20 +104,23 @@ function createDocumentRow(doc, type) {
     const row = document.createElement('tr');
     row.className = "border-b border-gray-800 hover:bg-gray-800/50";
     const statusClass = doc.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
+    
     let actionsHtml = `
         <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${doc.id}" title="Eliminar">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>`;
+
     if (type === 'Factura') {
         actionsHtml = `
         <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${doc.id}" title="Ver Factura">
             <i data-lucide="eye" class="w-4 h-4"></i>
         </button>` + actionsHtml;
+        
         if (doc.status === 'Cobrada') {
-            actionsHtml += `
-           <button class="generate-receipt-btn p-2 text-green-400 hover:text-green-300" data-id="${doc.id}" title="Generar Recibo">
-               <i data-lucide="receipt" class="w-4 h-4"></i>
-           </button>`;
+            actionsHtml = `
+            <button class="generate-receipt-btn p-2 text-green-400 hover:text-green-300" data-id="${doc.id}" title="Generar Recibo">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+            </button>` + actionsHtml;
         }
     }
 
@@ -705,20 +711,15 @@ export function showInvoiceViewer(invoiceId) {
             <p>Gracias por su confianza.</p>
         </footer>
     </div>`;
-    elements.invoiceViewerModal.querySelector('h3').textContent = 'Visualizador de Factura';
-    elements.invoiceViewerModal.dataset.documentType = 'invoice';
-    elements.invoiceViewerModal.dataset.documentId = invoiceId;
     elements.invoiceViewerModal.classList.remove('hidden');
     elements.invoiceViewerModal.classList.add('flex');
 }
 
-export function showReceiptViewer(invoiceId) {
-    const { documents } = getState();
-    const invoice = documents.find(doc => doc.id === invoiceId);
-    if (!invoice) return;
+export function showReceiptViewer(invoice) {
+    if (!invoice || !invoice.paymentDetails) return;
 
     elements.invoiceContentArea.innerHTML = `
-    <div id="receipt-printable-area" style="padding: 40px;" class="bg-white text-gray-800 font-sans">
+    <div id="invoice-printable-area" style="padding: 40px;" class="bg-white text-gray-800 font-sans">
         <header class="flex justify-between items-start mb-12 pb-8 border-b">
             <div class="w-1/2">
                 <div class="flex items-center gap-3 mb-4">
@@ -728,30 +729,54 @@ export function showReceiptViewer(invoiceId) {
                     <span class="text-2xl font-bold text-gray-800">Europa Envíos</span>
                 </div>
                 <p class="font-semibold">LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</p>
+                <p class="text-gray-600 text-sm">
+                    CALLE ESTEBAN SALAZAR CHAPELA, NUM 20, PUERTA 87, NAVE 87<br>
+                    29004 MÁLAGA (ESPAÑA)<br>
+                    NIF: B56340656
+                </p>
             </div>
             <div class="w-1/2 text-right">
                 <h1 class="text-5xl font-bold text-gray-800 uppercase tracking-widest">Recibo</h1>
                 <div class="mt-4">
-                    <span class="text-gray-500">Fecha:</span>
-                    <strong class="text-gray-700">${new Date().toLocaleDateString('es-ES')}</strong>
+                    <span class="text-gray-500">Recibo para Factura Nº:</span>
+                    <strong class="text-gray-700">${escapeHTML(invoice.number)}</strong>
+                </div>
+                <div>
+                    <span class="text-gray-500">Fecha de Emisión:</span>
+                    <strong class="text-gray-700">${new Date().toISOString().slice(0, 10)}</strong>
                 </div>
             </div>
         </header>
 
-        <div class="my-16 text-lg">
-            <p class="leading-relaxed">Hemos recibido de <strong>${escapeHTML(invoice.client)}</strong> la cantidad de <strong>${formatCurrency(invoice.total, invoice.currency)}</strong>.</p>
-            <br>
-            <p class="leading-relaxed">Este pago corresponde y salda la <strong>Factura Nº ${escapeHTML(invoice.number)}</strong> con fecha ${invoice.date}.</p>
+        <div class="grid grid-cols-2 gap-12 mb-12">
+            <div>
+                <h3 class="font-semibold text-gray-500 text-sm mb-2 uppercase tracking-wide">Recibido de:</h3>
+                <p class="font-bold text-lg text-gray-800">${escapeHTML(invoice.client)}</p>
+                <p class="text-gray-600">NIF/RUC: ${escapeHTML(invoice.nif) || ''}</p>
+            </div>
+            <div class="text-right">
+                 <h3 class="font-semibold text-gray-500 text-sm mb-2 uppercase tracking-wide">Detalles del Pago:</h3>
+                 <p class="text-gray-700"><span class="font-semibold">Método:</span> ${escapeHTML(invoice.paymentDetails.method)}</p>
+                 <p class="text-gray-700"><span class="font-semibold">Fecha:</span> ${invoice.paymentDetails.date}</p>
+                 ${invoice.paymentDetails.reference ? `<p class="text-gray-700"><span class="font-semibold">Referencia:</span> ${escapeHTML(invoice.paymentDetails.reference)}</p>` : ''}
+            </div>
         </div>
 
-        <footer class="text-center text-sm text-gray-500 mt-20 pt-4 border-t">
-            <p>Gracias por su confianza.</p>
-        </footer>
+        <div class="mb-12">
+            <p class="text-lg">Se ha recibido la cantidad de <strong class="text-xl">${formatCurrency(invoice.total, invoice.currency)}</strong> en concepto de pago de la factura <strong class="text-lg">${escapeHTML(invoice.number)}</strong>.</p>
+        </div>
+
+        <div class="flex justify-between items-end mt-24">
+            <div class="w-1/2">
+                <p class="text-center text-gray-600 border-t pt-2">Firma y Sello</p>
+            </div>
+            <div class="w-1/2 text-right">
+                <div class="bg-green-100 text-green-800 inline-block p-4 rounded-lg">
+                    <p class="text-2xl font-bold">PAGADO</p>
+                </div>
+            </div>
+        </div>
     </div>`;
-    
-    elements.invoiceViewerModal.querySelector('h3').textContent = 'Visualizador de Recibo';
-    elements.invoiceViewerModal.dataset.documentType = 'receipt';
-    elements.invoiceViewerModal.dataset.documentId = invoiceId;
     elements.invoiceViewerModal.classList.remove('hidden');
     elements.invoiceViewerModal.classList.add('flex');
 }
@@ -760,15 +785,26 @@ export function hideInvoiceViewer() {
     elements.invoiceViewerModal.classList.add('hidden');
 }
 
+export function showPaymentDetailsModal(invoiceId) {
+    elements.paymentDetailsForm.reset();
+    document.getElementById('payment-details-invoice-id').value = invoiceId;
+    document.getElementById('payment-date').value = new Date().toISOString().slice(0, 10);
+    elements.paymentDetailsModal.classList.remove('hidden');
+    elements.paymentDetailsModal.classList.add('flex');
+}
+
+export function hidePaymentDetailsModal() {
+    elements.paymentDetailsModal.classList.add('hidden');
+    elements.paymentDetailsModal.classList.remove('flex');
+}
+
 export function printInvoice() {
-    const docType = elements.invoiceViewerModal.dataset.documentType || 'invoice';
-    const printableAreaId = docType === 'receipt' ? 'receipt-printable-area' : 'invoice-printable-area';
-    const printContent = document.getElementById(printableAreaId).innerHTML;
+    const printContent = document.getElementById('invoice-printable-area').innerHTML;
     const printWindow = window.open('', '', 'height=800,width=800');
     printWindow.document.write(`
         <html>
             <head>
-                <title>Documento</title>
+                <title>Factura</title>
                 <script src="https://cdn.tailwindcss.com"><\/script>
                 <style>
                     @media print {
@@ -777,7 +813,6 @@ export function printInvoice() {
                             margin: 1.6cm;
                         }
                         body {
-                            margin: 0;
                             -webkit-print-color-adjust: exact;
                         }
                     }
@@ -799,34 +834,27 @@ export function printInvoice() {
 
 export function downloadInvoiceAsPDF() {
     const { jsPDF } = window.jspdf;
-    const docType = elements.invoiceViewerModal.dataset.documentType || 'invoice';
-    const printableAreaId = docType === 'receipt' ? 'receipt-printable-area' : 'invoice-printable-area';
-    const invoiceElement = document.getElementById(printableAreaId);
+    const invoiceElement = document.getElementById('invoice-printable-area');
     
-    const { documents } = getState();
-    const docId = elements.invoiceViewerModal.dataset.documentId;
-    const invoice = documents.find(doc => doc.id === docId);
-
-    if (!invoice) {
-        console.error("No se encontró el documento para generar el PDF.");
-        return;
-    }
+    // Hack para obtener el número de documento actual del título
+    const titleElement = elements.invoiceViewerModal.querySelector('h1');
+    const isReceipt = titleElement && titleElement.textContent.toLowerCase() === 'recibo';
+    const docNumberElement = invoiceElement.querySelector('strong');
+    const docNumberText = docNumberElement ? docNumberElement.textContent : 'documento';
+    const docType = isReceipt ? 'Recibo' : 'Factura';
 
     const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
     
     doc.html(invoiceElement, {
         callback: (doc) => {
-            const fileName = docType === 'receipt' 
-                ? `Recibo-Factura-${invoice.number}.pdf` 
-                : `Factura-${invoice.number}.pdf`;
-            doc.save(fileName);
+            doc.save(`${docType}-${docNumberText.replace(/[^a-z0-9]/gi, '_')}.pdf`);
         },
-        margin: [40, 30, 40, 30],
+        margin: [40, 0, 40, 0], // Se ajusta el margen para que el padding del HTML controle el espacio
         autoPaging: 'text',
         x: 0,
         y: 0,
         width: 595, // A4 width in points
-        windowWidth: 650
+        windowWidth: 700
     });
 }
 

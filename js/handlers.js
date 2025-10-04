@@ -1,5 +1,5 @@
 import * as actions from './actions.js';
-import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, showReceiptViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF } from './ui.js';
+import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF, showPaymentDetailsModal, hidePaymentDetailsModal, showReceiptViewer } from './ui.js';
 import { getState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
@@ -277,7 +277,7 @@ function handleDocumentsTableClick(e) {
         showInvoiceViewer(viewBtn.dataset.id);
     }
     if (receiptBtn) {
-        showReceiptViewer(receiptBtn.dataset.id);
+        showPaymentDetailsModal(receiptBtn.dataset.id);
     }
 }
 
@@ -358,6 +358,27 @@ function handleGenerateInvoice(e) {
 
     showAlertModal('Éxito', `La factura Nº ${escapeHTML(newInvoice.number)} ha sido creada.`);
     switchPage('facturacion', 'listado');
+}
+
+function handlePaymentDetailsSubmit(e) {
+    e.preventDefault();
+    const form = e.target;
+    const invoiceId = form.querySelector('#payment-details-invoice-id').value;
+    
+    const paymentData = {
+        method: form.querySelector('#payment-method').value,
+        date: form.querySelector('#payment-date').value,
+        reference: form.querySelector('#payment-reference').value,
+    };
+
+    const updatedInvoice = actions.savePaymentDetails(invoiceId, paymentData);
+
+    if (updatedInvoice) {
+        hidePaymentDetailsModal();
+        showReceiptViewer(updatedInvoice);
+    } else {
+        showAlertModal('Error', 'No se pudo encontrar la factura para guardar los detalles del pago.');
+    }
 }
 
 function handleAeatConfigSave(e) {
@@ -551,5 +572,8 @@ export function bindEventListeners() {
     elements.reportDisplayArea.addEventListener('click', handleReportDownloadClick);
 
     document.getElementById('close-year-btn').addEventListener('click', handleCloseYear);
+
+    elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
+    elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
 }
 
