@@ -716,12 +716,15 @@ export function printInvoice() {
                 <title>Factura</title>
                 <script src="https://cdn.tailwindcss.com"><\/script>
                 <style>
-                    @page { 
-                        size: auto;
-                        margin: 0mm;
-                    }
-                    body {
-                        margin: 1.6cm;
+                    @media print {
+                        @page {
+                            size: A4 portrait;
+                            margin: 0;
+                        }
+                        body {
+                            margin: 1.6cm;
+                            -webkit-print-color-adjust: exact;
+                        }
                     }
                 </style>
             </head>
@@ -735,7 +738,7 @@ export function printInvoice() {
         printWindow.focus();
         printWindow.print();
         printWindow.close(); 
-    }, 250);
+    }, 500); // Aumentado a 500ms para más fiabilidad
 }
 
 export function downloadInvoiceAsPDF() {
