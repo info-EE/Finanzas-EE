@@ -350,7 +350,7 @@ function handleGenerateInvoice(e) {
     
     form.reset();
     elements.facturaItemsContainer.innerHTML = '';
-    document.getElementById('factura-add-item-btn').click(); // Add one initial item
+    document.getElementById('factura-add-item-btn').click();
 
     showAlertModal('Éxito', `La factura Nº ${escapeHTML(newInvoice.number)} ha sido creada.`);
     switchPage('facturacion', 'listado');
@@ -385,17 +385,23 @@ function handleReportGeneration(e) {
     e.preventDefault();
     const form = e.target;
     const type = form.querySelector('#report-type').value;
+    let filters = { type };
 
     if (type === 'sociedades') {
-        const filters = {
-            type,
-            year: form.querySelector('#report-year-sociedades').value,
-            period: form.querySelector('#report-periodo-sociedades').value,
-        };
-        actions.generateReport(filters);
+        filters.year = form.querySelector('#report-year-sociedades').value;
+        filters.period = form.querySelector('#report-periodo-sociedades').value;
     } else {
-        // Implementar para otros reportes si es necesario
+        filters.period = form.querySelector('#report-period').value;
+        filters.account = form.querySelector('#report-account').value;
+        filters.part = form.querySelector('#report-part').value;
+        switch (filters.period) {
+            case 'daily': filters.date = form.querySelector('#report-date').value; break;
+            case 'weekly': filters.week = form.querySelector('#report-week').value; break;
+            case 'monthly': filters.month = form.querySelector('#report-month').value; break;
+            case 'annual': filters.year = form.querySelector('#report-year').value; break;
+        }
     }
+    actions.generateReport(filters);
 }
 
 function handleCloseYear() {
@@ -410,6 +416,20 @@ function handleCloseYear() {
     showConfirmationModal('Confirmar Cierre Anual', `Estás a punto de archivar todos los datos del ${startDate} al ${endDate} bajo el año ${year}. Esta acción no se puede deshacer. ¿Continuar?`, () => {
         actions.closeYear(startDate, endDate);
         showAlertModal('Éxito', `Se ha completado el cierre para el año ${year}.`);
+    });
+}
+
+function handleReportFilterChange() {
+    const reportType = document.getElementById('report-type').value;
+    const period = document.getElementById('report-period').value;
+
+    const isSociedades = reportType === 'sociedades';
+    elements.defaultFiltersContainer.classList.toggle('hidden', isSociedades);
+    elements.sociedadesFiltersContainer.classList.toggle('hidden', !isSociedades);
+
+    ['daily', 'weekly', 'monthly', 'annual'].forEach(p => {
+        const el = document.getElementById(`date-input-${p}`);
+        if (el) el.classList.toggle('hidden', p !== period);
     });
 }
 
@@ -503,6 +523,9 @@ export function bindEventListeners() {
     elements.pdfInvoiceBtn.addEventListener('click', downloadInvoiceAsPDF);
 
     elements.reportForm.addEventListener('submit', handleReportGeneration);
+    document.getElementById('report-type').addEventListener('change', handleReportFilterChange);
+    document.getElementById('report-period').addEventListener('change', handleReportFilterChange);
+
     document.getElementById('close-year-btn').addEventListener('click', handleCloseYear);
 }
 

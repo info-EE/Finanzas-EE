@@ -2,13 +2,6 @@ import { getState, setState } from './store.js';
 
 // --- Lógica Interna de Recálculo ---
 
-/**
- * Recalcula el saldo de todas las cuentas basándose en las transacciones.
- * Esta es una función pura: no modifica el estado directamente, solo devuelve los datos calculados.
- * @param {Array} accounts - El array de cuentas actual.
- * @param {Array} transactions - El array de transacciones actual.
- * @returns {Array} Un nuevo array de cuentas con los saldos actualizados.
- */
 function recalculateAllBalances(accounts, transactions) {
     const initialBalances = new Map();
     accounts.forEach(acc => {
@@ -264,18 +257,84 @@ export function saveFiscalParams(fiscalParams) {
 
 export function generateReport(filters) {
     const { transactions, documents, settings } = getState();
-    let data, title, columns;
+    let data = [], title = '', columns = [];
 
-    if (filters.type === 'sociedades') {
-        // Lógica para reporte de sociedades
-        let startDate, endDate;
+    // --- Lógica de cálculo de fechas ---
+    let startDate, endDate;
+    if (filters.type !== 'sociedades') {
+        switch (filters.period) {
+            case 'daily':
+                startDate = new Date(filters.date);
+                endDate = new Date(filters.date);
+                startDate.setUTCHours(0, 0, 0, 0);
+                endDate.setUTCHours(23, 59, 59, 999);
+                break;
+            case 'weekly':
+                const [yearW, weekW] = filters.week.split('-W');
+                const simple = new Date(Date.UTC(yearW, 0, 1 + (weekW - 1) * 7));
+                const dow = simple.getUTCDay();
+                const ISOweekStart = simple;
+                if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getUTCDay() + 1);
+                else ISOweekStart.setDate(simple.getDate() + 8 - simple.getUTCDay());
+                startDate = new Date(ISOweekStart);
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                endDate.setUTCHours(23, 59, 59, 999);
+                break;
+            case 'monthly':
+                const [yearM, monthM] = filters.month.split('-');
+                startDate = new Date(Date.UTC(yearM, monthM - 1, 1));
+                endDate = new Date(Date.UTC(yearM, monthM, 0, 23, 59, 59, 999));
+                break;
+            case 'annual':
+                startDate = new Date(Date.UTC(filters.year, 0, 1));
+                endDate = new Date(Date.UTC(filters.year, 11, 31, 23, 59, 59, 999));
+                break;
+        }
+    }
+
+    // --- Lógica específica por tipo de reporte ---
+    if (filters.type === 'movimientos') {
+        title = `Reporte de Movimientos`;
+        columns = ["Fecha", "Descripción", "Cuenta", "Categoría", "Tipo", "Monto", "Moneda", "Parte"];
+        data = transactions
+            .filter(t => {
+                const tDate = new Date(t.date);
+                const inDateRange = tDate >= startDate && tDate <= endDate;
+                const accountMatch = filters.account === 'all' || t.account === filters.account;
+                const partMatch = filters.part === 'all' || t.part === filters.part;
+                return inDateRange && accountMatch && partMatch;
+            })
+            .map(item => [item.date, item.description, item.account, item.category, item.type, item.amount, item.currency, item.part]);
+
+    } else if (filters.type === 'documentos') {
+        title = `Reporte de Documentos`;
+        columns = ["Fecha", "Número", "Cliente", "Monto", "Moneda", "Estado", "Tipo"];
+        data = documents
+            .filter(d => {
+                const dDate = new Date(d.date);
+                return dDate >= startDate && dDate <= endDate;
+            })
+            .map(item => [item.date, item.number, item.client, item.amount, item.currency, item.status, item.type]);
+    
+    } else if (filters.type === 'inversiones') {
+        title = `Reporte de Inversiones`;
+        columns = ["Fecha", "Descripción", "Cuenta Origen", "Monto", "Moneda"];
+        data = transactions
+            .filter(t => {
+                const tDate = new Date(t.date);
+                return tDate >= startDate && tDate <= endDate && t.category === 'Inversión';
+            })
+            .map(item => [item.date, item.description, item.account, item.amount, item.currency]);
+
+    } else if (filters.type === 'sociedades') {
         const year = parseInt(filters.year, 10);
         switch (filters.period) {
             case '1P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 2, 31, 23, 59, 59, 999)); break;
             case '2P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 8, 30, 23, 59, 59, 999)); break;
             case '3P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 10, 30, 23, 59, 59, 999)); break;
         }
-        const fiscalAccounts = ['CAIXA Bank', 'Banco WISE']; // Ejemplo
+        const fiscalAccounts = ['CAIXA Bank', 'Banco WISE'];
         const filteredTransactions = transactions.filter(t => {
             const tDate = new Date(t.date);
             return tDate >= startDate && tDate <= endDate && t.part === 'A' && fiscalAccounts.includes(t.account) && t.currency === 'EUR';
@@ -299,13 +358,6 @@ export function generateReport(filters) {
             ["Resultado Contable Acumulado", resultadoContable],
             [`Pago a cuenta estimado (${taxRate}%)`, pagoACuenta]
         ];
-
-    } else {
-        // Lógica para otros reportes
-        let startDate, endDate;
-        // ... (cálculo de fechas como lo tenías)
-        title = `Reporte de ${filters.type}`;
-        data = []; // Lógica de filtrado para otros reportes
     }
     
     setState({ activeReport: { type: filters.type, data, title, columns } });
