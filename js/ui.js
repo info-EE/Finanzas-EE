@@ -734,11 +734,12 @@ export function printInvoice() {
         </html>
     `);
     printWindow.document.close();
-    setTimeout(() => { 
+    
+    printWindow.onload = function() {
         printWindow.focus();
         printWindow.print();
-        printWindow.close(); 
-    }, 500); // Aumentado a 500ms para más fiabilidad
+        printWindow.close();
+    };
 }
 
 export function downloadInvoiceAsPDF() {
