@@ -1,5 +1,5 @@
 import * as actions from './actions.js';
-import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF } from './ui.js';
+import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, showReceiptViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF } from './ui.js';
 import { getState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
@@ -263,6 +263,7 @@ function handleDocumentsTableClick(e) {
     const statusBtn = e.target.closest('.status-btn');
     const deleteBtn = e.target.closest('.delete-doc-btn');
     const viewBtn = e.target.closest('.view-invoice-btn');
+    const receiptBtn = e.target.closest('.generate-receipt-btn');
 
     if (statusBtn) {
         actions.toggleDocumentStatus(statusBtn.dataset.id);
@@ -274,6 +275,9 @@ function handleDocumentsTableClick(e) {
     }
     if (viewBtn) {
         showInvoiceViewer(viewBtn.dataset.id);
+    }
+    if (receiptBtn) {
+        showReceiptViewer(receiptBtn.dataset.id);
     }
 }
 

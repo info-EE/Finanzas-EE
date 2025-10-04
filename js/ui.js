@@ -110,6 +110,12 @@ function createDocumentRow(doc, type) {
         <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${doc.id}" title="Ver Factura">
             <i data-lucide="eye" class="w-4 h-4"></i>
         </button>` + actionsHtml;
+        if (doc.status === 'Cobrada') {
+            actionsHtml += `
+           <button class="generate-receipt-btn p-2 text-green-400 hover:text-green-300" data-id="${doc.id}" title="Generar Recibo">
+               <i data-lucide="receipt" class="w-4 h-4"></i>
+           </button>`;
+        }
     }
 
     row.innerHTML = `
@@ -699,6 +705,53 @@ export function showInvoiceViewer(invoiceId) {
             <p>Gracias por su confianza.</p>
         </footer>
     </div>`;
+    elements.invoiceViewerModal.querySelector('h3').textContent = 'Visualizador de Factura';
+    elements.invoiceViewerModal.dataset.documentType = 'invoice';
+    elements.invoiceViewerModal.dataset.documentId = invoiceId;
+    elements.invoiceViewerModal.classList.remove('hidden');
+    elements.invoiceViewerModal.classList.add('flex');
+}
+
+export function showReceiptViewer(invoiceId) {
+    const { documents } = getState();
+    const invoice = documents.find(doc => doc.id === invoiceId);
+    if (!invoice) return;
+
+    elements.invoiceContentArea.innerHTML = `
+    <div id="receipt-printable-area" style="padding: 40px;" class="bg-white text-gray-800 font-sans">
+        <header class="flex justify-between items-start mb-12 pb-8 border-b">
+            <div class="w-1/2">
+                <div class="flex items-center gap-3 mb-4">
+                    <svg class="h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+                    </svg>
+                    <span class="text-2xl font-bold text-gray-800">Europa Envíos</span>
+                </div>
+                <p class="font-semibold">LAMAQUINALOGISTICA, SOCIEDAD LIMITADA</p>
+            </div>
+            <div class="w-1/2 text-right">
+                <h1 class="text-5xl font-bold text-gray-800 uppercase tracking-widest">Recibo</h1>
+                <div class="mt-4">
+                    <span class="text-gray-500">Fecha:</span>
+                    <strong class="text-gray-700">${new Date().toLocaleDateString('es-ES')}</strong>
+                </div>
+            </div>
+        </header>
+
+        <div class="my-16 text-lg">
+            <p class="leading-relaxed">Hemos recibido de <strong>${escapeHTML(invoice.client)}</strong> la cantidad de <strong>${formatCurrency(invoice.total, invoice.currency)}</strong>.</p>
+            <br>
+            <p class="leading-relaxed">Este pago corresponde y salda la <strong>Factura Nº ${escapeHTML(invoice.number)}</strong> con fecha ${invoice.date}.</p>
+        </div>
+
+        <footer class="text-center text-sm text-gray-500 mt-20 pt-4 border-t">
+            <p>Gracias por su confianza.</p>
+        </footer>
+    </div>`;
+    
+    elements.invoiceViewerModal.querySelector('h3').textContent = 'Visualizador de Recibo';
+    elements.invoiceViewerModal.dataset.documentType = 'receipt';
+    elements.invoiceViewerModal.dataset.documentId = invoiceId;
     elements.invoiceViewerModal.classList.remove('hidden');
     elements.invoiceViewerModal.classList.add('flex');
 }
@@ -708,12 +761,14 @@ export function hideInvoiceViewer() {
 }
 
 export function printInvoice() {
-    const printContent = document.getElementById('invoice-printable-area').innerHTML;
+    const docType = elements.invoiceViewerModal.dataset.documentType || 'invoice';
+    const printableAreaId = docType === 'receipt' ? 'receipt-printable-area' : 'invoice-printable-area';
+    const printContent = document.getElementById(printableAreaId).innerHTML;
     const printWindow = window.open('', '', 'height=800,width=800');
     printWindow.document.write(`
         <html>
             <head>
-                <title>Factura</title>
+                <title>Documento</title>
                 <script src="https://cdn.tailwindcss.com"><\/script>
                 <style>
                     @media print {
@@ -744,17 +799,27 @@ export function printInvoice() {
 
 export function downloadInvoiceAsPDF() {
     const { jsPDF } = window.jspdf;
-    const invoiceElement = document.getElementById('invoice-printable-area');
+    const docType = elements.invoiceViewerModal.dataset.documentType || 'invoice';
+    const printableAreaId = docType === 'receipt' ? 'receipt-printable-area' : 'invoice-printable-area';
+    const invoiceElement = document.getElementById(printableAreaId);
+    
     const { documents } = getState();
-    // This is a bit of a hack to get the invoice number, ideally it should be passed to the function
-    const currentInvoiceNumber = invoiceElement.querySelector('strong').textContent;
-    const invoice = documents.find(doc => doc.number === currentInvoiceNumber);
+    const docId = elements.invoiceViewerModal.dataset.documentId;
+    const invoice = documents.find(doc => doc.id === docId);
+
+    if (!invoice) {
+        console.error("No se encontró el documento para generar el PDF.");
+        return;
+    }
 
     const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
     
     doc.html(invoiceElement, {
         callback: (doc) => {
-            doc.save(`Factura-${invoice ? invoice.number : '0001'}.pdf`);
+            const fileName = docType === 'receipt' 
+                ? `Recibo-Factura-${invoice.number}.pdf` 
+                : `Factura-${invoice.number}.pdf`;
+            doc.save(fileName);
         },
         margin: [40, 30, 40, 30],
         autoPaging: 'text',
@@ -813,3 +878,4 @@ export function renderAll() {
 
     lucide.createIcons();
 }
+
