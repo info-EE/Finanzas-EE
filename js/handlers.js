@@ -1,5 +1,5 @@
 import * as actions from './actions.js';
-import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm } from './ui.js';
+import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF } from './ui.js';
 import { getState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
@@ -433,6 +433,25 @@ function handleReportFilterChange() {
     });
 }
 
+function handleReportDownloadClick(e) {
+    const downloadBtn = e.target.closest('#report-download-btn');
+    if (downloadBtn) {
+        document.getElementById('report-download-options').classList.toggle('show');
+        return;
+    }
+
+    const formatBtn = e.target.closest('.download-option');
+    if (formatBtn) {
+        const format = formatBtn.dataset.format;
+        if (format === 'xlsx') {
+            exportReportAsXLSX();
+        } else if (format === 'pdf') {
+            exportReportAsPDF();
+        }
+        document.getElementById('report-download-options').classList.remove('show');
+    }
+}
+
 
 // --- Vinculación de Eventos (Event Binding) ---
 
@@ -525,6 +544,7 @@ export function bindEventListeners() {
     elements.reportForm.addEventListener('submit', handleReportGeneration);
     document.getElementById('report-type').addEventListener('change', handleReportFilterChange);
     document.getElementById('report-period').addEventListener('change', handleReportFilterChange);
+    elements.reportDisplayArea.addEventListener('click', handleReportDownloadClick);
 
     document.getElementById('close-year-btn').addEventListener('click', handleCloseYear);
 }

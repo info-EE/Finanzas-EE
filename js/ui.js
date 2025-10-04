@@ -416,8 +416,9 @@ function renderSettings() {
 
 function renderReport() {
     const { activeReport } = getState();
-    if (!activeReport || !activeReport.type) {
-        elements.reportDisplayArea.innerHTML = `<div class="text-center text-gray-500 flex flex-col items-center justify-center h-full"><i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i><h3 class="font-semibold text-lg">Seleccione filtros</h3></div>`;
+    if (!activeReport || !activeReport.type || activeReport.data.length === 0) {
+        elements.reportDisplayArea.innerHTML = `<div class="text-center text-gray-500 flex flex-col items-center justify-center h-full"><i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i><h3 class="font-semibold text-lg">No hay datos para el reporte</h3><p class="text-sm">Pruebe con otros filtros o añada datos.</p></div>`;
+        lucide.createIcons();
         return;
     }
 
@@ -430,8 +431,16 @@ function renderReport() {
         tableHtml += `<tr class="border-b border-gray-800">`;
         row.forEach((cell, index) => {
             const isNumeric = typeof cell === 'number';
-            const currency = columns[index] === 'Importe' ? 'EUR' : undefined;
-            tableHtml += `<td class="py-2 px-3 text-sm ${isNumeric ? 'text-right' : ''}">${currency ? formatCurrency(cell, currency) : escapeHTML(String(cell))}</td>`;
+            const isAmount = columns[index].toLowerCase() === 'monto' || columns[index].toLowerCase() === 'importe';
+            // Asumimos EUR para Sociedades, para otros reportes podría necesitar más lógica
+            const currency = isAmount ? (row[6] || 'EUR') : undefined;
+            
+            let cellContent = isAmount ? formatCurrency(cell, currency) : escapeHTML(String(cell));
+            if(columns[index] === "Monto" && row[4] === 'Egreso') { // Si es un egreso en reporte de movimientos
+                cellContent = `- ${cellContent}`;
+            }
+
+            tableHtml += `<td class="py-2 px-3 text-sm ${isNumeric ? 'text-right' : ''}">${cellContent}</td>`;
         });
         tableHtml += `</tr>`;
     });
@@ -440,9 +449,18 @@ function renderReport() {
     elements.reportDisplayArea.innerHTML = `
         <div class="flex justify-between items-start mb-4">
             <h3 class="font-semibold text-lg">${title}</h3>
-            <button id="report-download-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Descargar</button>
+            <div class="dropdown">
+                <button id="report-download-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Descargar
+                </button>
+                <div id="report-download-options" class="dropdown-content">
+                    <button class="download-option" data-format="pdf">Exportar como PDF</button>
+                    <button class="download-option" data-format="xlsx">Exportar como Excel</button>
+                </div>
+            </div>
         </div>
-        ${tableHtml}`;
+        <div class="overflow-x-auto">${tableHtml}</div>`;
+    lucide.createIcons();
 }
 
 // --- Funciones de Utilidad y Ayuda para la UI ---
@@ -469,7 +487,8 @@ export function populateSelects() {
     const { accounts } = getState();
     const optionsHtml = accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
     ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select'].forEach(id => {
-        document.getElementById(id).innerHTML = optionsHtml;
+        const el = document.getElementById(id);
+        if(el) el.innerHTML = optionsHtml;
     });
     populateCategories();
     populateOperationTypesSelect();
@@ -486,7 +505,9 @@ export function populateCategories() {
 
 function populateOperationTypesSelect() {
     const { invoiceOperationTypes } = getState();
-    elements.facturaOperationType.innerHTML = invoiceOperationTypes.map(type => `<option value="${escapeHTML(type)}">${escapeHTML(type)}</option>`).join('');
+    if(elements.facturaOperationType) {
+        elements.facturaOperationType.innerHTML = invoiceOperationTypes.map(type => `<option value="${escapeHTML(type)}">${escapeHTML(type)}</option>`).join('');
+    }
 }
 
 function populateReportAccounts() {
@@ -495,6 +516,15 @@ function populateReportAccounts() {
     if(select) {
         select.innerHTML = '<option value="all">Todas las Cuentas</option>';
         select.innerHTML += accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
+    }
+    const yearSelect = document.getElementById('report-year-sociedades');
+    if(yearSelect) {
+        const currentYear = new Date().getFullYear();
+        let yearOptions = '';
+        for (let i = 0; i < 5; i++) {
+            yearOptions += `<option value="${currentYear - i}">${currentYear - i}</option>`;
+        }
+        yearSelect.innerHTML = yearOptions;
     }
 }
 
@@ -639,6 +669,29 @@ export function downloadInvoiceAsPDF() {
         callback: (doc) => doc.save('factura.pdf'),
         x: 0, y: 0, width: 595, windowWidth: 650
     });
+}
+
+export function exportReportAsXLSX() {
+    const { activeReport } = getState();
+    if (!activeReport || activeReport.data.length === 0) return;
+    const worksheet = XLSX.utils.aoa_to_sheet([activeReport.columns, ...activeReport.data]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte");
+    XLSX.writeFile(workbook, `${activeReport.title.replace(/ /g, '_')}.xlsx`);
+}
+
+export function exportReportAsPDF() {
+    const { activeReport } = getState();
+    if (!activeReport || activeReport.data.length === 0) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.text(activeReport.title, 14, 16);
+    doc.autoTable({
+        head: [activeReport.columns],
+        body: activeReport.data,
+        startY: 20
+    });
+    doc.save(`${activeReport.title.replace(/ /g, '_')}.pdf`);
 }
 
 
