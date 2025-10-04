@@ -622,7 +622,7 @@ export function showInvoiceViewer(invoiceId) {
         </tr>`).join('');
 
     elements.invoiceContentArea.innerHTML = `
-    <div id="invoice-printable-area" class="p-10 bg-white text-gray-800 font-sans">
+    <div id="invoice-printable-area" style="padding: 40px;" class="bg-white text-gray-800 font-sans">
         <header class="flex justify-between items-start mb-12 pb-8 border-b">
             <div class="w-1/2">
                 <div class="flex items-center gap-3 mb-4">
@@ -719,10 +719,10 @@ export function printInvoice() {
                     @media print {
                         @page {
                             size: A4 portrait;
-                            margin: 0;
+                            margin: 1.6cm;
                         }
                         body {
-                            margin: 1.6cm;
+                            margin: 0;
                             -webkit-print-color-adjust: exact;
                         }
                     }
@@ -813,4 +813,3 @@ export function renderAll() {
 
     lucide.createIcons();
 }
-
