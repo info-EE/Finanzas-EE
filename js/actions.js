@@ -548,3 +548,40 @@ export function closeYear(startDate, endDate) {
         archivedData: newArchivedData
     });
 }
+
+// --- Investment Actions ---
+
+export function addInvestmentAsset(assetData) {
+    const { investmentAssets } = getState();
+    const newAsset = { ...assetData, id: crypto.randomUUID() };
+    setState({ investmentAssets: [...investmentAssets, newAsset] });
+}
+
+export function deleteInvestmentAsset(assetId) {
+    const { investmentAssets } = getState();
+    const updatedAssets = investmentAssets.filter(asset => asset.id !== assetId);
+    setState({ investmentAssets: updatedAssets });
+}
+
+export function addInvestment(investmentData) {
+    const { accounts } = getState();
+    const account = accounts.find(acc => acc.name === investmentData.account);
+
+    if (!account) return;
+
+    const transactionData = {
+        date: investmentData.date,
+        description: `Inversión en ${investmentData.assetName}: ${investmentData.description}`,
+        type: 'Egreso',
+        part: 'A', // Las inversiones generalmente son parte 'A'
+        account: investmentData.account,
+        category: 'Inversión',
+        amount: investmentData.amount,
+        iva: 0,
+        currency: account.currency,
+        // Guardamos una referencia al ID del activo para un futuro seguimiento
+        investmentAssetId: investmentData.assetId 
+    };
+
+    saveTransaction(transactionData);
+}
