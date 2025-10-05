@@ -16,7 +16,11 @@ function recalculateAllBalances(accounts, transactions) {
         transactions
             .filter(t => t.account === account.name && !t.isInitialBalance)
             .forEach(t => {
-                currentBalance += (t.type === 'Ingreso' ? t.amount : -t.amount);
+                if (t.type === 'Ingreso') {
+                    currentBalance += t.amount;
+                } else {
+                    currentBalance -= (t.amount + (t.iva || 0));
+                }
             });
         account.balance = currentBalance;
     });
@@ -130,14 +134,14 @@ export function addTransfer(transferData) {
         id: crypto.randomUUID(), date,
         description: `Transferencia a ${toAccountName}`,
         type: 'Egreso', part: 'A', account: fromAccountName,
-        category: 'Transferencia', amount: amount, currency: fromAccount.currency
+        category: 'Transferencia', amount: amount, currency: fromAccount.currency, iva: 0
     });
 
     newTransactions.push({
         id: crypto.randomUUID(), date,
         description: `Transferencia desde ${fromAccountName}`,
         type: 'Ingreso', part: 'A', account: toAccountName,
-        category: 'Transferencia', amount: receivedAmount, currency: toAccount.currency
+        category: 'Transferencia', amount: receivedAmount, currency: toAccount.currency, iva: 0
     });
     
     if (feeSource > 0) {
@@ -145,7 +149,7 @@ export function addTransfer(transferData) {
             id: crypto.randomUUID(), date,
             description: `Comisión por transferencia a ${toAccountName}`,
             type: 'Egreso', part: 'A', account: fromAccountName,
-            category: 'Comisiones', amount: feeSource, currency: fromAccount.currency
+            category: 'Comisiones', amount: feeSource, currency: fromAccount.currency, iva: 0
         });
     }
 
@@ -282,21 +286,19 @@ export function generateReport(filters) {
     if (filters.type !== 'sociedades') {
         switch (filters.period) {
             case 'daily':
-                startDate = new Date(filters.date);
-                endDate = new Date(filters.date);
-                startDate.setUTCHours(0, 0, 0, 0);
-                endDate.setUTCHours(23, 59, 59, 999);
+                startDate = new Date(filters.date + 'T00:00:00Z');
+                endDate = new Date(filters.date + 'T23:59:59Z');
                 break;
             case 'weekly':
                 const [yearW, weekW] = filters.week.split('-W');
                 const simple = new Date(Date.UTC(yearW, 0, 1 + (weekW - 1) * 7));
                 const dow = simple.getUTCDay();
                 const ISOweekStart = simple;
-                if (dow <= 4) ISOweekStart.setDate(simple.getDate() - simple.getUTCDay() + 1);
-                else ISOweekStart.setDate(simple.getDate() + 8 - simple.getUTCDay());
+                if (dow <= 4) ISOweekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
+                else ISOweekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
                 startDate = new Date(ISOweekStart);
                 endDate = new Date(startDate);
-                endDate.setDate(startDate.getDate() + 6);
+                endDate.setUTCDate(startDate.getUTCDate() + 6);
                 endDate.setUTCHours(23, 59, 59, 999);
                 break;
             case 'monthly':
@@ -317,7 +319,7 @@ export function generateReport(filters) {
         columns = ["Fecha", "Descripción", "Cuenta", "Categoría", "Tipo", "Monto", "Moneda", "Parte"];
         data = transactions
             .filter(t => {
-                const tDate = new Date(t.date);
+                const tDate = new Date(t.date + 'T00:00:00Z');
                 const inDateRange = tDate >= startDate && tDate <= endDate;
                 const accountMatch = filters.account === 'all' || t.account === filters.account;
                 const partMatch = filters.part === 'all' || t.part === filters.part;
@@ -330,7 +332,7 @@ export function generateReport(filters) {
         columns = ["Fecha", "Número", "Cliente", "Monto", "Moneda", "Estado", "Tipo"];
         data = documents
             .filter(d => {
-                const dDate = new Date(d.date);
+                const dDate = new Date(d.date + 'T00:00:00Z');
                 return dDate >= startDate && dDate <= endDate;
             })
             .map(item => [item.date, item.number, item.client, item.amount, item.currency, item.status, item.type]);
@@ -340,7 +342,7 @@ export function generateReport(filters) {
         columns = ["Fecha", "Descripción", "Cuenta Origen", "Monto", "Moneda"];
         data = transactions
             .filter(t => {
-                const tDate = new Date(t.date);
+                const tDate = new Date(t.date + 'T00:00:00Z');
                 return tDate >= startDate && tDate <= endDate && t.category === 'Inversión';
             })
             .map(item => [item.date, item.description, item.account, item.amount, item.currency]);
@@ -354,14 +356,14 @@ export function generateReport(filters) {
         }
         const fiscalAccounts = ['CAIXA Bank', 'Banco WISE'];
         const filteredTransactions = transactions.filter(t => {
-            const tDate = new Date(t.date);
+            const tDate = new Date(t.date + 'T00:00:00Z');
             return tDate >= startDate && tDate <= endDate && t.part === 'A' && fiscalAccounts.includes(t.account) && t.currency === 'EUR';
         });
 
         let totalIngresos = 0, totalEgresos = 0;
         filteredTransactions.forEach(t => {
             if (t.type === 'Ingreso') totalIngresos += t.amount;
-            else totalEgresos += t.amount;
+            else totalEgresos += t.amount + (t.iva || 0);
         });
 
         const resultadoContable = totalIngresos - totalEgresos;
@@ -386,17 +388,17 @@ export function generateIvaReport(month) {
     const [year, monthNum] = month.split('-').map(Number);
 
     const ivaSoportado = transactions.filter(t => {
-        const [tYear, tMonth] = t.date.split('-').map(Number);
+        const tDate = new Date(t.date + 'T00:00:00Z');
         return t.type === 'Egreso' && t.iva > 0 &&
-               tYear === year &&
-               tMonth === monthNum;
+               tDate.getUTCFullYear() === year &&
+               tDate.getUTCMonth() + 1 === monthNum;
     });
 
     const ivaRepercutido = documents.filter(doc => {
-        const [dYear, dMonth] = doc.date.split('-').map(Number);
+        const dDate = new Date(doc.date + 'T00:00:00Z');
         return doc.type === 'Factura' && doc.iva > 0 &&
-               dYear === year &&
-               dMonth === monthNum;
+               dDate.getUTCFullYear() === year &&
+               dDate.getUTCMonth() + 1 === monthNum;
     });
 
     const totalSoportado = ivaSoportado.reduce((sum, t) => sum + t.iva, 0);
@@ -409,7 +411,7 @@ export function generateIvaReport(month) {
             items: ivaSoportado.map(t => ({
                 date: t.date,
                 description: t.description,
-                base: t.amount - t.iva,
+                base: t.amount,
                 iva: t.iva,
                 currency: t.currency
             }))
@@ -440,11 +442,11 @@ export function closeYear(startDate, endDate) {
     const end = new Date(endDate);
 
     const transactionsToArchive = transactions.filter(t => {
-        const tDate = new Date(t.date);
+        const tDate = new Date(t.date + 'T00:00:00Z');
         return tDate >= start && tDate <= end;
     });
     const documentsToArchive = documents.filter(d => {
-        const dDate = new Date(d.date);
+        const dDate = new Date(d.date + 'T00:00:00Z');
         return dDate >= start && dDate <= end;
     });
 
@@ -456,11 +458,11 @@ export function closeYear(startDate, endDate) {
     newArchivedData[year].documents.push(...documentsToArchive);
 
     const remainingTransactions = transactions.filter(t => {
-        const tDate = new Date(t.date);
+        const tDate = new Date(t.date + 'T00:00:00Z');
         return tDate < start || tDate > end;
     });
     const remainingDocuments = documents.filter(d => {
-        const dDate = new Date(d.date);
+        const dDate = new Date(d.date + 'T00:00:00Z');
         return dDate < start || dDate > end;
     });
 
@@ -470,3 +472,4 @@ export function closeYear(startDate, endDate) {
         archivedData: newArchivedData
     });
 }
+
