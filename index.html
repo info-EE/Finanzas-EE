@@ -35,6 +35,9 @@
             <a href="#" id="nav-cashflow" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
                 <i data-lucide="arrow-left-right"></i> <span class="nav-text hidden">Cash Flow</span>
             </a>
+            <a href="#" id="nav-iva" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
+                <i data-lucide="percent-circle"></i> <span class="nav-text hidden">Control IVA</span>
+            </a>
             <a href="#" id="nav-cuentas" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg">
                 <i data-lucide="landmark"></i> <span class="nav-text hidden">Cuentas & Bancos</span>
             </a>
@@ -223,6 +226,72 @@
                             <tbody id="transactions-table-body">
                                 </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-iva" class="page-content hidden">
+            <h2 class="text-3xl font-bold mb-6 text-white">Control Mensual de IVA</h2>
+            <div class="card p-6 rounded-xl mb-6">
+                <div class="flex items-end gap-4">
+                    <div>
+                        <label for="iva-month" class="block text-sm font-medium text-gray-400 mb-1">Seleccionar Mes</label>
+                        <input type="month" id="iva-month" class="form-input">
+                    </div>
+                    <button id="iva-generate-report-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Generar</button>
+                </div>
+            </div>
+        
+            <div id="iva-results-container" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="card p-6 rounded-xl text-center">
+                        <p class="text-gray-400">IVA Soportado (Compras)</p>
+                        <p id="iva-soportado-total" class="text-4xl font-bold kpi-value mt-2 text-red-400">€0.00</p>
+                    </div>
+                    <div class="card p-6 rounded-xl text-center">
+                        <p class="text-gray-400">IVA Repercutido (Ventas)</p>
+                        <p id="iva-repercutido-total" class="text-4xl font-bold kpi-value mt-2 text-green-400">€0.00</p>
+                    </div>
+                    <div class="card p-6 rounded-xl text-center">
+                        <p id="iva-resultado-label" class="text-gray-400">Resultado</p>
+                        <p id="iva-resultado-total" class="text-4xl font-bold kpi-value mt-2">€0.00</p>
+                    </div>
+                </div>
+        
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Detalle de IVA Soportado (Egresos)</h3>
+                        <div class="overflow-x-auto max-h-96">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="text-gray-400 border-b border-gray-700">
+                                        <th class="py-2 px-3">Fecha</th>
+                                        <th class="py-2 px-3">Descripción</th>
+                                        <th class="py-2 px-3 text-right">Monto Base</th>
+                                        <th class="py-2 px-3 text-right">IVA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="iva-soportado-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Detalle de IVA Repercutido (Facturas)</h3>
+                        <div class="overflow-x-auto max-h-96">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr class="text-gray-400 border-b border-gray-700">
+                                        <th class="py-2 px-3">Fecha</th>
+                                        <th class="py-2 px-3">Factura Nº</th>
+                                        <th class="py-2 px-3">Cliente</th>
+                                        <th class="py-2 px-3 text-right">Monto Base</th>
+                                        <th class="py-2 px-3 text-right">IVA</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="iva-repercutido-table-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

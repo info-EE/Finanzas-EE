@@ -20,6 +20,7 @@ function getDefaultState() {
         invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
         archivedData: {},
         activeReport: { type: null, data: [], title: '', columns: [] },
+        activeIvaReport: null,
         settings: {
             aeatModuleActive: false,
             aeatConfig: {
@@ -88,4 +89,3 @@ export function initState() {
     // Forzamos una notificación inicial para que la UI se renderice con los datos cargados
     notify();
 }
-

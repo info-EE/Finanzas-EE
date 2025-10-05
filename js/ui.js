@@ -50,6 +50,9 @@ export const elements = {
     paymentDetailsForm: document.getElementById('payment-details-form'),
     paymentDetailsCancelBtn: document.getElementById('payment-details-cancel-btn'),
     transactionIvaContainer: document.getElementById('transaction-iva-container'),
+    ivaMonthInput: document.getElementById('iva-month'),
+    ivaGenerateReportBtn: document.getElementById('iva-generate-report-btn'),
+    ivaReportDisplay: document.getElementById('iva-report-display'),
 };
 
 const charts = {
@@ -473,6 +476,91 @@ function renderReport() {
             </div>
         </div>
         <div class="overflow-x-auto">${tableHtml}</div>`;
+    lucide.createIcons();
+}
+
+function renderIvaReport() {
+    const { activeIvaReport } = getState();
+    const displayArea = elements.ivaReportDisplay;
+
+    if (!activeIvaReport) {
+        displayArea.innerHTML = `
+            <div class="text-center text-gray-500 py-10">
+                <i data-lucide="info" class="w-12 h-12 mx-auto mb-4"></i>
+                <p>Seleccione un mes y genere el reporte para ver los resultados.</p>
+            </div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    const { soportado, repercutido, resultado } = activeIvaReport;
+
+    const createTableRows = (items) => {
+        if (items.length === 0) {
+            return `<tr><td colspan="4" class="text-center py-3 text-gray-500">No hay datos para este período.</td></tr>`;
+        }
+        return items.map(item => `
+            <tr class="border-b border-gray-800">
+                <td class="py-2 px-3 text-sm">${item.date}</td>
+                <td class="py-2 px-3 text-sm">${escapeHTML(item.description || `${item.number} - ${item.client}`)}</td>
+                <td class="py-2 px-3 text-sm text-right">${formatCurrency(item.base, item.currency)}</td>
+                <td class="py-2 px-3 text-sm text-right font-semibold">${formatCurrency(item.iva, item.currency)}</td>
+            </tr>
+        `).join('');
+    };
+
+    displayArea.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="card p-4 rounded-xl text-center">
+                <p class="text-sm text-gray-400">IVA Soportado (Gastos)</p>
+                <p class="text-2xl font-bold text-red-400 mt-1">${formatCurrency(soportado.total, 'EUR')}</p>
+            </div>
+            <div class="card p-4 rounded-xl text-center">
+                <p class="text-sm text-gray-400">IVA Repercutido (Ingresos)</p>
+                <p class="text-2xl font-bold text-green-400 mt-1">${formatCurrency(repercutido.total, 'EUR')}</p>
+            </div>
+            <div class="card p-4 rounded-xl text-center ${resultado >= 0 ? 'bg-green-900/30' : 'bg-red-900/30'}">
+                <p class="text-sm ${resultado >= 0 ? 'text-green-300' : 'text-red-300'}">Resultado del Período</p>
+                <p class="text-2xl font-bold ${resultado >= 0 ? 'text-green-300' : 'text-red-300'} mt-1">${formatCurrency(Math.abs(resultado), 'EUR')}</p>
+                <p class="text-xs ${resultado >= 0 ? 'text-green-400' : 'text-red-400'}">${resultado >= 0 ? 'IVA a Pagar' : 'IVA a Favor'}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="card p-4 rounded-xl">
+                <h4 class="font-semibold mb-3 text-lg">Detalle de IVA Soportado</h4>
+                <div class="overflow-y-auto max-h-80">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-700">
+                                <th class="py-2 px-3 text-xs">Fecha</th>
+                                <th class="py-2 px-3 text-xs">Concepto</th>
+                                <th class="py-2 px-3 text-xs text-right">Base</th>
+                                <th class="py-2 px-3 text-xs text-right">IVA</th>
+                            </tr>
+                        </thead>
+                        <tbody>${createTableRows(soportado.items)}</tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card p-4 rounded-xl">
+                <h4 class="font-semibold mb-3 text-lg">Detalle de IVA Repercutido</h4>
+                 <div class="overflow-y-auto max-h-80">
+                    <table class="w-full text-left">
+                        <thead>
+                             <tr class="text-gray-400 border-b border-gray-700">
+                                <th class="py-2 px-3 text-xs">Fecha</th>
+                                <th class="py-2 px-3 text-xs">Factura / Cliente</th>
+                                <th class="py-2 px-3 text-xs text-right">Base</th>
+                                <th class="py-2 px-3 text-xs text-right">IVA</th>
+                            </tr>
+                        </thead>
+                        <tbody>${createTableRows(repercutido.items)}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
     lucide.createIcons();
 }
 
@@ -916,6 +1004,7 @@ export function renderAll() {
     renderInvestments();
     renderSettings();
     renderReport();
+    renderIvaReport();
     populateSelects();
 
     lucide.createIcons();

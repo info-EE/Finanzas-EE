@@ -431,6 +431,15 @@ function handleReportGeneration(e) {
     actions.generateReport(filters);
 }
 
+function handleIvaReportGeneration() {
+    const month = elements.ivaMonthInput.value;
+    if (month) {
+        actions.generateIvaReport(month);
+    } else {
+        showAlertModal('Falta Información', 'Por favor, seleccione un mes para generar el reporte de IVA.');
+    }
+}
+
 function handleCloseYear() {
     const startDate = document.getElementById('cierre-start-date').value;
     const endDate = document.getElementById('cierre-end-date').value;
@@ -577,5 +586,7 @@ export function bindEventListeners() {
 
     elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
     elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
+
+    elements.ivaGenerateReportBtn.addEventListener('click', handleIvaReportGeneration);
 }
 

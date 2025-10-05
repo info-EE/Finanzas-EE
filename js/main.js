@@ -18,14 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Establece la página inicial y realiza el primer renderizado completo
     switchPage('inicio');
 
-    // 5. Establece valores por defecto en campos de fecha
+    // 5. Establece valores por defecto en campos de fecha y mes
     const today = new Date().toISOString().slice(0, 10);
     ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = today;
     });
+    
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const monthInput = document.getElementById('report-month');
-    if(monthInput) monthInput.value = currentMonth;
+    ['report-month', 'iva-month'].forEach(id => {
+        const monthInput = document.getElementById(id);
+        if(monthInput) monthInput.value = currentMonth;
+    });
 });
-

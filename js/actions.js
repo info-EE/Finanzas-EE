@@ -381,6 +381,56 @@ export function generateReport(filters) {
     setState({ activeReport: { type: filters.type, data, title, columns } });
 }
 
+export function generateIvaReport(month) {
+    const { transactions, documents } = getState();
+    const [year, monthNum] = month.split('-').map(Number);
+
+    const ivaSoportado = transactions.filter(t => {
+        const tDate = new Date(t.date);
+        return t.type === 'Egreso' && t.iva > 0 &&
+               tDate.getFullYear() === year &&
+               tDate.getMonth() + 1 === monthNum;
+    });
+
+    const ivaRepercutido = documents.filter(doc => {
+        const dDate = new Date(doc.date);
+        return doc.type === 'Factura' && doc.iva > 0 &&
+               dDate.getFullYear() === year &&
+               dDate.getMonth() + 1 === monthNum;
+    });
+
+    const totalSoportado = ivaSoportado.reduce((sum, t) => sum + t.iva, 0);
+    const totalRepercutido = ivaRepercutido.reduce((sum, d) => sum + d.iva, 0);
+
+    const ivaReport = {
+        month: month,
+        soportado: {
+            total: totalSoportado,
+            items: ivaSoportado.map(t => ({
+                date: t.date,
+                description: t.description,
+                base: t.amount - t.iva,
+                iva: t.iva,
+                currency: t.currency
+            }))
+        },
+        repercutido: {
+            total: totalRepercutido,
+            items: ivaRepercutido.map(d => ({
+                date: d.date,
+                number: d.number,
+                client: d.client,
+                base: d.subtotal,
+                iva: d.iva,
+                currency: d.currency
+            }))
+        },
+        resultado: totalRepercutido - totalSoportado
+    };
+
+    setState({ activeIvaReport: ivaReport });
+}
+
 
 export function closeYear(startDate, endDate) {
     const { transactions, documents, archivedData } = getState();
