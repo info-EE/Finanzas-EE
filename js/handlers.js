@@ -1,5 +1,5 @@
 import * as actions from './actions.js';
-import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF, showPaymentDetailsModal, hidePaymentDetailsModal, showReceiptViewer, showSpinner, hideSpinner } from './ui.js';
+import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF, showPaymentDetailsModal, hidePaymentDetailsModal, showReceiptViewer, showSpinner, hideSpinner, renderAll } from './ui.js';
 import { getState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
@@ -550,6 +550,20 @@ export function bindEventListeners() {
             switchPage(pageId);
         });
     });
+
+    // Inicio Dashboard
+    document.getElementById('inicio-chart-currency').addEventListener('change', renderAll);
+    document.getElementById('quick-add-income').addEventListener('click', () => {
+        switchPage('cashflow');
+        document.getElementById('transaction-type').value = 'Ingreso';
+        populateCategories();
+    });
+    document.getElementById('quick-add-expense').addEventListener('click', () => {
+        switchPage('cashflow');
+        document.getElementById('transaction-type').value = 'Egreso';
+        populateCategories();
+    });
+
 
     elements.transactionForm.addEventListener('submit', handleTransactionFormSubmit);
     elements.transactionsTableBody.addEventListener('click', handleTransactionsTableClick);
