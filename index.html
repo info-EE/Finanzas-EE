@@ -243,59 +243,11 @@
                 </div>
             </div>
         
-            <div id="iva-results-container" class="hidden">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div class="card p-6 rounded-xl text-center">
-                        <p class="text-gray-400">IVA Soportado (Compras)</p>
-                        <p id="iva-soportado-total" class="text-4xl font-bold kpi-value mt-2 text-red-400">€0.00</p>
-                    </div>
-                    <div class="card p-6 rounded-xl text-center">
-                        <p class="text-gray-400">IVA Repercutido (Ventas)</p>
-                        <p id="iva-repercutido-total" class="text-4xl font-bold kpi-value mt-2 text-green-400">€0.00</p>
-                    </div>
-                    <div class="card p-6 rounded-xl text-center">
-                        <p id="iva-resultado-label" class="text-gray-400">Resultado</p>
-                        <p id="iva-resultado-total" class="text-4xl font-bold kpi-value mt-2">€0.00</p>
-                    </div>
-                </div>
-        
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="card p-6 rounded-xl">
-                        <h3 class="font-semibold mb-4">Detalle de IVA Soportado (Egresos)</h3>
-                        <div class="overflow-x-auto max-h-96">
-                            <table class="w-full text-left">
-                                <thead>
-                                    <tr class="text-gray-400 border-b border-gray-700">
-                                        <th class="py-2 px-3">Fecha</th>
-                                        <th class="py-2 px-3">Descripción</th>
-                                        <th class="py-2 px-3 text-right">Monto Base</th>
-                                        <th class="py-2 px-3 text-right">IVA</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="iva-soportado-table-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card p-6 rounded-xl">
-                        <h3 class="font-semibold mb-4">Detalle de IVA Repercutido (Facturas)</h3>
-                        <div class="overflow-x-auto max-h-96">
-                            <table class="w-full text-left">
-                                <thead>
-                                    <tr class="text-gray-400 border-b border-gray-700">
-                                        <th class="py-2 px-3">Fecha</th>
-                                        <th class="py-2 px-3">Factura Nº</th>
-                                        <th class="py-2 px-3">Cliente</th>
-                                        <th class="py-2 px-3 text-right">Monto Base</th>
-                                        <th class="py-2 px-3 text-right">IVA</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="iva-repercutido-table-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+            <div id="iva-report-display">
+                <!-- El contenido del reporte de IVA se generará aquí -->
             </div>
         </div>
+
 
         <div id="page-cuentas" class="page-content hidden">
             <h2 class="text-3xl font-bold mb-6 text-white">Cuentas y Bancos</h2>
@@ -1012,10 +964,88 @@
                 </form>
             </div>
         </div>
-
     </main>
+
+    <!-- =========== TEMPLATES =========== -->
+    <template id="transaction-row-template">
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+            <td class="py-3 px-3" data-content="date"></td>
+            <td class="py-3 px-3" data-content="description"></td>
+            <td class="py-3 px-3" data-content="account"></td>
+            <td class="py-3 px-3" data-content="category"></td>
+            <td class="py-3 px-3" data-content="part"></td>
+            <td class="py-3 px-3 text-right text-gray-400" data-content="iva"></td>
+            <td class="py-3 px-3 text-right font-medium" data-content="amount"></td>
+            <td class="py-3 px-3">
+                <div class="flex items-center justify-center gap-2">
+                    <button class="edit-btn p-2 text-blue-400 hover:text-blue-300" title="Editar">
+                        <i data-lucide="edit" class="w-4 h-4"></i>
+                    </button>
+                    <button class="delete-btn p-2 text-red-400 hover:text-red-300" title="Eliminar">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    </template>
+
+    <template id="account-card-template">
+        <div class="card p-6 rounded-xl flex flex-col">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-semibold text-lg" data-content="name"></h3>
+                <div data-content="logo-container"></div>
+            </div>
+            <div class="mt-auto">
+                <p class="text-gray-400 text-sm">Saldo Actual</p>
+                <p class="text-4xl font-bold kpi-value mt-2" data-content="balance"></p>
+            </div>
+        </div>
+    </template>
+
+    <template id="document-row-template">
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+            <td class="py-3 px-3" data-content="date"></td>
+            <td class="py-2 px-3" data-content="number"></td>
+            <td class="py-2 px-3" data-content="client"></td>
+            <td class="py-2 px-3 text-right" data-content="amount"></td>
+            <td class="py-2 px-3 text-center">
+                <button class="status-btn text-xs font-semibold px-2 py-1 rounded-full" data-action="toggle-status"></button>
+            </td>
+            <td class="py-2 px-3">
+                <div class="flex items-center justify-center gap-2" data-content="actions"></div>
+            </td>
+        </tr>
+    </template>
+
+    <template id="client-row-template">
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+            <td class="py-3 px-3" data-content="name"></td>
+            <td class="py-3 px-3" data-content="taxId"></td>
+            <td class="py-3 px-3" data-content="email"></td>
+            <td class="py-3 px-3" data-content="phone"></td>
+            <td class="py-3 px-3">
+                <div class="flex items-center justify-center gap-2">
+                    <button class="edit-client-btn p-2 text-blue-400 hover:text-blue-300" title="Editar">
+                        <i data-lucide="edit" class="w-4 h-4"></i>
+                    </button>
+                    <button class="delete-client-btn p-2 text-red-400 hover:text-red-300" title="Eliminar">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    </template>
+
+    <template id="investment-row-template">
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+            <td class="py-3 px-3" data-content="date"></td>
+            <td class="py-2 px-3" data-content="description"></td>
+            <td class="py-2 px-3" data-content="account"></td>
+            <td class="py-2 px-3 text-right" data-content="amount"></td>
+        </tr>
+    </template>
+    <!-- =========== END TEMPLATES =========== -->
     
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
-
