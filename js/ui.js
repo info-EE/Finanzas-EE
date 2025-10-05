@@ -60,6 +60,7 @@ const charts = {
     accountsBalanceChartEUR: null,
     accountsBalanceChartUSD: null,
     annualFlowChart: null,
+    expenseDistributionChart: null,
 };
 
 
@@ -282,14 +283,44 @@ function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, c
 }
 
 function updateInicioKPIs() {
-    const { accounts } = getState();
-    const totalEUR = accounts.filter(a => a.currency === 'EUR').reduce((s, a) => s + a.balance, 0);
-    const totalUSD = accounts.filter(a => a.currency === 'USD').reduce((s, a) => s + a.balance, 0);
-    document.getElementById('total-eur').textContent = formatCurrency(totalEUR, 'EUR');
-    document.getElementById('total-usd').textContent = formatCurrency(totalUSD, 'USD');
+    const { transactions, accounts } = getState();
+    const currency = document.getElementById('inicio-chart-currency').value;
+    const symbol = getCurrencySymbol(currency);
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    let monthlyIncome = 0;
+    let monthlyExpense = 0;
+
+    transactions
+        .filter(t => {
+            const tDate = new Date(t.date);
+            return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear && t.currency === currency;
+        })
+        .forEach(t => {
+            if (t.type === 'Ingreso') {
+                monthlyIncome += t.amount;
+            } else if (t.type === 'Egreso') {
+                monthlyExpense += t.amount;
+            }
+        });
+
+    const monthlyProfit = monthlyIncome - monthlyExpense;
+    const totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
+
+    document.getElementById('kpi-monthly-income').textContent = formatCurrency(monthlyIncome, currency);
+    document.getElementById('kpi-monthly-expense').textContent = formatCurrency(monthlyExpense, currency);
+    document.getElementById('kpi-monthly-profit').textContent = formatCurrency(monthlyProfit, currency);
+    document.getElementById('kpi-total-balance').textContent = formatCurrency(totalBalance, currency);
+    
+    const profitEl = document.getElementById('kpi-monthly-profit');
+    profitEl.classList.remove('text-green-400', 'text-red-400');
+    profitEl.classList.add(monthlyProfit >= 0 ? 'text-green-400' : 'text-red-400');
 }
 
-function renderInicioCharts() {
+function renderAnnualFlowChart() {
     const { transactions } = getState();
     const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
     if (!annualCtx) return;
@@ -333,6 +364,154 @@ function renderInicioCharts() {
         }
     });
 }
+
+function renderExpenseDistributionChart() {
+    const { transactions } = getState();
+    const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
+    if (!ctx) return;
+
+    const currency = document.getElementById('inicio-chart-currency').value;
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const expenseByCategory = transactions
+        .filter(t => {
+            const tDate = new Date(t.date);
+            return t.type === 'Egreso' && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear && t.currency === currency;
+        })
+        .reduce((acc, t) => {
+            acc[t.category] = (acc[t.category] || 0) + t.amount;
+            return acc;
+        }, {});
+
+    const labels = Object.keys(expenseByCategory);
+    const data = Object.values(expenseByCategory);
+
+    if (charts.expenseDistributionChart) charts.expenseDistributionChart.destroy();
+    
+    if (labels.length === 0) {
+        // Show a message if there's no data
+        return;
+    }
+
+    charts.expenseDistributionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: CHART_COLORS,
+                borderColor: '#0a0a0a',
+                borderWidth: 5,
+                borderRadius: 10,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#e0e0e0',
+                        boxWidth: 12,
+                        padding: 15,
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderRecentTransactions() {
+    const { transactions } = getState();
+    const container = document.getElementById('recent-transactions-container');
+    if (!container) return;
+
+    const recent = transactions
+        .filter(t => !t.isInitialBalance)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 5);
+
+    if (recent.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500 py-4">No hay movimientos recientes.</p>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="w-full text-left">
+            <tbody>
+                ${recent.map(t => {
+                    const isIncome = t.type === 'Ingreso';
+                    return `
+                        <tr class="border-b border-gray-800 last:border-b-0">
+                            <td class="py-3 px-3">
+                                <p class="font-medium">${escapeHTML(t.description)}</p>
+                                <p class="text-xs text-gray-400">${t.date} - ${escapeHTML(t.account)}</p>
+                            </td>
+                            <td class="py-3 px-3 text-right font-semibold ${isIncome ? 'text-green-400' : 'text-red-400'}">
+                                ${isIncome ? '+' : '-'} ${formatCurrency(t.amount, t.currency)}
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>`;
+}
+
+function renderMainBalances() {
+    const { accounts } = getState();
+    const container = document.getElementById('main-balances-container');
+    if (!container) return;
+
+    const sortedAccounts = [...accounts].sort((a, b) => b.balance - a.balance).slice(0, 4);
+
+    if (sortedAccounts.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500">No hay cuentas configuradas.</p>`;
+        return;
+    }
+
+    container.innerHTML = sortedAccounts.map(acc => `
+        <div class="flex justify-between items-center text-sm">
+            <div class="flex items-center gap-3">
+                ${acc.logoHtml || '<i data-lucide="wallet"></i>'}
+                <span>${escapeHTML(acc.name)}</span>
+            </div>
+            <span class="font-semibold">${formatCurrency(acc.balance, acc.currency)}</span>
+        </div>
+    `).join('');
+    lucide.createIcons();
+}
+
+function renderPendingInvoices() {
+    const { documents } = getState();
+    const container = document.getElementById('pending-invoices-container');
+    if (!container) return;
+
+    const pending = documents.filter(doc => doc.type === 'Factura' && doc.status === 'Adeudada');
+
+    if (pending.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-500 py-4">
+            <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto mb-2 text-green-500"></i>
+            <p>¡Todo al día!</p>
+        </div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    container.innerHTML = pending.slice(0, 3).map(doc => `
+        <div class="flex justify-between items-center text-sm border-b border-gray-800 last:border-b-0 py-2">
+            <div>
+                <p class="font-medium">${escapeHTML(doc.number)}</p>
+                <p class="text-xs text-gray-400">${escapeHTML(doc.client)}</p>
+            </div>
+            <span class="font-semibold">${formatCurrency(doc.amount, doc.currency)}</span>
+        </div>
+    `).join('');
+}
+
 
 function renderDocuments(type, tableBody, searchInputId) {
     const { documents } = getState();
@@ -567,6 +746,15 @@ function renderIvaReport() {
 
 // --- Funciones de Utilidad y Ayuda para la UI ---
 
+function renderInicioDashboard() {
+    updateInicioKPIs();
+    renderAnnualFlowChart();
+    renderExpenseDistributionChart();
+    renderMainBalances();
+    renderPendingInvoices();
+    renderRecentTransactions();
+}
+
 function toggleIvaField() {
     const type = elements.transactionForm.querySelector('#transaction-type').value;
     if (type === 'Egreso') {
@@ -580,8 +768,9 @@ export function switchPage(pageId, subpageId = null) {
     elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
     elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
     
+    // Render specific content based on the active page
+    if (pageId === 'inicio') renderInicioDashboard();
     if (pageId === 'cuentas') renderBalanceLegendAndChart();
-    if (pageId === 'inicio') renderInicioCharts();
     if (pageId === 'facturacion' && subpageId) {
         document.querySelectorAll('.tab-button-inner').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`facturacion-tab-${subpageId}`).classList.add('active');
@@ -1006,17 +1195,45 @@ export function renderAll() {
     const state = getState();
     if (!state.accounts) return;
 
-    updateInicioKPIs();
-    renderTransactions();
-    renderAccountsTab();
-    renderDocuments('Proforma', elements.proformasTableBody, 'proformas-search');
-    renderDocuments('Factura', elements.facturasTableBody, 'facturas-search');
-    renderClients();
-    renderInvestments();
-    renderSettings();
-    renderReport();
-    renderIvaReport();
+    // Call render functions for the visible page
+    const visiblePage = Array.from(elements.pages).find(p => !p.classList.contains('hidden'));
+    if (visiblePage) {
+        const pageId = visiblePage.id.replace('page-', '');
+        switch (pageId) {
+            case 'inicio':
+                renderInicioDashboard();
+                break;
+            case 'cashflow':
+                renderTransactions();
+                break;
+            case 'cuentas':
+                renderAccountsTab();
+                renderBalanceLegendAndChart();
+                break;
+            case 'proformas':
+                renderDocuments('Proforma', elements.proformasTableBody, 'proformas-search');
+                break;
+            case 'facturacion':
+                renderDocuments('Factura', elements.facturasTableBody, 'facturas-search');
+                break;
+            case 'clientes':
+                renderClients();
+                break;
+            case 'inversiones':
+                renderInvestments();
+                break;
+            case 'ajustes':
+                renderSettings();
+                break;
+            case 'reportes':
+                renderReport();
+                break;
+            case 'iva':
+                renderIvaReport();
+                break;
+        }
+    }
+    
     populateSelects();
-
     lucide.createIcons();
 }
