@@ -388,17 +388,17 @@ export function generateIvaReport(month) {
     const [year, monthNum] = month.split('-').map(Number);
 
     const ivaSoportado = transactions.filter(t => {
-        const tDate = new Date(t.date + 'T00:00:00Z');
+        const tDate = new Date(t.date);
         return t.type === 'Egreso' && t.iva > 0 &&
-               tDate.getUTCFullYear() === year &&
-               tDate.getUTCMonth() + 1 === monthNum;
+               tDate.getFullYear() === year &&
+               tDate.getMonth() + 1 === monthNum;
     });
 
     const ivaRepercutido = documents.filter(doc => {
-        const dDate = new Date(doc.date + 'T00:00:00Z');
+        const dDate = new Date(doc.date);
         return doc.type === 'Factura' && doc.iva > 0 &&
-               dDate.getUTCFullYear() === year &&
-               dDate.getUTCMonth() + 1 === monthNum;
+               dDate.getFullYear() === year &&
+               dDate.getMonth() + 1 === monthNum;
     });
 
     const totalSoportado = ivaSoportado.reduce((sum, t) => sum + t.iva, 0);
@@ -442,11 +442,11 @@ export function closeYear(startDate, endDate) {
     const end = new Date(endDate);
 
     const transactionsToArchive = transactions.filter(t => {
-        const tDate = new Date(t.date + 'T00:00:00Z');
+        const tDate = new Date(t.date);
         return tDate >= start && tDate <= end;
     });
     const documentsToArchive = documents.filter(d => {
-        const dDate = new Date(d.date + 'T00:00:00Z');
+        const dDate = new Date(d.date);
         return dDate >= start && dDate <= end;
     });
 
@@ -458,11 +458,11 @@ export function closeYear(startDate, endDate) {
     newArchivedData[year].documents.push(...documentsToArchive);
 
     const remainingTransactions = transactions.filter(t => {
-        const tDate = new Date(t.date + 'T00:00:00Z');
+        const tDate = new Date(t.date);
         return tDate < start || tDate > end;
     });
     const remainingDocuments = documents.filter(d => {
-        const dDate = new Date(d.date + 'T00:00:00Z');
+        const dDate = new Date(d.date);
         return dDate < start || dDate > end;
     });
 
