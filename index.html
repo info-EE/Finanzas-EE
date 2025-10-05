@@ -1167,19 +1167,23 @@
     <!-- =========== END TEMPLATES =========== -->
     
     <script>
-        // Configuración de Firebase - REEMPLAZAR CON TUS DATOS
+        // Esta configuración se carga automáticamente desde los servidores de Firebase
+        // cuando tu app se aloja en Firebase Hosting.
+        // No es necesario incluir las claves aquí.
         const firebaseConfig = {
-            apiKey: "AIzaSyDFCyXACTjzwSrjyaLyzc3hqSB0s5zLUJY",
-            authDomain: "europa-envios-gestor.firebaseapp.com",
-            projectId: "europa-envios-gestor",
-            storageBucket: "europa-envios-gestor.appspot.com",
-            messagingSenderId: "135669072477",
-            appId: "1:135669072477:web:59d6b6c1af1b496c0983b4",
-            measurementId: "G-KZPBK200QS"
+           apiKey: "AIzaSyDFCyXACTjzwSrjyaLyzc3hqSB0s5zLUJY",
+           authDomain: "europa-envios-gestor.firebaseapp.com",
+           projectId: "europa-envios-gestor",
+           storageBucket: "europa-envios-gestor.appspot.com",
+           messagingSenderId: "135669072477",
+           appId: "1:135669072477:web:59d6b6c1af1b496c0983b4",
+           measurementId: "G-KZPBK200QS"
         };
-
+        
         // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+        }
     </script>
     <script type="module" src="js/main.js"></script>
 </body>
