@@ -54,6 +54,10 @@ export const elements = {
     ivaGenerateReportBtn: document.getElementById('iva-generate-report-btn'),
     ivaReportDisplay: document.getElementById('iva-report-display'),
     loadingOverlay: document.getElementById('loading-overlay'),
+    // Nuevos elementos para inversiones
+    addInvestmentForm: document.getElementById('add-investment-form'),
+    addInvestmentAssetForm: document.getElementById('add-investment-asset-form'),
+    investmentAssetsList: document.getElementById('investment-assets-list'),
 };
 
 const charts = {
@@ -166,14 +170,21 @@ function createClientRow(client) {
     return row;
 }
 
-function createInvestmentRow(t) {
+function createInvestmentRow(t, allAssets) {
+    const asset = allAssets.find(a => a.id === t.investmentAssetId);
+    const assetName = asset ? asset.name : 'Activo Desconocido';
     const row = document.createElement('tr');
     row.className = "border-b border-gray-800 hover:bg-gray-800/50";
     row.innerHTML = `
         <td class="py-3 px-3">${t.date}</td>
-        <td class="py-2 px-3">${escapeHTML(t.description)}</td>
+        <td class="py-2 px-3">${escapeHTML(assetName)}</td>
         <td class="py-2 px-3">${escapeHTML(t.account)}</td>
-        <td class="py-2 px-3 text-right">${formatCurrency(t.amount, t.currency)}</td>`;
+        <td class="py-2 px-3 text-right">${formatCurrency(t.amount, t.currency)}</td>
+        <td class="py-2 px-3 text-center">
+            <button class="delete-investment-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar Inversión">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </td>`;
     return row;
 }
 
@@ -553,7 +564,7 @@ function renderClients() {
 }
 
 function renderInvestments() {
-    const { transactions } = getState();
+    const { transactions, investmentAssets } = getState();
     const investmentsData = transactions.filter(t => t.category === 'Inversión');
     const tbody = elements.investmentsTableBody;
     tbody.innerHTML = '';
@@ -564,14 +575,38 @@ function renderInvestments() {
     document.getElementById('total-invested-usd').textContent = formatCurrency(totalInvestedUSD, 'USD');
 
     if (investmentsData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray-500">No hay movimientos de inversión.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay movimientos de inversión.</td></tr>`;
     } else {
         const fragment = document.createDocumentFragment();
         investmentsData.sort((a, b) => new Date(b.date) - new Date(a.date))
-                       .forEach(t => fragment.appendChild(createInvestmentRow(t)));
+                       .forEach(t => fragment.appendChild(createInvestmentRow(t, investmentAssets)));
         tbody.appendChild(fragment);
     }
 }
+
+function renderInvestmentAssetsList() {
+    const { investmentAssets } = getState();
+    const listEl = elements.investmentAssetsList;
+    listEl.innerHTML = '';
+    if (investmentAssets.length === 0) {
+        listEl.innerHTML = `<p class="text-sm text-gray-500 text-center">No hay activos definidos.</p>`;
+        return;
+    }
+    investmentAssets.forEach(asset => {
+        const div = document.createElement('div');
+        div.className = "flex items-center justify-between bg-gray-800/50 p-2 rounded text-sm";
+        div.innerHTML = `
+            <div>
+                <span class="font-semibold">${escapeHTML(asset.name)}</span>
+                <span class="text-gray-400 text-xs">(${escapeHTML(asset.category)})</span>
+            </div>
+            <button class="delete-investment-asset-btn p-1 text-red-400 hover:text-red-300" data-id="${asset.id}">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>`;
+        listEl.appendChild(div);
+    });
+}
+
 
 function renderSettings() {
     const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, settings } = getState();
@@ -602,6 +637,8 @@ function renderSettings() {
     renderCategoryList(elements.incomeCategoriesList, incomeCategories, []);
     renderCategoryList(elements.expenseCategoriesList, expenseCategories, []);
     renderCategoryList(elements.operationTypesList, invoiceOperationTypes, []);
+
+    renderInvestmentAssetsList();
 
     const isActive = settings.aeatModuleActive;
     elements.aeatToggleContainer.innerHTML = isActive
@@ -783,10 +820,23 @@ export function switchPage(pageId, subpageId = null) {
     lucide.createIcons();
 }
 
+function populateInvestmentAssetSelect() {
+    const { investmentAssets } = getState();
+    const select = document.getElementById('investment-asset');
+    if (select) {
+        if(investmentAssets.length > 0){
+             select.innerHTML = investmentAssets.map(asset => `<option value="${asset.id}">${escapeHTML(asset.name)}</option>`).join('');
+        } else {
+            select.innerHTML = `<option value="">No hay activos definidos</option>`;
+        }
+    }
+}
+
+
 export function populateSelects() {
     const { accounts } = getState();
     const optionsHtml = accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
-    ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select'].forEach(id => {
+    ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select', 'investment-account'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.innerHTML = optionsHtml;
     });
@@ -794,6 +844,7 @@ export function populateSelects() {
     populateOperationTypesSelect();
     populateReportAccounts();
     populateClientSelectForInvoice();
+    populateInvestmentAssetSelect();
 }
 
 export function populateCategories() {
