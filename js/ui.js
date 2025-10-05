@@ -72,6 +72,7 @@ function createTransactionRow(t) {
         <td class="py-3 px-3">${escapeHTML(t.account)}</td>
         <td class="py-3 px-3">${escapeHTML(t.category)}</td>
         <td class="py-3 px-3">${escapeHTML(t.part)}</td>
+        <td class="py-3 px-3 text-right text-gray-400">${t.iva > 0 ? formatCurrency(t.iva, t.currency) : '-'}</td>
         <td class="py-3 px-3 text-right font-medium ${amountColor}">${sign} ${formatCurrency(t.amount, t.currency)}</td>
         <td class="py-3 px-3">
             <div class="flex items-center justify-center gap-2">
@@ -190,7 +191,7 @@ function renderTransactions() {
     }
     
     if (filteredTransactions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-gray-500">No hay movimientos.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">No hay movimientos.</td></tr>`;
     } else {
         filteredTransactions
             .sort((a, b) => new Date(b.date) - new Date(a.date))
