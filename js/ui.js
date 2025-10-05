@@ -53,6 +53,7 @@ export const elements = {
     ivaMonthInput: document.getElementById('iva-month'),
     ivaGenerateReportBtn: document.getElementById('iva-generate-report-btn'),
     ivaReportDisplay: document.getElementById('iva-report-display'),
+    loadingOverlay: document.getElementById('loading-overlay'),
 };
 
 const charts = {
@@ -989,6 +990,16 @@ export function exportReportAsPDF() {
     doc.save(`${activeReport.title.replace(/ /g, '_')}.pdf`);
 }
 
+export function showSpinner() {
+    elements.loadingOverlay.classList.remove('hidden');
+    elements.loadingOverlay.classList.add('flex');
+}
+
+export function hideSpinner() {
+    elements.loadingOverlay.classList.add('hidden');
+    elements.loadingOverlay.classList.remove('flex');
+}
+
 
 // --- Función Agregadora de Renderizado ---
 export function renderAll() {
@@ -1009,4 +1020,3 @@ export function renderAll() {
 
     lucide.createIcons();
 }
-

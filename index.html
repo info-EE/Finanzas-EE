@@ -895,6 +895,7 @@
             </div>
         </div>
 
+        <!-- MODALS -->
         <div id="confirmation-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
             <div id="confirmation-modal-backdrop" class="absolute inset-0"></div>
             <div class="card rounded-xl p-8 z-10 w-full max-w-md">
@@ -964,7 +965,13 @@
                 </form>
             </div>
         </div>
+        <!-- END MODALS -->
     </main>
+
+    <!-- Global Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 z-[100] items-center justify-center hidden bg-black/70 backdrop-blur-sm">
+        <div class="spinner" role="status"></div>
+    </div>
 
     <!-- =========== TEMPLATES =========== -->
     <template id="transaction-row-template">

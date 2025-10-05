@@ -146,3 +146,19 @@ body {
     color: #004488 !important;
     border-top: 2px solid #004488 !important;
 }
+
+/* Spinner for loading state */
+.spinner {
+    width: 56px;
+    height: 56px;
+    border: 8px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #60a5fa; /* Blue accent color */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

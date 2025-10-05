@@ -1,8 +1,26 @@
 import * as actions from './actions.js';
-import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF, showPaymentDetailsModal, hidePaymentDetailsModal, showReceiptViewer } from './ui.js';
+import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF, showPaymentDetailsModal, hidePaymentDetailsModal, showReceiptViewer, showSpinner, hideSpinner } from './ui.js';
 import { getState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
+
+// --- Helper for showing spinner during actions ---
+function withSpinner(action, delay = 300) {
+    return (...args) => {
+        showSpinner();
+        setTimeout(() => {
+            try {
+                action(...args);
+            } catch (e) {
+                console.error("Error during action:", e);
+                showAlertModal('Error', 'Ocurrió un error inesperado durante la operación.');
+            } finally {
+                hideSpinner();
+            }
+        }, delay);
+    };
+}
+
 
 // --- Funciones Manejadoras (Handlers) ---
 
@@ -31,8 +49,12 @@ function handleTransactionFormSubmit(e) {
         currency: account.currency
     };
 
-    actions.saveTransaction(transactionData, id);
-    resetTransactionForm();
+    const saveAction = () => {
+        actions.saveTransaction(transactionData, id);
+        resetTransactionForm();
+    };
+    
+    withSpinner(saveAction)();
 }
 
 function handleTransactionsTableClick(e) {
@@ -66,9 +88,9 @@ function handleTransactionsTableClick(e) {
 
     if (deleteBtn) {
         const id = deleteBtn.dataset.id;
-        showConfirmationModal('Eliminar Movimiento', '¿Estás seguro de que quieres eliminar este movimiento?', () => {
+        showConfirmationModal('Eliminar Movimiento', '¿Estás seguro de que quieres eliminar este movimiento?', withSpinner(() => {
             actions.deleteTransaction(id);
-        });
+        }));
     }
 }
 
@@ -90,17 +112,19 @@ function handleAddAccount(e) {
         logoHtml: form.querySelector('#new-account-logo').value,
     };
     
-    actions.addAccount(accountData);
-    form.reset();
+    withSpinner(() => {
+        actions.addAccount(accountData);
+        form.reset();
+    })();
 }
 
 function handleSettingsAccountsListClick(e) {
     const deleteBtn = e.target.closest('.delete-account-btn');
     if (deleteBtn) {
         const accountName = deleteBtn.dataset.name;
-        showConfirmationModal('Eliminar Cuenta', `¿Seguro que quieres eliminar la cuenta "${escapeHTML(accountName)}"? Se eliminarán todas sus transacciones.`, () => {
+        showConfirmationModal('Eliminar Cuenta', `¿Seguro que quieres eliminar la cuenta "${escapeHTML(accountName)}"? Se eliminarán todas sus transacciones.`, withSpinner(() => {
             actions.deleteAccount(accountName);
-        });
+        }));
     }
 }
 
@@ -110,9 +134,11 @@ function handleUpdateBalance(e) {
     const accountName = form.querySelector('#update-account-select').value;
     const newBalance = parseFloat(form.querySelector('#new-balance-amount').value);
 
-    actions.updateBalance(accountName, newBalance);
-    showAlertModal('Éxito', `Se ha creado un ajuste de saldo para la cuenta ${escapeHTML(accountName)}.`);
-    form.reset();
+    withSpinner(() => {
+        actions.updateBalance(accountName, newBalance);
+        showAlertModal('Éxito', `Se ha creado un ajuste de saldo para la cuenta ${escapeHTML(accountName)}.`);
+        form.reset();
+    })();
 }
 
 function handleTransferFormSubmit(e) {
@@ -148,8 +174,10 @@ function handleTransferFormSubmit(e) {
         receivedAmount: receivedAmount,
     };
 
-    actions.addTransfer(transferData);
-    form.reset();
+    withSpinner(() => {
+        actions.addTransfer(transferData);
+        form.reset();
+    })();
 }
 
 function handleAddCategory(e, type) {
@@ -160,8 +188,10 @@ function handleAddCategory(e, type) {
     const categoryName = input.value.trim();
 
     if (categoryName) {
-        actions.addCategory(categoryName, type);
-        input.value = '';
+        withSpinner(() => {
+            actions.addCategory(categoryName, type);
+            input.value = '';
+        }, 150)(); // Shorter delay for quick actions
     }
 }
 
@@ -175,9 +205,9 @@ function handleDeleteCategory(e, type, essentialCategories) {
             return;
         }
 
-        showConfirmationModal('Eliminar Categoría', `¿Seguro que quieres eliminar la categoría "${escapeHTML(categoryName)}"?`, () => {
+        showConfirmationModal('Eliminar Categoría', `¿Seguro que quieres eliminar la categoría "${escapeHTML(categoryName)}"?`, withSpinner(() => {
             actions.deleteCategory(categoryName, type);
-        });
+        }, 150));
     }
 }
 
@@ -199,13 +229,16 @@ function handleClientFormSubmit(e) {
         industry: form.querySelector('#client-industry').value,
     };
 
-    actions.saveClient(clientData, id);
-    
-    form.reset();
-    form.querySelector('#client-id').value = '';
-    document.getElementById('client-form-title').textContent = 'Agregar Nuevo Cliente';
-    document.getElementById('client-form-submit-text').textContent = 'Guardar Cliente';
-    document.getElementById('client-form-cancel-btn').classList.add('hidden');
+    const saveAction = () => {
+        actions.saveClient(clientData, id);
+        form.reset();
+        form.querySelector('#client-id').value = '';
+        document.getElementById('client-form-title').textContent = 'Agregar Nuevo Cliente';
+        document.getElementById('client-form-submit-text').textContent = 'Guardar Cliente';
+        document.getElementById('client-form-cancel-btn').classList.add('hidden');
+    };
+
+    withSpinner(saveAction)();
 }
 
 function handleClientsTableClick(e) {
@@ -239,9 +272,9 @@ function handleClientsTableClick(e) {
 
     if (deleteBtn) {
         const id = deleteBtn.dataset.id;
-        showConfirmationModal('Eliminar Cliente', '¿Estás seguro de que quieres eliminar este cliente?', () => {
+        showConfirmationModal('Eliminar Cliente', '¿Estás seguro de que quieres eliminar este cliente?', withSpinner(() => {
             actions.deleteClient(id);
-        });
+        }));
     }
 }
 
@@ -257,8 +290,10 @@ function handleDocumentSubmit(e, type) {
         currency: form.querySelector(`#${type.toLowerCase()}-currency`).value,
         status: 'Adeudada',
     };
-    actions.addDocument(docData);
-    form.reset();
+    withSpinner(() => {
+        actions.addDocument(docData);
+        form.reset();
+    })();
 }
 
 function handleDocumentsTableClick(e) {
@@ -268,12 +303,12 @@ function handleDocumentsTableClick(e) {
     const receiptBtn = e.target.closest('.generate-receipt-btn');
 
     if (statusBtn) {
-        actions.toggleDocumentStatus(statusBtn.dataset.id);
+        withSpinner(() => actions.toggleDocumentStatus(statusBtn.dataset.id), 150)();
     }
     if (deleteBtn) {
-        showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento?', () => {
+        showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento?', withSpinner(() => {
             actions.deleteDocument(deleteBtn.dataset.id);
-        });
+        }));
     }
     if (viewBtn) {
         showInvoiceViewer(viewBtn.dataset.id);
@@ -352,14 +387,16 @@ function handleGenerateInvoice(e) {
         ivaRate
     };
     
-    actions.addDocument(newInvoice);
-    
-    form.reset();
-    elements.facturaItemsContainer.innerHTML = '';
-    document.getElementById('factura-add-item-btn').click();
+    withSpinner(() => {
+        actions.addDocument(newInvoice);
+        
+        form.reset();
+        elements.facturaItemsContainer.innerHTML = '';
+        document.getElementById('factura-add-item-btn').click();
 
-    showAlertModal('Éxito', `La factura Nº ${escapeHTML(newInvoice.number)} ha sido creada.`);
-    switchPage('facturacion', 'listado');
+        showAlertModal('Éxito', `La factura Nº ${escapeHTML(newInvoice.number)} ha sido creada.`);
+        switchPage('facturacion', 'listado');
+    })();
 }
 
 function handlePaymentDetailsSubmit(e) {
@@ -373,14 +410,17 @@ function handlePaymentDetailsSubmit(e) {
         reference: form.querySelector('#payment-reference').value,
     };
 
-    const updatedInvoice = actions.savePaymentDetails(invoiceId, paymentData);
-
-    if (updatedInvoice) {
-        hidePaymentDetailsModal();
-        showReceiptViewer(updatedInvoice);
-    } else {
-        showAlertModal('Error', 'No se pudo encontrar la factura para guardar los detalles del pago.');
-    }
+    const generateAction = () => {
+        const updatedInvoice = actions.savePaymentDetails(invoiceId, paymentData);
+        if (updatedInvoice) {
+            hidePaymentDetailsModal();
+            showReceiptViewer(updatedInvoice);
+        } else {
+            showAlertModal('Error', 'No se pudo encontrar la factura para guardar los detalles del pago.');
+        }
+    };
+    
+    withSpinner(generateAction)();
 }
 
 function handleAeatConfigSave(e) {
@@ -392,8 +432,10 @@ function handleAeatConfigSave(e) {
         endpoint: form.querySelector('#aeat-endpoint').value,
         apiKey: form.querySelector('#aeat-api-key').value,
     };
-    actions.saveAeatConfig(aeatConfig);
-    showAlertModal('Éxito', 'La configuración de AEAT ha sido guardada.');
+    withSpinner(() => {
+        actions.saveAeatConfig(aeatConfig);
+        showAlertModal('Éxito', 'La configuración de AEAT ha sido guardada.');
+    })();
 }
 
 function handleFiscalParamsSave(e) {
@@ -401,8 +443,10 @@ function handleFiscalParamsSave(e) {
     const form = e.target;
     const rate = parseFloat(form.querySelector('#corporate-tax-rate').value);
     if (!isNaN(rate) && rate >= 0 && rate <= 100) {
-        actions.saveFiscalParams({ corporateTaxRate: rate });
-        showAlertModal('Éxito', 'Los parámetros fiscales han sido actualizados.');
+        withSpinner(() => {
+            actions.saveFiscalParams({ corporateTaxRate: rate });
+            showAlertModal('Éxito', 'Los parámetros fiscales han sido actualizados.');
+        })();
     } else {
         showAlertModal('Error', 'Por favor, introduce un valor válido para el tipo impositivo (0-100).');
     }
@@ -428,13 +472,13 @@ function handleReportGeneration(e) {
             case 'annual': filters.year = form.querySelector('#report-year').value; break;
         }
     }
-    actions.generateReport(filters);
+    withSpinner(() => actions.generateReport(filters), 500)();
 }
 
 function handleIvaReportGeneration() {
     const month = elements.ivaMonthInput.value;
     if (month) {
-        actions.generateIvaReport(month);
+        withSpinner(() => actions.generateIvaReport(month), 500)();
     } else {
         showAlertModal('Falta Información', 'Por favor, seleccione un mes para generar el reporte de IVA.');
     }
@@ -449,10 +493,10 @@ function handleCloseYear() {
         return;
     }
     const year = new Date(endDate).getFullYear();
-    showConfirmationModal('Confirmar Cierre Anual', `Estás a punto de archivar todos los datos del ${startDate} al ${endDate} bajo el año ${year}. Esta acción no se puede deshacer. ¿Continuar?`, () => {
+    showConfirmationModal('Confirmar Cierre Anual', `Estás a punto de archivar todos los datos del ${startDate} al ${endDate} bajo el año ${year}. Esta acción no se puede deshacer. ¿Continuar?`, withSpinner(() => {
         actions.closeYear(startDate, endDate);
         showAlertModal('Éxito', `Se ha completado el cierre para el año ${year}.`);
-    });
+    }, 1000));
 }
 
 function handleReportFilterChange() {
@@ -568,7 +612,7 @@ export function bindEventListeners() {
     elements.aeatConfigForm.addEventListener('submit', handleAeatConfigSave);
     elements.aeatToggleContainer.addEventListener('click', (e) => {
         if (e.target.closest('.aeat-toggle-btn')) {
-            actions.toggleAeatModule();
+            withSpinner(() => actions.toggleAeatModule(), 150)();
         }
     });
     elements.fiscalParamsForm.addEventListener('submit', handleFiscalParamsSave);
@@ -589,4 +633,3 @@ export function bindEventListeners() {
 
     elements.ivaGenerateReportBtn.addEventListener('click', handleIvaReportGeneration);
 }
-
