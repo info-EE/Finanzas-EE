@@ -15,6 +15,10 @@ function getDefaultState() {
         transactions: [],
         documents: [],
         clients: [],
+        investmentAssets: [
+            { id: crypto.randomUUID(), name: 'Bitcoin', category: 'Criptomoneda' },
+            { id: crypto.randomUUID(), name: 'Acciones Apple', category: 'Acciones' },
+        ],
         incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
         expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
         invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
