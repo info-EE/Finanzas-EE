@@ -49,6 +49,7 @@ export const elements = {
     paymentDetailsModal: document.getElementById('payment-details-modal'),
     paymentDetailsForm: document.getElementById('payment-details-form'),
     paymentDetailsCancelBtn: document.getElementById('payment-details-cancel-btn'),
+    transactionIvaContainer: document.getElementById('transaction-iva-container'),
 };
 
 const charts = {
@@ -476,6 +477,15 @@ function renderReport() {
 
 // --- Funciones de Utilidad y Ayuda para la UI ---
 
+function toggleIvaField() {
+    const type = elements.transactionForm.querySelector('#transaction-type').value;
+    if (type === 'Egreso') {
+        elements.transactionIvaContainer.classList.remove('hidden');
+    } else {
+        elements.transactionIvaContainer.classList.add('hidden');
+    }
+}
+
 export function switchPage(pageId, subpageId = null) {
     elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
     elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
@@ -512,6 +522,7 @@ export function populateCategories() {
     const type = elements.transactionForm.querySelector('#transaction-type').value;
     const categories = type === 'Ingreso' ? incomeCategories : expenseCategories;
     elements.transactionForm.querySelector('#transaction-category').innerHTML = categories.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join('');
+    toggleIvaField();
 }
 
 function populateOperationTypesSelect() {
@@ -560,6 +571,7 @@ export function updateCurrencySymbol() {
     const account = accounts.find(acc => acc.name === accountName);
     if (account) {
         document.getElementById('amount-currency-symbol').textContent = getCurrencySymbol(account.currency);
+        document.getElementById('iva-currency-symbol').textContent = getCurrencySymbol(account.currency);
     }
 }
 
@@ -585,6 +597,7 @@ export function updateTransferFormUI() {
 export function resetTransactionForm() {
     elements.transactionForm.reset();
     elements.transactionForm.querySelector('#transaction-id').value = '';
+    elements.transactionForm.querySelector('#transaction-iva').value = '';
     elements.transactionForm.querySelector('#form-title').textContent = 'Agregar Nuevo Movimiento';
     elements.transactionForm.querySelector('#form-submit-button-text').textContent = 'Guardar';
     elements.transactionForm.querySelector('#form-cancel-button').classList.add('hidden');

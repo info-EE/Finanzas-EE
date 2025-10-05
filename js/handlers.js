@@ -27,6 +27,7 @@ function handleTransactionFormSubmit(e) {
         account: accountName,
         category: form.querySelector('#transaction-category').value,
         amount: parseFloat(form.querySelector('#transaction-amount').value),
+        iva: parseFloat(form.querySelector('#transaction-iva').value) || 0,
         currency: account.currency
     };
 
@@ -53,6 +54,7 @@ function handleTransactionsTableClick(e) {
             form.querySelector('#transaction-part').value = transaction.part;
             form.querySelector('#transaction-account').value = transaction.account;
             form.querySelector('#transaction-amount').value = transaction.amount;
+            form.querySelector('#transaction-iva').value = transaction.iva || '';
             updateCurrencySymbol();
             
             form.querySelector('#form-submit-button-text').textContent = 'Actualizar';
