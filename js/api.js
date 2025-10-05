@@ -1,11 +1,11 @@
-import { STORAGE_KEY } from './config.js';
+// La clave de almacenamiento ahora vive aquí, junto a la lógica que la usa.
+const STORAGE_KEY = 'financeDashboardData';
 
 /**
- * Carga el estado de la aplicación desde localStorage.
- * Si no hay datos guardados, devuelve null.
- * @returns {object | null} El estado guardado o null.
+ * Carga el estado de la aplicación desde el almacenamiento local (localStorage).
+ * @returns {object | null} El estado guardado o null si no existe o hay un error.
  */
-export function loadStateFromStorage() {
+export function loadData() {
     try {
         const serializedState = localStorage.getItem(STORAGE_KEY);
         if (serializedState === null) {
@@ -14,16 +14,15 @@ export function loadStateFromStorage() {
         return JSON.parse(serializedState);
     } catch (error) {
         console.error("Error al cargar datos desde localStorage:", error);
-        // En caso de error (ej. datos corruptos), no devolver nada para que se use el estado por defecto.
         return null;
     }
 }
 
 /**
- * Guarda el estado de la aplicación en localStorage.
+ * Guarda el estado completo de la aplicación en el almacenamiento local (localStorage).
  * @param {object} state - El estado completo de la aplicación a guardar.
  */
-export function saveStateToStorage(state) {
+export function saveData(state) {
     try {
         // Excluimos datos volátiles que no necesitamos persistir
         const stateToSave = { ...state, activeReport: { type: null, data: [] } };
@@ -33,4 +32,3 @@ export function saveStateToStorage(state) {
         console.error("Error al guardar datos en localStorage:", error);
     }
 }
-

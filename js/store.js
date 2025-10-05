@@ -1,4 +1,4 @@
-import { loadStateFromStorage, saveStateToStorage } from './storage.js';
+import { loadData, saveData } from './api.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
 
 // --- Estado Inicial por Defecto ---
@@ -74,7 +74,7 @@ export function getState() {
 export function setState(newState) {
     state = { ...state, ...newState };
     notify();
-    saveStateToStorage(state);
+    saveData(state);
 }
 
 /**
@@ -82,7 +82,7 @@ export function setState(newState) {
  * o usando el estado por defecto si no hay nada guardado.
  */
 export function initState() {
-    const loadedState = loadStateFromStorage();
+    const loadedState = loadData();
     // Usamos el estado cargado, o el estado por defecto si no hay nada
     state = loadedState || getDefaultState();
     

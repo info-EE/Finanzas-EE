@@ -1,6 +1,3 @@
-// --- Almacenamiento ---
-export const STORAGE_KEY = 'financeDashboardData';
-
 // --- Categorías Esenciales (No se pueden eliminar) ---
 export const ESSENTIAL_INCOME_CATEGORIES = ['Ventas', 'Servicios', 'Otros Ingresos', 'Transferencia', 'Ajuste de Saldo'];
 export const ESSENTIAL_EXPENSE_CATEGORIES = ['Operaciones', 'Marketing', 'Salarios', 'Software', 'Impuestos', 'Otros Gastos', 'Inversión', 'Transferencia', 'Comisiones', 'Ajuste de Saldo'];
@@ -8,4 +5,3 @@ export const ESSENTIAL_OPERATION_TYPES = ['Nacional / Intracomunitaria (UE)', 'E
 
 // --- Gráficos ---
 export const CHART_COLORS = ['#FFC3A0', '#FF7A85', '#D4A5A5', '#A5D4D4', '#CDB4DB', '#FFC8DD', '#A2D2FF', '#BDE0FE'];
-
