@@ -532,6 +532,66 @@ function handleReportDownloadClick(e) {
     }
 }
 
+// --- Investment Handlers ---
+function handleAddInvestmentAsset(e) {
+    e.preventDefault();
+    const form = e.target;
+    const assetData = {
+        name: form.querySelector('#new-investment-asset-name').value,
+        category: form.querySelector('#new-investment-asset-category').value,
+    };
+    withSpinner(() => {
+        actions.addInvestmentAsset(assetData);
+        form.reset();
+    }, 150)();
+}
+
+function handleInvestmentAssetListClick(e) {
+    const deleteBtn = e.target.closest('.delete-investment-asset-btn');
+    if (deleteBtn) {
+        const assetId = deleteBtn.dataset.id;
+        showConfirmationModal('Eliminar Activo', '¿Estás seguro de que quieres eliminar este tipo de activo?', withSpinner(() => {
+            actions.deleteInvestmentAsset(assetId);
+        }, 150));
+    }
+}
+
+function handleAddInvestment(e) {
+    e.preventDefault();
+    const form = e.target;
+    const { investmentAssets } = getState();
+    const assetId = form.querySelector('#investment-asset').value;
+    const asset = investmentAssets.find(a => a.id === assetId);
+
+    if (!asset) {
+        showAlertModal('Error', 'Por favor, selecciona un activo de inversión válido. Puedes definirlos en Ajustes.');
+        return;
+    }
+
+    const investmentData = {
+        date: form.querySelector('#investment-date').value,
+        account: form.querySelector('#investment-account').value,
+        amount: parseFloat(form.querySelector('#investment-amount').value),
+        description: form.querySelector('#investment-description').value,
+        assetId: asset.id,
+        assetName: asset.name,
+    };
+    withSpinner(() => {
+        actions.addInvestment(investmentData);
+        form.reset();
+    })();
+}
+
+function handleInvestmentsTableClick(e) {
+    const deleteBtn = e.target.closest('.delete-investment-btn');
+    if (deleteBtn) {
+        const transactionId = deleteBtn.dataset.id;
+        showConfirmationModal('Eliminar Inversión', 'Esto eliminará el registro de la inversión y devolverá el monto a la cuenta de origen. ¿Continuar?', withSpinner(() => {
+            actions.deleteTransaction(transactionId);
+        }));
+    }
+}
+
 
 // --- Vinculación de Eventos (Event Binding) ---
 
@@ -646,4 +706,10 @@ export function bindEventListeners() {
     elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
 
     elements.ivaGenerateReportBtn.addEventListener('click', handleIvaReportGeneration);
+
+    // Investment Listeners
+    elements.addInvestmentAssetForm.addEventListener('submit', handleAddInvestmentAsset);
+    elements.investmentAssetsList.addEventListener('click', handleInvestmentAssetListClick);
+    elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
+    elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
 }
