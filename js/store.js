@@ -15,13 +15,13 @@ function getDefaultState() {
         transactions: [],
         documents: [],
         clients: [],
-        investmentAssets: [
-            { id: crypto.randomUUID(), name: 'Bitcoin', category: 'Criptomoneda' },
-            { id: crypto.randomUUID(), name: 'Acciones Apple', category: 'Acciones' },
-        ],
         incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
         expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
         invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
+        investmentAssets: [
+            { id: crypto.randomUUID(), name: 'Bitcoin', category: 'Criptomoneda' },
+            { id: crypto.randomUUID(), name: 'Acciones Apple (AAPL)', category: 'Acción' },
+        ],
         archivedData: {},
         activeReport: { type: null, data: [], title: '', columns: [] },
         activeIvaReport: null,
@@ -87,9 +87,13 @@ export function setState(newState) {
  */
 export function initState() {
     const loadedState = loadData();
-    // Usamos el estado cargado, o el estado por defecto si no hay nada
-    state = loadedState || getDefaultState();
+    const defaultState = getDefaultState();
+    
+    // Fusiona el estado por defecto con el estado cargado.
+    // Esto asegura que las nuevas propiedades (como investmentAssets) existan.
+    state = { ...defaultState, ...loadedState };
     
     // Forzamos una notificación inicial para que la UI se renderice con los datos cargados
     notify();
 }
+
