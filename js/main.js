@@ -5,6 +5,10 @@ import { renderAll, switchPage } from './ui.js';
 // --- App Initialization ---
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 0. Configuración global para los gráficos
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = '#e0e0e0';
+    
     // 1. Inicializa el estado de la aplicación (carga desde localStorage o usa el default)
     initState();
 
