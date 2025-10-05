@@ -69,33 +69,85 @@
     <main id="main-content" class="flex-1 ml-20 p-8 main-content">
         
         <div id="page-inicio" class="page-content">
-            <h2 class="text-3xl font-bold mb-6 text-white uppercase tracking-wider">
-                EUROPA ENVIOS
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div class="card p-6 rounded-xl text-center">
-                    <p class="text-gray-400">Saldo Total Disponible en Euros</p>
-                    <p id="total-eur" class="text-5xl font-bold kpi-value mt-2">€0.00</p>
-                </div>
-                <div class="card p-6 rounded-xl text-center">
-                    <p class="text-gray-400">Saldo Total Disponible en Dólares</p>
-                    <p id="total-usd" class="text-5xl font-bold kpi-value mt-2">$0.00</p>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-white uppercase tracking-wider">Centro de Mando</h2>
+                <div class="flex items-center gap-2">
+                    <button id="quick-add-income" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Ingreso
+                    </button>
+                    <button id="quick-add-expense" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                        <i data-lucide="minus-circle" class="w-4 h-4"></i> Egreso
+                    </button>
                 </div>
             </div>
-            <div class="card p-6 rounded-xl">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="font-semibold">Ingresos vs. Egresos Anuales</h3>
-                    <div>
-                        <label for="inicio-chart-currency" class="text-sm text-gray-400 mr-2">Moneda:</label>
-                        <select id="inicio-chart-currency" class="form-input !p-2 !w-auto !text-sm bg-gray-900">
-                            <option value="EUR">EUR (€)</option>
-                            <option value="USD">USD ($)</option>
-                        </select>
+
+            <!-- KPIs Mensuales -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="card p-4 rounded-xl">
+                    <p class="text-sm text-gray-400">Ingresos (Mes Actual)</p>
+                    <p id="kpi-monthly-income" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                </div>
+                <div class="card p-4 rounded-xl">
+                    <p class="text-sm text-gray-400">Egresos (Mes Actual)</p>
+                    <p id="kpi-monthly-expense" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                </div>
+                <div class="card p-4 rounded-xl">
+                    <p class="text-sm text-gray-400">Beneficio Neto (Mes Actual)</p>
+                    <p id="kpi-monthly-profit" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                </div>
+                <div class="card p-4 rounded-xl">
+                    <p class="text-sm text-gray-400">Saldo Total Disponible</p>
+                    <p id="kpi-total-balance" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                </div>
+            </div>
+
+            <!-- Layout Principal -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Columna Izquierda -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="card p-6 rounded-xl">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-semibold">Flujo de Caja Anual</h3>
+                            <div>
+                                <label for="inicio-chart-currency" class="text-sm text-gray-400 mr-2">Moneda:</label>
+                                <select id="inicio-chart-currency" class="form-input !p-2 !w-auto !text-sm bg-gray-900">
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="USD">USD ($)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="h-80"><canvas id="annualFlowChart"></canvas></div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
+                        <div id="recent-transactions-container" class="overflow-x-auto">
+                            <!-- Contenido se generará dinámicamente -->
+                        </div>
                     </div>
                 </div>
-                <div class="h-80"><canvas id="annualFlowChart"></canvas></div>
+
+                <!-- Columna Derecha -->
+                <div class="space-y-6">
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Distribución de Gastos (Mes)</h3>
+                        <div class="h-64"><canvas id="expenseDistributionChart"></canvas></div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Saldos Principales</h3>
+                        <div id="main-balances-container" class="space-y-3">
+                            <!-- Contenido se generará dinámicamente -->
+                        </div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Facturas Pendientes</h3>
+                        <div id="pending-invoices-container">
+                            <!-- Contenido se generará dinámicamente -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+
 
         <div id="page-cashflow" class="page-content hidden">
             <h2 class="text-3xl font-bold mb-6 text-white">Flujo de Caja (Cash Flow)</h2>
