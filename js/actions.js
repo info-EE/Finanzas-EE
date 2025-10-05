@@ -1,30 +1,64 @@
 import { getState, setState } from './store.js';
 
-// --- Lógica Interna de Recálculo ---
+// --- Lógica Interna de Actualización Incremental de Balances ---
 
-function recalculateAllBalances(accounts, transactions) {
-    const initialBalances = new Map();
-    accounts.forEach(acc => {
-        const initialTransaction = transactions.find(t => t.isInitialBalance && t.account === acc.name);
-        initialBalances.set(acc.name, initialTransaction ? initialTransaction.amount : 0);
-    });
+/**
+ * Aplica el efecto de una transacción a los saldos de las cuentas.
+ * @param {Array} accounts - El array actual de cuentas.
+ * @param {Object} transaction - La transacción a aplicar.
+ * @returns {Array} Un nuevo array de cuentas con los saldos actualizados.
+ */
+function applyTransactionToBalances(accounts, transaction) {
+    // Las transacciones de saldo inicial no deben afectar los cálculos incrementales.
+    if (transaction.isInitialBalance) {
+        return accounts;
+    }
 
-    const updatedAccounts = JSON.parse(JSON.stringify(accounts));
+    const accountIndex = accounts.findIndex(acc => acc.name === transaction.account);
+    if (accountIndex === -1) {
+        return accounts; // No se encontró la cuenta, no se hace nada.
+    }
 
-    updatedAccounts.forEach(account => {
-        let currentBalance = initialBalances.get(account.name) || 0;
-        transactions
-            .filter(t => t.account === account.name && !t.isInitialBalance)
-            .forEach(t => {
-                if (t.type === 'Ingreso') {
-                    currentBalance += t.amount;
-                } else {
-                    currentBalance -= (t.amount + (t.iva || 0));
-                }
-            });
-        account.balance = currentBalance;
-    });
+    const updatedAccounts = [...accounts];
+    const accountToUpdate = { ...updatedAccounts[accountIndex] };
 
+    if (transaction.type === 'Ingreso') {
+        accountToUpdate.balance += transaction.amount;
+    } else { // Egreso
+        accountToUpdate.balance -= (transaction.amount + (transaction.iva || 0));
+    }
+
+    updatedAccounts[accountIndex] = accountToUpdate;
+    return updatedAccounts;
+}
+
+/**
+ * Revierte el efecto de una transacción de los saldos de las cuentas.
+ * @param {Array} accounts - El array actual de cuentas.
+ * @param {Object} transaction - La transacción a revertir.
+ * @returns {Array} Un nuevo array de cuentas con los saldos actualizados.
+ */
+function revertTransactionFromBalances(accounts, transaction) {
+    // Las transacciones de saldo inicial no deben afectar los cálculos incrementales.
+    if (transaction.isInitialBalance) {
+        return accounts;
+    }
+    
+    const accountIndex = accounts.findIndex(acc => acc.name === transaction.account);
+    if (accountIndex === -1) {
+        return accounts;
+    }
+
+    const updatedAccounts = [...accounts];
+    const accountToUpdate = { ...updatedAccounts[accountIndex] };
+
+    if (transaction.type === 'Ingreso') {
+        accountToUpdate.balance -= transaction.amount;
+    } else { // Egreso
+        accountToUpdate.balance += (transaction.amount + (transaction.iva || 0));
+    }
+
+    updatedAccounts[accountIndex] = accountToUpdate;
     return updatedAccounts;
 }
 
@@ -32,27 +66,47 @@ function recalculateAllBalances(accounts, transactions) {
 // --- Acciones Públicas (modifican el estado) ---
 
 export function saveTransaction(transactionData, transactionId) {
-    const { transactions, accounts } = getState();
+    let { transactions, accounts } = getState();
     let updatedTransactions = [...transactions];
 
     if (transactionId) {
-        const index = updatedTransactions.findIndex(t => t.id === transactionId);
-        if (index !== -1) {
-            updatedTransactions[index] = { ...updatedTransactions[index], ...transactionData };
+        // --- Lógica para EDITAR una transacción existente ---
+        const transactionIndex = updatedTransactions.findIndex(t => t.id === transactionId);
+        if (transactionIndex !== -1) {
+            const oldTransaction = updatedTransactions[transactionIndex];
+            
+            // 1. Revertir el saldo de la transacción antigua.
+            accounts = revertTransactionFromBalances(accounts, oldTransaction);
+            
+            // 2. Crear la nueva transacción y actualizar el array.
+            const updatedTransaction = { ...oldTransaction, ...transactionData };
+            updatedTransactions[transactionIndex] = updatedTransaction;
+            
+            // 3. Aplicar el saldo de la nueva transacción.
+            accounts = applyTransactionToBalances(accounts, updatedTransaction);
         }
     } else {
-        updatedTransactions.push({ ...transactionData, id: crypto.randomUUID(), isInitialBalance: false });
+        // --- Lógica para AÑADIR una nueva transacción ---
+        const newTransaction = { ...transactionData, id: crypto.randomUUID(), isInitialBalance: false };
+        updatedTransactions.push(newTransaction);
+        
+        // Aplicar el efecto de la nueva transacción al saldo de la cuenta correspondiente.
+        accounts = applyTransactionToBalances(accounts, newTransaction);
     }
     
-    const updatedAccounts = recalculateAllBalances(accounts, updatedTransactions);
-    setState({ transactions: updatedTransactions, accounts: updatedAccounts });
+    setState({ transactions: updatedTransactions, accounts });
 }
 
 export function deleteTransaction(transactionId) {
-    const { transactions, accounts } = getState();
-    const updatedTransactions = transactions.filter(t => t.id !== transactionId);
-    const updatedAccounts = recalculateAllBalances(accounts, updatedTransactions);
-    setState({ transactions: updatedTransactions, accounts: updatedAccounts });
+    let { transactions, accounts } = getState();
+    const transactionToDelete = transactions.find(t => t.id === transactionId);
+
+    if (transactionToDelete) {
+        // Revertir el efecto de la transacción en el saldo antes de eliminarla.
+        const updatedAccounts = revertTransactionFromBalances(accounts, transactionToDelete);
+        const updatedTransactions = transactions.filter(t => t.id !== transactionId);
+        setState({ transactions: updatedTransactions, accounts: updatedAccounts });
+    }
 }
 
 export function addAccount(accountData) {
@@ -63,11 +117,12 @@ export function addAccount(accountData) {
         name: accountData.name,
         currency: accountData.currency,
         symbol: accountData.currency === 'EUR' ? '€' : '$',
-        balance: accountData.balance,
+        balance: accountData.balance, // El saldo inicial se establece directamente.
         logoHtml: accountData.logoHtml
     };
 
     let updatedTransactions = [...transactions];
+    // La transacción de "Saldo Inicial" es solo un registro, no se usa para cálculos incrementales.
     if (accountData.balance !== 0) {
         updatedTransactions.push({
             id: crypto.randomUUID(),
@@ -79,30 +134,34 @@ export function addAccount(accountData) {
             category: 'Ajuste de Saldo',
             amount: accountData.balance,
             currency: accountData.currency,
-            isInitialBalance: true
+            isInitialBalance: true // Marcar como saldo inicial para que sea ignorada en los cálculos.
         });
     }
 
-    const updatedAccounts = recalculateAllBalances([...accounts, newAccount], updatedTransactions);
+    const updatedAccounts = [...accounts, newAccount];
+    // No se necesita recalcular todo, solo se añade la nueva cuenta.
     setState({ accounts: updatedAccounts, transactions: updatedTransactions });
 }
 
 export function deleteAccount(accountName) {
     const { accounts, transactions } = getState();
     const updatedAccounts = accounts.filter(acc => acc.name !== accountName);
+    // Al eliminar la cuenta, también se eliminan sus transacciones asociadas.
     const updatedTransactions = transactions.filter(t => t.account !== accountName);
     setState({ accounts: updatedAccounts, transactions: updatedTransactions });
 }
 
 export function updateBalance(accountName, newBalance) {
     const { accounts, transactions } = getState();
-    const account = accounts.find(acc => acc.name === accountName);
-    if (!account) return;
+    const accountIndex = accounts.findIndex(acc => acc.name === accountName);
+    if (accountIndex === -1) return;
 
+    const account = accounts[accountIndex];
     const currentBalance = account.balance;
     const difference = newBalance - currentBalance;
 
     if (difference !== 0) {
+        // 1. Crear la transacción de ajuste para mantener un registro.
         const adjustmentTransaction = {
             id: crypto.randomUUID(),
             date: new Date().toISOString().slice(0, 10),
@@ -116,20 +175,25 @@ export function updateBalance(accountName, newBalance) {
             isInitialBalance: false
         };
         const updatedTransactions = [...transactions, adjustmentTransaction];
-        const updatedAccounts = recalculateAllBalances(accounts, updatedTransactions);
+
+        // 2. Actualizar el saldo de la cuenta directamente.
+        const updatedAccounts = [...accounts];
+        updatedAccounts[accountIndex] = { ...account, balance: newBalance };
+        
         setState({ transactions: updatedTransactions, accounts: updatedAccounts });
     }
 }
 
 export function addTransfer(transferData) {
     const { date, fromAccountName, toAccountName, amount, feeSource, receivedAmount } = transferData;
-    const { accounts, transactions } = getState();
+    let { accounts, transactions } = getState();
     
     const fromAccount = accounts.find(a => a.name === fromAccountName);
     const toAccount = accounts.find(a => a.name === toAccountName);
     
     let newTransactions = [];
 
+    // 1. Crear las transacciones de la transferencia.
     newTransactions.push({
         id: crypto.randomUUID(), date,
         description: `Transferencia a ${toAccountName}`,
@@ -153,8 +217,20 @@ export function addTransfer(transferData) {
         });
     }
 
+    // 2. Actualizar los saldos de las cuentas de forma incremental.
+    let updatedAccounts = [...accounts];
+    const fromAccountIndex = updatedAccounts.findIndex(a => a.name === fromAccountName);
+    const toAccountIndex = updatedAccounts.findIndex(a => a.name === toAccountName);
+
+    if (fromAccountIndex !== -1) {
+        const totalDebit = amount + feeSource;
+        updatedAccounts[fromAccountIndex] = { ...updatedAccounts[fromAccountIndex], balance: updatedAccounts[fromAccountIndex].balance - totalDebit };
+    }
+    if (toAccountIndex !== -1) {
+         updatedAccounts[toAccountIndex] = { ...updatedAccounts[toAccountIndex], balance: updatedAccounts[toAccountIndex].balance + receivedAmount };
+    }
+
     const updatedTransactions = [...transactions, ...newTransactions];
-    const updatedAccounts = recalculateAllBalances(accounts, updatedTransactions);
     setState({ transactions: updatedTransactions, accounts: updatedAccounts });
 }
 
@@ -472,4 +548,3 @@ export function closeYear(startDate, endDate) {
         archivedData: newArchivedData
     });
 }
-
