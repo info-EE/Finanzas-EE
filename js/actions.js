@@ -386,17 +386,17 @@ export function generateIvaReport(month) {
     const [year, monthNum] = month.split('-').map(Number);
 
     const ivaSoportado = transactions.filter(t => {
-        const tDate = new Date(t.date);
+        const [tYear, tMonth] = t.date.split('-').map(Number);
         return t.type === 'Egreso' && t.iva > 0 &&
-               tDate.getFullYear() === year &&
-               tDate.getMonth() + 1 === monthNum;
+               tYear === year &&
+               tMonth === monthNum;
     });
 
     const ivaRepercutido = documents.filter(doc => {
-        const dDate = new Date(doc.date);
+        const [dYear, dMonth] = doc.date.split('-').map(Number);
         return doc.type === 'Factura' && doc.iva > 0 &&
-               dDate.getFullYear() === year &&
-               dDate.getMonth() + 1 === monthNum;
+               dYear === year &&
+               dMonth === monthNum;
     });
 
     const totalSoportado = ivaSoportado.reduce((sum, t) => sum + t.iva, 0);
