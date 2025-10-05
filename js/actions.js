@@ -442,11 +442,11 @@ export function closeYear(startDate, endDate) {
     const end = new Date(endDate);
 
     const transactionsToArchive = transactions.filter(t => {
-        const tDate = new Date(t.date);
+        const tDate = new Date(t.date + 'T00:00:00Z');
         return tDate >= start && tDate <= end;
     });
     const documentsToArchive = documents.filter(d => {
-        const dDate = new Date(d.date);
+        const dDate = new Date(d.date + 'T00:00:00Z');
         return dDate >= start && dDate <= end;
     });
 
@@ -458,11 +458,11 @@ export function closeYear(startDate, endDate) {
     newArchivedData[year].documents.push(...documentsToArchive);
 
     const remainingTransactions = transactions.filter(t => {
-        const tDate = new Date(t.date);
+        const tDate = new Date(t.date + 'T00:00:00Z');
         return tDate < start || tDate > end;
     });
     const remainingDocuments = documents.filter(d => {
-        const dDate = new Date(d.date);
+        const dDate = new Date(d.date + 'T00:00:00Z');
         return dDate < start || dDate > end;
     });
 
