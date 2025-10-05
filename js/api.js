@@ -5,8 +5,8 @@
 const db = firebase.firestore();
 
 // Usaremos un único documento para guardar todo el estado de la aplicación.
-// Esto es simple y efectivo para una aplicación de un solo usuario.
-const dataDocRef = db.collection('appData').doc('mainState');
+// Le damos un nombre único a la colección para que no entre en conflicto con otros sistemas.
+const dataDocRef = db.collection('finanzas-ee-data').doc('mainState');
 
 
 /**
@@ -65,3 +65,4 @@ export function listenForDataChanges(onDataChange) {
         console.error("Error en el listener de Firebase:", error);
     });
 }
+
