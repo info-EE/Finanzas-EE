@@ -15,13 +15,13 @@ function getDefaultState() {
         transactions: [],
         documents: [],
         clients: [],
-        incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
-        expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
-        invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
         investmentAssets: [
             { id: crypto.randomUUID(), name: 'Bitcoin', category: 'Criptomoneda' },
             { id: crypto.randomUUID(), name: 'Acciones Apple (AAPL)', category: 'Acción' },
         ],
+        incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
+        expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
+        invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
         archivedData: {},
         activeReport: { type: null, data: [], title: '', columns: [] },
         activeIvaReport: null,
@@ -44,6 +44,7 @@ function getDefaultState() {
 // --- Lógica del Store ---
 let state = {};
 const listeners = []; // Lista de funciones a llamar cuando el estado cambia
+let isUpdatingFromFirebase = false; // Flag to prevent feedback loops
 
 /**
  * Suscribe una función para que se ejecute cada vez que el estado cambie.
@@ -74,25 +75,38 @@ export function getState() {
  * Actualiza el estado con nuevos datos y notifica a los suscriptores.
  * También persiste el nuevo estado en el almacenamiento.
  * @param {object} newState - Un objeto con las claves del estado a actualizar.
+ * @param {boolean} fromFirebase - Indica si la actualización viene de Firebase.
  */
-export function setState(newState) {
+export function setState(newState, fromFirebase = false) {
     state = { ...state, ...newState };
     notify();
-    saveData(state);
+
+    // Solo guarda en Firebase si el cambio NO vino de Firebase
+    if (!fromFirebase) {
+        isUpdatingFromFirebase = true;
+        saveData(state).then(() => {
+            isUpdatingFromFirebase = false;
+        });
+    }
 }
 
 /**
  * Inicializa el store, cargando el estado desde el almacenamiento
  * o usando el estado por defecto si no hay nada guardado.
  */
-export function initState() {
-    const loadedState = loadData();
+export async function initState() {
     const defaultState = getDefaultState();
-    
-    // Fusiona el estado por defecto con el estado cargado.
+    const loadedState = await loadData();
+
+    // Fusionamos el estado por defecto con el cargado.
     // Esto asegura que las nuevas propiedades (como investmentAssets) existan.
     state = { ...defaultState, ...loadedState };
     
+    // Si no había datos en Firebase, guardamos el estado inicial por defecto.
+    if (!loadedState) {
+        await saveData(state);
+    }
+
     // Forzamos una notificación inicial para que la UI se renderice con los datos cargados
     notify();
 }
