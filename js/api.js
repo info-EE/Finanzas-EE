@@ -10,8 +10,6 @@ import {
 import { updateConnectionStatus, showAuthError } from './ui.js';
 
 // --- Configuración de Firebase ---
-// Este objeto es necesario para que el SDK sepa a qué proyecto conectarse.
-// Es seguro colocarlo aquí porque es información pública de tu proyecto.
 const firebaseConfig = {
     apiKey: "AIzaSyDFCyXACTjzwSrjyaLyzc3hqSB0s5zLUJY",
     authDomain: "europa-envios-gestor.firebaseapp.com",
@@ -30,7 +28,6 @@ let dataDocRef = null;
 let unsubscribeFromData = null; 
 
 try {
-    // Pasamos la configuración al inicializar la app
     app = initializeApp(firebaseConfig); 
     db = getFirestore(app);
     auth = getAuth(app);
@@ -58,12 +55,45 @@ export function onAuthChange(callback) {
     });
 }
 
+function translateAuthError(errorCode) {
+    switch (errorCode) {
+        case 'auth/email-already-in-use':
+            return 'Este correo electrónico ya está registrado.';
+        case 'auth/invalid-email':
+            return 'El formato del correo electrónico no es válido.';
+        case 'auth/weak-password':
+            return 'La contraseña debe tener al menos 6 caracteres.';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            return 'El correo o la contraseña son incorrectos.';
+        default:
+            return 'Ha ocurrido un error. Inténtalo de nuevo más tarde.';
+    }
+}
+
 export async function registerUser(email, password) {
     try {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // --- AUTOMATIZACIÓN ---
+        // Después de crear el usuario, creamos su documento en la colección 'users'.
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, {
+            email: user.email,
+            status: 'pendiente' // El estado inicial es 'pendiente'
+        });
+
+        // Informamos al usuario que su cuenta necesita aprobación.
+        showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
+        
+        // Desconectamos al usuario para que no pueda acceder hasta ser aprobado.
+        await signOut(auth);
+
     } catch (error) {
         console.error("Error en el registro:", error.code);
-        showAuthError("Error al registrar: " + error.message);
+        showAuthError(translateAuthError(error.code));
     }
 }
 
@@ -72,7 +102,7 @@ export async function loginUser(email, password) {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
         console.error("Error en el inicio de sesión:", error.code);
-        showAuthError("Email o contraseña incorrectos.");
+        showAuthError(translateAuthError(error.code));
     }
 }
 
@@ -145,3 +175,4 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
+
