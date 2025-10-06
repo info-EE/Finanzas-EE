@@ -1,6 +1,7 @@
 import { getState } from './store.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
 import { CHART_COLORS } from './config.js';
+import { updateConnectionStatus } from './api.js';
 
 // --- Almacenamiento de Referencias a Elementos del DOM y Gráficos ---
 
@@ -660,7 +661,52 @@ function renderReport() {
         return;
     }
 
-    const { title, columns, data } = activeReport;
+    const { type, title, columns, data } = activeReport;
+
+    // --- Construcción del Footer con Totales (si aplica) ---
+    let footerHtml = '';
+    if (type === 'movimientos') {
+        const totals = {}; // ej: { EUR: 100, USD: -50 }
+        const typeIndex = columns.indexOf("Tipo");
+        const amountIndex = columns.indexOf("Monto");
+        const currencyIndex = columns.indexOf("Moneda");
+
+        if (typeIndex !== -1 && amountIndex !== -1 && currencyIndex !== -1) {
+            data.forEach(row => {
+                const type = row[typeIndex];
+                const amount = row[amountIndex];
+                const currency = row[currencyIndex];
+                
+                if (!totals[currency]) {
+                    totals[currency] = 0;
+                }
+                
+                if (type === 'Ingreso') {
+                    totals[currency] += amount;
+                } else { // Egreso
+                    totals[currency] -= amount;
+                }
+            });
+        }
+        
+        const totalsContent = Object.keys(totals).map(currency => {
+            const total = totals[currency];
+            const colorClass = total >= 0 ? 'text-green-400' : 'text-red-400';
+            return `<div class="font-bold ${colorClass}">${formatCurrency(total, currency)}</div>`;
+        }).join('');
+
+        if (Object.keys(totals).length > 0) {
+            footerHtml = `
+                <tfoot>
+                    <tr class="border-t-2 border-gray-600">
+                        <td colspan="${columns.length - 1}" class="py-3 px-3 text-right font-semibold">TOTAL NETO:</td>
+                        <td class="py-3 px-3 text-right">${totalsContent}</td>
+                    </tr>
+                </tfoot>`;
+        }
+    }
+
+    // --- Construcción de la Tabla ---
     let tableHtml = `<table class="w-full text-left"><thead><tr class="border-b border-gray-700">`;
     columns.forEach(col => tableHtml += `<th class="py-2 px-3 text-sm font-semibold text-gray-400">${col}</th>`);
     tableHtml += `</tr></thead><tbody>`;
@@ -681,7 +727,7 @@ function renderReport() {
         });
         tableHtml += `</tr>`;
     });
-    tableHtml += `</tbody></table>`;
+    tableHtml += `</tbody>${footerHtml}</table>`;
 
     elements.reportDisplayArea.innerHTML = `
         <div class="flex justify-between items-start mb-4">
@@ -699,6 +745,7 @@ function renderReport() {
         <div class="overflow-x-auto">${tableHtml}</div>`;
     lucide.createIcons();
 }
+
 
 function renderIvaReport() {
     const { activeIvaReport } = getState();
@@ -786,49 +833,6 @@ function renderIvaReport() {
 }
 
 // --- Funciones de Utilidad y Ayuda para la UI ---
-
-/**
- * Actualiza el indicador de estado de la conexión en la UI.
- * @param {'loading' | 'success' | 'error' | 'idle'} status El estado a mostrar.
- * @param {string} message El mensaje de texto a mostrar.
- */
-export function updateConnectionStatus(status, message) {
-    const { connectionStatus, statusIcon, statusText } = elements;
-    
-    connectionStatus.classList.remove('text-green-400', 'text-red-400', 'text-yellow-400');
-    let iconHtml = '';
-
-    switch (status) {
-        case 'loading':
-            iconHtml = `<div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>`;
-            connectionStatus.classList.add('text-yellow-400');
-            break;
-        case 'success':
-            iconHtml = `<i data-lucide="check-circle" class="w-4 h-4"></i>`;
-            connectionStatus.classList.add('text-green-400');
-            break;
-        case 'error':
-            iconHtml = `<i data-lucide="x-circle" class="w-4 h-4"></i>`;
-            connectionStatus.classList.add('text-red-400');
-            break;
-        case 'idle':
-            connectionStatus.classList.add('opacity-0');
-            return; // Ocultar y salir
-    }
-
-    statusIcon.innerHTML = iconHtml;
-    statusText.textContent = message;
-    lucide.createIcons();
-    connectionStatus.classList.remove('opacity-0');
-
-    // Ocultar automáticamente después de un tiempo para 'success' y 'error'
-    if (status === 'success' || status === 'error') {
-        setTimeout(() => {
-            connectionStatus.classList.add('opacity-0');
-        }, 3000);
-    }
-}
-
 
 function renderInicioDashboard() {
     updateInicioKPIs();
@@ -1335,3 +1339,4 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
+
