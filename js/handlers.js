@@ -1,24 +1,79 @@
 import * as actions from './actions.js';
-import { elements, switchPage, populateCategories, updateCurrencySymbol, updateTransferFormUI, showInvoiceViewer, hideInvoiceViewer, printInvoice, downloadInvoiceAsPDF, populateClientSelectForInvoice, showConfirmationModal, showAlertModal, resetTransactionForm, exportReportAsXLSX, exportReportAsPDF, showPaymentDetailsModal, hidePaymentDetailsModal, showReceiptViewer, showSpinner, hideSpinner, renderAll } from './ui.js';
-import { getState } from './store.js';
+import * as api from './api.js';
+import { 
+    elements, 
+    switchPage, 
+    populateCategories, 
+    updateCurrencySymbol, 
+    updateTransferFormUI, 
+    showInvoiceViewer, 
+    hideInvoiceViewer, 
+    printInvoice, 
+    downloadInvoiceAsPDF, 
+    populateClientSelectForInvoice, 
+    showConfirmationModal, 
+    showAlertModal, 
+    resetTransactionForm, 
+    exportReportAsXLSX, 
+    exportReportAsPDF, 
+    showPaymentDetailsModal, 
+    hidePaymentDetailsModal, 
+    showReceiptViewer, 
+    showSpinner, 
+    hideSpinner, 
+    renderAll,
+    showLoginView,
+    showRegisterView,
+    clearAuthError
+} from './ui.js';
+import { getState, setState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
 
 // --- Helper for showing spinner during actions ---
 function withSpinner(action, delay = 300) {
-    return (...args) => {
+    return async (...args) => {
         showSpinner();
-        setTimeout(() => {
-            try {
-                action(...args);
-            } catch (e) {
-                console.error("Error during action:", e);
-                showAlertModal('Error', 'Ocurrió un error inesperado durante la operación.');
-            } finally {
-                hideSpinner();
-            }
-        }, delay);
+        try {
+            await new Promise(resolve => setTimeout(resolve, delay));
+            await action(...args);
+        } catch (e) {
+            console.error("Error during action:", e);
+            showAlertModal('Error', 'Ocurrió un error inesperado durante la operación.');
+        } finally {
+            hideSpinner();
+        }
     };
+}
+
+
+// --- Auth Handlers ---
+
+function handleLoginSubmit(e) {
+    e.preventDefault();
+    clearAuthError();
+    const email = elements.loginForm.querySelector('#login-email').value;
+    const password = elements.loginForm.querySelector('#login-password').value;
+    withSpinner(async () => {
+        await api.loginUser(email, password);
+    })();
+}
+
+function handleRegisterSubmit(e) {
+    e.preventDefault();
+    clearAuthError();
+    const email = elements.registerForm.querySelector('#register-email').value;
+    const password = elements.registerForm.querySelector('#register-password').value;
+     withSpinner(async () => {
+        await api.registerUser(email, password);
+    })();
+}
+
+function handleLogout() {
+    withSpinner(async () => {
+        await api.logoutUser();
+        resetState(); // Limpiamos el estado local al cerrar sesión
+    })();
 }
 
 
@@ -61,12 +116,10 @@ function handleTransactionFormSubmit(e) {
         currency: account.currency
     };
 
-    const saveAction = () => {
+    withSpinner(() => {
         actions.saveTransaction(transactionData, id);
         resetTransactionForm();
-    };
-    
-    withSpinner(saveAction)();
+    })();
 }
 
 function handleTransactionsTableClick(e) {
@@ -231,7 +284,7 @@ function handleAddCategory(e, type) {
         withSpinner(() => {
             actions.addCategory(categoryName, type);
             input.value = '';
-        }, 150)(); // Shorter delay for quick actions
+        }, 150)();
     } else {
         showAlertModal('Campo Requerido', 'El nombre de la categoría no puede estar vacío.');
     }
@@ -282,16 +335,14 @@ function handleClientFormSubmit(e) {
         industry: form.querySelector('#client-industry').value,
     };
 
-    const saveAction = () => {
+    withSpinner(() => {
         actions.saveClient(clientData, id);
         form.reset();
         form.querySelector('#client-id').value = '';
         document.getElementById('client-form-title').textContent = 'Agregar Nuevo Cliente';
         document.getElementById('client-form-submit-text').textContent = 'Guardar Cliente';
         document.getElementById('client-form-cancel-btn').classList.add('hidden');
-    };
-
-    withSpinner(saveAction)();
+    })();
 }
 
 function handleClientsTableClick(e) {
@@ -482,7 +533,7 @@ function handlePaymentDetailsSubmit(e) {
         reference: form.querySelector('#payment-reference').value,
     };
 
-    const generateAction = () => {
+    withSpinner(() => {
         const updatedInvoice = actions.savePaymentDetails(invoiceId, paymentData);
         if (updatedInvoice) {
             hidePaymentDetailsModal();
@@ -490,9 +541,7 @@ function handlePaymentDetailsSubmit(e) {
         } else {
             showAlertModal('Error', 'No se pudo encontrar la factura para guardar los detalles del pago.');
         }
-    };
-    
-    withSpinner(generateAction)();
+    })();
 }
 
 function handleAeatConfigSave(e) {
@@ -604,7 +653,6 @@ function handleReportDownloadClick(e) {
     }
 }
 
-// --- Investment Handlers ---
 function handleAddInvestmentAsset(e) {
     e.preventDefault();
     const form = e.target;
@@ -681,6 +729,19 @@ function handleInvestmentsTableClick(e) {
 // --- Vinculación de Eventos (Event Binding) ---
 
 export function bindEventListeners() {
+    // Auth events
+    elements.loginForm.addEventListener('submit', handleLoginSubmit);
+    elements.registerForm.addEventListener('submit', handleRegisterSubmit);
+    elements.logoutBtn.addEventListener('click', handleLogout);
+    elements.showRegisterViewBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showRegisterView();
+    });
+    elements.showLoginViewBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showLoginView();
+    });
+
     elements.sidebar.querySelector('#sidebar-toggle').addEventListener('click', () => {
         elements.sidebar.classList.toggle('w-64');
         elements.sidebar.classList.toggle('w-20');
@@ -792,7 +853,6 @@ export function bindEventListeners() {
 
     elements.ivaGenerateReportBtn.addEventListener('click', handleIvaReportGeneration);
 
-    // Investment Listeners
     elements.addInvestmentAssetForm.addEventListener('submit', handleAddInvestmentAsset);
     elements.investmentAssetsList.addEventListener('click', handleInvestmentAssetListClick);
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
