@@ -1,56 +1,51 @@
+// Importa solo las funciones que necesitas de la SDK de Firebase v9
+import { 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { 
+    doc, 
+    getDoc, 
+    setDoc, 
+    onSnapshot,
+    collection
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
 import { updateConnectionStatus, showAuthError } from './ui.js';
 
-// --- Configuración de Firebase ---
-const firebaseConfig = {
-    apiKey: "AIzaSyDFCyXACTjzwSrjyaLyzc3hqSB0s5zLUJY",
-    authDomain: "europa-envios-gestor.firebaseapp.com",
-    projectId: "europa-envios-gestor",
-    storageBucket: "europa-envios-gestor.appspot.com",
-    messagingSenderId: "135669072477",
-    appId: "1:135669072477:web:59d6b6c1af1b496c0983b4",
-    measurementId: "G-KZPBK200QS"
-};
-
+// Variables para almacenar las instancias de los servicios de Firebase
 let app;
-let db;
 let auth;
+let db;
 let currentUserId = null;
 let dataDocRef = null;
 let unsubscribeFromData = null;
 
-// Esta función se llamará desde main.js DESPUÉS de que la página haya cargado
-export function initFirebase() {
-    try {
-        // Ahora usamos el objeto global 'firebase' que se carga en index.html
-        app = firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-        auth = firebase.auth();
-        return true; // Devolvemos true si la inicialización fue exitosa
-    } catch (error) {
-        console.error("Error al inicializar Firebase:", error);
-        updateConnectionStatus('error', 'Error de Firebase');
-        return false; // Devolvemos false si hubo un error
-    }
+// Esta función recibe las instancias desde main.js
+export function initFirebaseServices(firebaseApp, firebaseAuth, firestoreDb) {
+    app = firebaseApp;
+    auth = firebaseAuth;
+    db = firestoreDb;
 }
 
-// --- Funciones de Autenticación ---
+// Funciones para que otros módulos puedan acceder a las instancias si es necesario
+export function getAuthInstance() {
+    return auth;
+}
 
-export function onAuthChange(callback) {
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            currentUserId = user.uid;
-            // La sintaxis para referenciar un documento cambia con la versión 'compat'
-            dataDocRef = db.collection('usuarios').doc(currentUserId).collection('estado').doc('mainState');
-        } else {
-            currentUserId = null;
-            dataDocRef = null;
-            if (unsubscribeFromData) {
-                unsubscribeFromData();
-                unsubscribeFromData = null;
-            }
+export function setCurrentUser(uid) {
+    currentUserId = uid;
+    if (uid) {
+        // La sintaxis de v9 para obtener una referencia a un documento
+        dataDocRef = doc(db, 'usuarios', uid, 'estado', 'mainState');
+    } else {
+        dataDocRef = null;
+        if (unsubscribeFromData) {
+            unsubscribeFromData();
+            unsubscribeFromData = null;
         }
-        callback(user);
-    });
+    }
 }
 
 function translateAuthError(errorCode) {
@@ -72,18 +67,18 @@ function translateAuthError(errorCode) {
 
 export async function registerUser(email, password) {
     try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        const userDocRef = db.collection('users').doc(user.uid);
-        await userDocRef.set({
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, {
             email: user.email,
             status: 'pendiente'
         });
 
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
         
-        await auth.signOut();
+        await signOut(auth);
 
     } catch (error) {
         console.error("Error en el registro:", error.code);
@@ -93,7 +88,7 @@ export async function registerUser(email, password) {
 
 export async function loginUser(email, password) {
     try {
-        await auth.signInWithEmailAndPassword(email, password);
+        await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
         console.error("Error en el inicio de sesión:", error.code);
         showAuthError(translateAuthError(error.code));
@@ -102,7 +97,7 @@ export async function loginUser(email, password) {
 
 export async function logoutUser() {
     try {
-        await auth.signOut();
+        await signOut(auth);
     } catch (error) {
         console.error("Error al cerrar sesión:", error);
     }
@@ -118,8 +113,8 @@ export async function loadData() {
     }
     updateConnectionStatus('loading', 'Cargando datos...');
     try {
-        const docSnap = await dataDocRef.get();
-        if (docSnap.exists) {
+        const docSnap = await getDoc(dataDocRef);
+        if (docSnap.exists()) {
             console.log("Datos cargados desde Firebase.");
             updateConnectionStatus('success', 'Datos cargados');
             return docSnap.data();
@@ -143,7 +138,7 @@ export async function saveData(state) {
     updateConnectionStatus('loading', 'Guardando...');
     try {
         const stateToSave = { ...state, activeReport: { type: null, data: [] }, activeIvaReport: null };
-        await dataDocRef.set(stateToSave, { merge: true });
+        await setDoc(dataDocRef, stateToSave, { merge: true });
         console.log("Datos guardados en Firebase.");
         setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000);
     } catch (error) {
@@ -158,8 +153,8 @@ export function listenForDataChanges(onDataChange) {
     }
     if (!currentUserId || !dataDocRef) return;
     
-    unsubscribeFromData = dataDocRef.onSnapshot((doc) => {
-        if (doc.exists) {
+    unsubscribeFromData = onSnapshot(dataDocRef, (doc) => {
+        if (doc.exists()) {
             console.log("Se detectó un cambio en Firebase. Actualizando estado local.");
             updateConnectionStatus('success', 'Sincronizado');
             onDataChange(doc.data());
