@@ -1000,6 +1000,7 @@ function populateLogoSelect() {
 
 export function populateSelects() {
     const { accounts } = getState();
+    if (!accounts) return;
     const optionsHtml = accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
     ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select', 'investment-account'].forEach(id => {
         const el = document.getElementById(id);
@@ -1015,6 +1016,7 @@ export function populateSelects() {
 
 export function populateCategories() {
     const { incomeCategories, expenseCategories } = getState();
+    if (!incomeCategories || !expenseCategories) return;
     const type = elements.transactionForm.querySelector('#transaction-type').value;
     const categories = type === 'Ingreso' ? incomeCategories : expenseCategories;
     elements.transactionForm.querySelector('#transaction-category').innerHTML = categories.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join('');
@@ -1478,3 +1480,4 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
+
