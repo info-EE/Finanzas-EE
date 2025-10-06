@@ -18,14 +18,19 @@ let currentUserId = null;
 let dataDocRef = null;
 let unsubscribeFromData = null;
 
-try {
-    // Ahora usamos el objeto global 'firebase' que se carga en index.html
-    app = firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    auth = firebase.auth();
-} catch (error) {
-    console.error("Error al inicializar Firebase:", error);
-    updateConnectionStatus('error', 'Error de Firebase');
+// Esta función se llamará desde main.js DESPUÉS de que la página haya cargado
+export function initFirebase() {
+    try {
+        // Ahora usamos el objeto global 'firebase' que se carga en index.html
+        app = firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+        return true; // Devolvemos true si la inicialización fue exitosa
+    } catch (error) {
+        console.error("Error al inicializar Firebase:", error);
+        updateConnectionStatus('error', 'Error de Firebase');
+        return false; // Devolvemos false si hubo un error
+    }
 }
 
 // --- Funciones de Autenticación ---
