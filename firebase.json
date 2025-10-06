@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "europa-envios-gestor",
     "public": ".",
     "ignore": [
       "firebase.json",
