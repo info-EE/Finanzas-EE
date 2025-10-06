@@ -1,12 +1,3 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-import { 
-    getAuth, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    signOut,
-    onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 import { updateConnectionStatus, showAuthError } from './ui.js';
 
 // --- Configuración de Firebase ---
@@ -25,12 +16,13 @@ let db;
 let auth;
 let currentUserId = null;
 let dataDocRef = null;
-let unsubscribeFromData = null; 
+let unsubscribeFromData = null;
 
 try {
-    app = initializeApp(firebaseConfig); 
-    db = getFirestore(app);
-    auth = getAuth(app);
+    // Ahora usamos el objeto global 'firebase' que se carga en index.html
+    app = firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
 } catch (error) {
     console.error("Error al inicializar Firebase:", error);
     updateConnectionStatus('error', 'Error de Firebase');
@@ -39,10 +31,11 @@ try {
 // --- Funciones de Autenticación ---
 
 export function onAuthChange(callback) {
-    onAuthStateChanged(auth, (user) => {
+    auth.onAuthStateChanged((user) => {
         if (user) {
             currentUserId = user.uid;
-            dataDocRef = doc(db, 'usuarios', currentUserId, 'estado', 'mainState');
+            // La sintaxis para referenciar un documento cambia con la versión 'compat'
+            dataDocRef = db.collection('usuarios').doc(currentUserId).collection('estado').doc('mainState');
         } else {
             currentUserId = null;
             dataDocRef = null;
@@ -74,22 +67,18 @@ function translateAuthError(errorCode) {
 
 export async function registerUser(email, password) {
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        // --- AUTOMATIZACIÓN ---
-        // Después de crear el usuario, creamos su documento en la colección 'users'.
-        const userDocRef = doc(db, 'users', user.uid);
-        await setDoc(userDocRef, {
+        const userDocRef = db.collection('users').doc(user.uid);
+        await userDocRef.set({
             email: user.email,
-            status: 'pendiente' // El estado inicial es 'pendiente'
+            status: 'pendiente'
         });
 
-        // Informamos al usuario que su cuenta necesita aprobación.
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
         
-        // Desconectamos al usuario para que no pueda acceder hasta ser aprobado.
-        await signOut(auth);
+        await auth.signOut();
 
     } catch (error) {
         console.error("Error en el registro:", error.code);
@@ -99,7 +88,7 @@ export async function registerUser(email, password) {
 
 export async function loginUser(email, password) {
     try {
-        await signInWithEmailAndPassword(auth, email, password);
+        await auth.signInWithEmailAndPassword(email, password);
     } catch (error) {
         console.error("Error en el inicio de sesión:", error.code);
         showAuthError(translateAuthError(error.code));
@@ -108,7 +97,7 @@ export async function loginUser(email, password) {
 
 export async function logoutUser() {
     try {
-        await signOut(auth);
+        await auth.signOut();
     } catch (error) {
         console.error("Error al cerrar sesión:", error);
     }
@@ -124,8 +113,8 @@ export async function loadData() {
     }
     updateConnectionStatus('loading', 'Cargando datos...');
     try {
-        const docSnap = await getDoc(dataDocRef);
-        if (docSnap.exists()) {
+        const docSnap = await dataDocRef.get();
+        if (docSnap.exists) {
             console.log("Datos cargados desde Firebase.");
             updateConnectionStatus('success', 'Datos cargados');
             return docSnap.data();
@@ -149,7 +138,7 @@ export async function saveData(state) {
     updateConnectionStatus('loading', 'Guardando...');
     try {
         const stateToSave = { ...state, activeReport: { type: null, data: [] }, activeIvaReport: null };
-        await setDoc(dataDocRef, stateToSave, { merge: true });
+        await dataDocRef.set(stateToSave, { merge: true });
         console.log("Datos guardados en Firebase.");
         setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000);
     } catch (error) {
@@ -164,8 +153,8 @@ export function listenForDataChanges(onDataChange) {
     }
     if (!currentUserId || !dataDocRef) return;
     
-    unsubscribeFromData = onSnapshot(dataDocRef, (doc) => {
-        if (doc.exists()) {
+    unsubscribeFromData = dataDocRef.onSnapshot((doc) => {
+        if (doc.exists) {
             console.log("Se detectó un cambio en Firebase. Actualizando estado local.");
             updateConnectionStatus('success', 'Sincronizado');
             onDataChange(doc.data());
