@@ -9,15 +9,29 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { updateConnectionStatus, showAuthError } from './ui.js';
 
+// --- Configuración de Firebase ---
+// Este objeto es necesario para que el SDK sepa a qué proyecto conectarse.
+// Es seguro colocarlo aquí porque es información pública de tu proyecto.
+const firebaseConfig = {
+    apiKey: "AIzaSyDFCyXACTjzwSrjyaLyzc3hqSB0s5zLUJY",
+    authDomain: "europa-envios-gestor.firebaseapp.com",
+    projectId: "europa-envios-gestor",
+    storageBucket: "europa-envios-gestor.appspot.com",
+    messagingSenderId: "135669072477",
+    appId: "1:135669072477:web:59d6b6c1af1b496c0983b4",
+    measurementId: "G-KZPBK200QS"
+};
+
 let app;
 let db;
 let auth;
 let currentUserId = null;
 let dataDocRef = null;
-let unsubscribeFromData = null; // Para detener el listener al cerrar sesión
+let unsubscribeFromData = null; 
 
 try {
-    app = initializeApp({});
+    // Pasamos la configuración al inicializar la app
+    app = initializeApp(firebaseConfig); 
     db = getFirestore(app);
     auth = getAuth(app);
 } catch (error) {
@@ -31,12 +45,10 @@ export function onAuthChange(callback) {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUserId = user.uid;
-            // La referencia al documento ahora depende del ID del usuario
             dataDocRef = doc(db, 'usuarios', currentUserId, 'estado', 'mainState');
         } else {
             currentUserId = null;
             dataDocRef = null;
-            // Si hay un listener activo, lo detenemos
             if (unsubscribeFromData) {
                 unsubscribeFromData();
                 unsubscribeFromData = null;
@@ -73,7 +85,7 @@ export async function logoutUser() {
 }
 
 
-// --- Funciones de Base de Datos (Modificadas para un usuario específico) ---
+// --- Funciones de Base de Datos ---
 
 export async function loadData() {
     if (!currentUserId || !dataDocRef) {
@@ -118,7 +130,7 @@ export async function saveData(state) {
 
 export function listenForDataChanges(onDataChange) {
     if (unsubscribeFromData) {
-        unsubscribeFromData(); // Detiene el listener anterior si existe
+        unsubscribeFromData();
     }
     if (!currentUserId || !dataDocRef) return;
     
@@ -133,4 +145,3 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
-
