@@ -21,9 +21,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. Escucha los cambios en tiempo real desde Firebase
     listenForDataChanges((newData) => {
-        // Actualiza el estado local con los datos de Firebase,
-        // marcando que el cambio viene de Firebase para evitar un bucle de guardado.
-        setState(newData, true);
+        // Cuando los datos cambian en Firebase, actualizamos el estado local.
+        // Esto dispara una actualización de la UI a través del suscriptor.
+        // No se guarda nada de vuelta, evitando bucles.
+        setState(newData);
     });
 
     // 5. Establece la página inicial y realiza el primer renderizado completo
