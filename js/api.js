@@ -1,24 +1,85 @@
-// --- Conexión con Firebase Firestore ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { updateConnectionStatus } from './ui.js';
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { updateConnectionStatus, showAuthError } from './ui.js';
 
-// La inicialización de Firebase ahora se maneja aquí,
-// asumiendo la configuración automática de Firebase Hosting.
-// El SDK v9 modular requiere que la inicialización ocurra dentro del scope del módulo.
-const app = initializeApp({});
-const db = getFirestore(app);
+let app;
+let db;
+let auth;
+let currentUserId = null;
+let dataDocRef = null;
+let unsubscribeFromData = null; // Para detener el listener al cerrar sesión
 
-// Usaremos un único documento para guardar todo el estado de la aplicación.
-// Le damos un nombre único a la colección para que no entre en conflicto con otros sistemas.
-const dataDocRef = doc(db, 'finanzas-ee-data', 'mainState');
+try {
+    app = initializeApp({});
+    db = getFirestore(app);
+    auth = getAuth(app);
+} catch (error) {
+    console.error("Error al inicializar Firebase:", error);
+    updateConnectionStatus('error', 'Error de Firebase');
+}
+
+// --- Funciones de Autenticación ---
+
+export function onAuthChange(callback) {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            currentUserId = user.uid;
+            // La referencia al documento ahora depende del ID del usuario
+            dataDocRef = doc(db, 'usuarios', currentUserId, 'estado', 'mainState');
+        } else {
+            currentUserId = null;
+            dataDocRef = null;
+            // Si hay un listener activo, lo detenemos
+            if (unsubscribeFromData) {
+                unsubscribeFromData();
+                unsubscribeFromData = null;
+            }
+        }
+        callback(user);
+    });
+}
+
+export async function registerUser(email, password) {
+    try {
+        await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        console.error("Error en el registro:", error.code);
+        showAuthError("Error al registrar: " + error.message);
+    }
+}
+
+export async function loginUser(email, password) {
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        console.error("Error en el inicio de sesión:", error.code);
+        showAuthError("Email o contraseña incorrectos.");
+    }
+}
+
+export async function logoutUser() {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Error al cerrar sesión:", error);
+    }
+}
 
 
-/**
- * Carga el estado de la aplicación desde Firebase Firestore.
- * @returns {Promise<object | null>} Una promesa que se resuelve con el estado guardado o null si no existe.
- */
+// --- Funciones de Base de Datos (Modificadas para un usuario específico) ---
+
 export async function loadData() {
+    if (!currentUserId || !dataDocRef) {
+        updateConnectionStatus('error', 'No autenticado');
+        return null;
+    }
     updateConnectionStatus('loading', 'Cargando datos...');
     try {
         const docSnap = await getDoc(dataDocRef);
@@ -27,48 +88,41 @@ export async function loadData() {
             updateConnectionStatus('success', 'Datos cargados');
             return docSnap.data();
         } else {
-            console.log("No se encontró ningún documento en Firebase, se usará el estado por defecto.");
+            console.log("No se encontró ningún documento, se usará el estado por defecto.");
             updateConnectionStatus('success', 'Listo');
-            return null; // No hay estado guardado en la nube.
+            return null;
         }
     } catch (error) {
         console.error("Error al cargar datos desde Firebase:", error);
         updateConnectionStatus('error', 'Error de carga');
-        // Devolvemos null para que la app pueda iniciar con el estado por defecto.
         return null;
     }
 }
 
-/**
- * Guarda el estado completo de la aplicación en Firebase Firestore.
- * @param {object} state - El estado completo de la aplicación a guardar.
- * @returns {Promise<void>}
- */
 export async function saveData(state) {
+    if (!currentUserId || !dataDocRef) {
+        updateConnectionStatus('error', 'No autenticado');
+        return;
+    }
     updateConnectionStatus('loading', 'Guardando...');
     try {
-        // Excluimos datos volátiles que no necesitamos persistir.
-        const stateToSave = { ...state, activeReport: { type: null, data: [] } };
-        
-        // Usamos set con { merge: true } para crear el documento si no existe
-        // o para actualizarlo si ya existe, sin sobrescribir campos no incluidos.
+        const stateToSave = { ...state, activeReport: { type: null, data: [] }, activeIvaReport: null };
         await setDoc(dataDocRef, stateToSave, { merge: true });
         console.log("Datos guardados en Firebase.");
-        updateConnectionStatus('success', 'Guardado');
-
+        setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000);
     } catch (error) {
         console.error("Error al guardar datos en Firebase:", error);
         updateConnectionStatus('error', 'Error al guardar');
     }
 }
 
-/**
- * Escucha los cambios en los datos de Firebase en tiempo real.
- * Cada vez que los datos cambian en la nube, esta función se ejecutará.
- * @param {function} onDataChange - El callback que se ejecutará con los nuevos datos.
- */
 export function listenForDataChanges(onDataChange) {
-    onSnapshot(dataDocRef, (doc) => {
+    if (unsubscribeFromData) {
+        unsubscribeFromData(); // Detiene el listener anterior si existe
+    }
+    if (!currentUserId || !dataDocRef) return;
+    
+    unsubscribeFromData = onSnapshot(dataDocRef, (doc) => {
         if (doc.exists()) {
             console.log("Se detectó un cambio en Firebase. Actualizando estado local.");
             updateConnectionStatus('success', 'Sincronizado');
