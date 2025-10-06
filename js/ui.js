@@ -1,6 +1,6 @@
 import { getState } from './store.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
-import { CHART_COLORS } from './config.js';
+import { CHART_COLORS, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 
 // --- Almacenamiento de Referencias a Elementos del DOM y Gráficos ---
 
@@ -33,10 +33,12 @@ export const elements = {
     addIncomeCategoryForm: document.getElementById('add-income-category-form'),
     addExpenseCategoryForm: document.getElementById('add-expense-category-form'),
     addOperationTypeForm: document.getElementById('add-operation-type-form'),
+    addTaxIdTypeForm: document.getElementById('add-tax-id-type-form'),
     settingsAccountsList: document.getElementById('settings-accounts-list'),
     incomeCategoriesList: document.getElementById('income-categories-list'),
     expenseCategoriesList: document.getElementById('expense-categories-list'),
     operationTypesList: document.getElementById('operation-types-list'),
+    taxIdTypesList: document.getElementById('tax-id-types-list'),
     proformasTableBody: document.getElementById('proformas-table-body'),
     aeatSettingsCard: document.getElementById('aeat-settings-card'),
     aeatToggleContainer: document.getElementById('aeat-toggle-container'),
@@ -724,7 +726,7 @@ function renderInvestmentAssetsList() {
 
 
 function renderSettings() {
-    const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, settings } = getState();
+    const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes, settings } = getState();
     
     elements.settingsAccountsList.innerHTML = '';
     accounts.forEach(acc => {
@@ -752,6 +754,7 @@ function renderSettings() {
     renderCategoryList(elements.incomeCategoriesList, incomeCategories, []);
     renderCategoryList(elements.expenseCategoriesList, expenseCategories, []);
     renderCategoryList(elements.operationTypesList, invoiceOperationTypes, []);
+    renderCategoryList(elements.taxIdTypesList, taxIdTypes, ESSENTIAL_TAX_ID_TYPES);
 
     renderInvestmentAssetsList();
 
@@ -1007,6 +1010,7 @@ export function populateSelects() {
     });
     populateCategories();
     populateOperationTypesSelect();
+    populateTaxIdTypeSelect();
     populateReportAccounts();
     populateClientSelectForInvoice();
     populateInvestmentAssetSelect();
@@ -1038,6 +1042,14 @@ function populateOperationTypesSelect() {
     const { invoiceOperationTypes } = getState();
     if(elements.facturaOperationType) {
         elements.facturaOperationType.innerHTML = invoiceOperationTypes.map(type => `<option value="${escapeHTML(type)}">${escapeHTML(type)}</option>`).join('');
+    }
+}
+
+function populateTaxIdTypeSelect() {
+    const { taxIdTypes } = getState();
+    const select = document.getElementById('client-tax-id-type');
+    if(select) {
+        select.innerHTML = taxIdTypes.map(type => `<option value="${escapeHTML(type)}">${escapeHTML(type)}</option>`).join('');
     }
 }
 
