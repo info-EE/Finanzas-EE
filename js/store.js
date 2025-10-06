@@ -44,7 +44,6 @@ function getDefaultState() {
 // --- Lógica del Store ---
 let state = {};
 const listeners = []; // Lista de funciones a llamar cuando el estado cambia
-let isUpdatingFromFirebase = false; // Flag to prevent feedback loops
 
 /**
  * Suscribe una función para que se ejecute cada vez que el estado cambie.
@@ -64,30 +63,22 @@ function notify() {
 }
 
 /**
- * Devuelve una copia del estado actual para evitar mutaciones directas.
+ * Devuelve una copia profunda del estado actual para evitar mutaciones directas.
  * @returns {object} Una copia del estado.
  */
 export function getState() {
-    return { ...state };
+    return JSON.parse(JSON.stringify(state));
 }
 
 /**
  * Actualiza el estado con nuevos datos y notifica a los suscriptores.
- * También persiste el nuevo estado en el almacenamiento.
+ * Esta función YA NO guarda los datos, solo actualiza el estado local.
+ * La persistencia debe ser manejada por las funciones de acción.
  * @param {object} newState - Un objeto con las claves del estado a actualizar.
- * @param {boolean} fromFirebase - Indica si la actualización viene de Firebase.
  */
-export function setState(newState, fromFirebase = false) {
+export function setState(newState) {
     state = { ...state, ...newState };
     notify();
-
-    // Solo guarda en Firebase si el cambio NO vino de Firebase
-    if (!fromFirebase) {
-        isUpdatingFromFirebase = true;
-        saveData(state).then(() => {
-            isUpdatingFromFirebase = false;
-        });
-    }
 }
 
 /**
@@ -102,6 +93,11 @@ export async function initState() {
     // Esto asegura que las nuevas propiedades (como investmentAssets) existan.
     state = { ...defaultState, ...loadedState };
     
+    // Aseguramos que las categorías esenciales no se pierdan si los datos cargados están corruptos.
+    state.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(loadedState?.incomeCategories || [])])];
+    state.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(loadedState?.expenseCategories || [])])];
+    state.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(loadedState?.invoiceOperationTypes || [])])];
+    
     // Si no había datos en Firebase, guardamos el estado inicial por defecto.
     if (!loadedState) {
         await saveData(state);
@@ -110,4 +106,3 @@ export async function initState() {
     // Forzamos una notificación inicial para que la UI se renderice con los datos cargados
     notify();
 }
-
