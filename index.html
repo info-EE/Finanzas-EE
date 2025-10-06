@@ -15,9 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <!-- Los scripts de Firebase ya no se importan aquí, se manejan en api.js -->
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -1166,25 +1164,8 @@
     </template>
     <!-- =========== END TEMPLATES =========== -->
     
-    <script>
-        // Esta configuración se carga automáticamente desde los servidores de Firebase
-        // cuando tu app se aloja en Firebase Hosting.
-        // No es necesario incluir las claves aquí.
-        const firebaseConfig = {
-           apiKey: "AIzaSyDFCyXACTjzwSrjyaLyzc3hqSB0s5zLUJY",
-           authDomain: "europa-envios-gestor.firebaseapp.com",
-           projectId: "europa-envios-gestor",
-           storageBucket: "europa-envios-gestor.appspot.com",
-           messagingSenderId: "135669072477",
-           appId: "1:135669072477:web:59d6b6c1af1b496c0983b4",
-           measurementId: "G-KZPBK200QS"
-        };
-        
-        // Inicializar Firebase
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(firebaseConfig);
-        }
-    </script>
+    <!-- Se eliminó el script de inicialización de Firebase de aquí. -->
+    <!-- main.js ahora es un módulo e importará api.js, que maneja la inicialización. -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
