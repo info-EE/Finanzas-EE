@@ -1,5 +1,5 @@
 import { loadData, saveData } from './api.js';
-import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
+import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 
 // --- Catálogo de Logos ---
 const LOGO_CATALOG = {
@@ -27,6 +27,7 @@ function getDefaultState() {
         incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
         expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
         invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
+        taxIdTypes: [...ESSENTIAL_TAX_ID_TYPES],
         archivedData: {},
         activeReport: { type: null, data: [], title: '', columns: [] },
         activeIvaReport: null,
@@ -86,7 +87,9 @@ export async function initState() {
         state.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(loadedState?.incomeCategories || [])])];
         state.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(loadedState?.expenseCategories || [])])];
         state.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(loadedState?.invoiceOperationTypes || [])])];
+        state.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(loadedState?.taxIdTypes || [])])];
     }
     
     notify();
 }
+
