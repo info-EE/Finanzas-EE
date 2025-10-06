@@ -987,13 +987,12 @@ function populateLogoSelect() {
     const select = elements.newAccountLogoSelect;
     if (!select || !logoCatalog) return;
 
-    select.innerHTML = ''; // Limpiar opciones existentes
+    select.innerHTML = ''; 
 
     for (const key in logoCatalog) {
         const option = document.createElement('option');
         option.value = key;
-        // Capitalizar y reemplazar guiones bajos para una mejor visualización
-        option.textContent = (key.charAt(0).toUpperCase() + key.slice(1)).replace('_', ' ');
+        option.textContent = (key.charAt(0).toUpperCase() + key.slice(1)).replace(/_/g, ' ');
         select.appendChild(option);
     }
 }
@@ -1012,6 +1011,18 @@ export function populateSelects() {
     populateClientSelectForInvoice();
     populateInvestmentAssetSelect();
     populateLogoSelect();
+}
+
+function populateInvestmentAssetSelect() {
+    const { investmentAssets } = getState();
+    const select = document.getElementById('investment-asset');
+    if (select) {
+        if(investmentAssets && investmentAssets.length > 0){
+             select.innerHTML = investmentAssets.map(asset => `<option value="${asset.id}">${escapeHTML(asset.name)}</option>`).join('');
+        } else {
+            select.innerHTML = `<option value="">No hay activos definidos</option>`;
+        }
+    }
 }
 
 export function populateCategories() {
