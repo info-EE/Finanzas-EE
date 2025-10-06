@@ -1,12 +1,16 @@
 // --- Conexión con Firebase Firestore ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// Obtenemos una referencia a la base de datos de Firestore.
-// La inicialización de Firebase se hace en index.html
-const db = firebase.firestore();
+// La inicialización de Firebase ahora se maneja aquí,
+// asumiendo la configuración automática de Firebase Hosting.
+// El SDK v9 modular requiere que la inicialización ocurra dentro del scope del módulo.
+const app = initializeApp({});
+const db = getFirestore(app);
 
 // Usaremos un único documento para guardar todo el estado de la aplicación.
 // Le damos un nombre único a la colección para que no entre en conflicto con otros sistemas.
-const dataDocRef = db.collection('finanzas-ee-data').doc('mainState');
+const dataDocRef = doc(db, 'finanzas-ee-data', 'mainState');
 
 
 /**
@@ -15,10 +19,10 @@ const dataDocRef = db.collection('finanzas-ee-data').doc('mainState');
  */
 export async function loadData() {
     try {
-        const doc = await dataDocRef.get();
-        if (doc.exists) {
+        const docSnap = await getDoc(dataDocRef);
+        if (docSnap.exists()) {
             console.log("Datos cargados desde Firebase.");
-            return doc.data();
+            return docSnap.data();
         } else {
             console.log("No se encontró ningún documento en Firebase, se usará el estado por defecto.");
             return null; // No hay estado guardado en la nube.
@@ -42,7 +46,7 @@ export async function saveData(state) {
         
         // Usamos set con { merge: true } para crear el documento si no existe
         // o para actualizarlo si ya existe, sin sobrescribir campos no incluidos.
-        await dataDocRef.set(stateToSave, { merge: true });
+        await setDoc(dataDocRef, stateToSave, { merge: true });
         console.log("Datos guardados en Firebase.");
 
     } catch (error) {
@@ -56,8 +60,8 @@ export async function saveData(state) {
  * @param {function} onDataChange - El callback que se ejecutará con los nuevos datos.
  */
 export function listenForDataChanges(onDataChange) {
-    dataDocRef.onSnapshot((doc) => {
-        if (doc.exists) {
+    onSnapshot(dataDocRef, (doc) => {
+        if (doc.exists()) {
             console.log("Se detectó un cambio en Firebase. Actualizando estado local.");
             onDataChange(doc.data());
         }
@@ -65,4 +69,3 @@ export function listenForDataChanges(onDataChange) {
         console.error("Error en el listener de Firebase:", error);
     });
 }
-
