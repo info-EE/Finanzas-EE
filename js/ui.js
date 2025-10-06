@@ -1,13 +1,25 @@
 import { getState } from './store.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
 import { CHART_COLORS } from './config.js';
-import { updateConnectionStatus } from './api.js';
 
 // --- Almacenamiento de Referencias a Elementos del DOM y Gráficos ---
 
 export const elements = {
+    // Vistas principales
+    authContainer: document.getElementById('auth-container'),
     sidebar: document.getElementById('sidebar'),
     mainContent: document.getElementById('main-content'),
+
+    // Formularios de autenticación
+    loginView: document.getElementById('login-view'),
+    registerView: document.getElementById('register-view'),
+    loginForm: document.getElementById('login-form'),
+    registerForm: document.getElementById('register-form'),
+    showRegisterViewBtn: document.getElementById('show-register-view'),
+    showLoginViewBtn: document.getElementById('show-login-view'),
+    authError: document.getElementById('auth-error'),
+    logoutBtn: document.getElementById('logout-btn'),
+
     navLinks: document.querySelectorAll('.nav-link'),
     pages: document.querySelectorAll('.page-content'),
     transactionForm: document.getElementById('transaction-form'),
@@ -55,11 +67,9 @@ export const elements = {
     ivaGenerateReportBtn: document.getElementById('iva-generate-report-btn'),
     ivaReportDisplay: document.getElementById('iva-report-display'),
     loadingOverlay: document.getElementById('loading-overlay'),
-    // Nuevos elementos para inversiones
     addInvestmentForm: document.getElementById('add-investment-form'),
     addInvestmentAssetForm: document.getElementById('add-investment-asset-form'),
     investmentAssetsList: document.getElementById('investment-assets-list'),
-    // Indicador de estado
     connectionStatus: document.getElementById('connection-status'),
     statusIcon: document.getElementById('status-icon'),
     statusText: document.getElementById('status-text'),
@@ -70,8 +80,45 @@ const charts = {
     accountsBalanceChartUSD: null,
     annualFlowChart: null,
     expenseDistributionChart: null,
-    clientsChart: null, // Nuevo gráfico para clientes
+    clientsChart: null,
 };
+
+// --- Funciones de UI para Autenticación ---
+
+export function showAuthError(message) {
+    elements.authError.textContent = message;
+}
+
+export function clearAuthError() {
+    elements.authError.textContent = '';
+}
+
+export function showLoginView() {
+    elements.loginView.classList.remove('hidden');
+    elements.registerView.classList.add('hidden');
+    clearAuthError();
+}
+
+export function showRegisterView() {
+    elements.loginView.classList.add('hidden');
+    elements.registerView.classList.remove('hidden');
+    clearAuthError();
+}
+
+export function showApp() {
+    elements.authContainer.classList.add('hidden');
+    elements.sidebar.classList.remove('hidden');
+    elements.sidebar.classList.add('flex'); // Make sure it's flex
+    elements.mainContent.classList.remove('hidden');
+}
+
+export function hideApp() {
+    elements.authContainer.classList.remove('hidden');
+    elements.sidebar.classList.add('hidden');
+    elements.sidebar.classList.remove('flex');
+    elements.mainContent.classList.add('hidden');
+    showLoginView(); // Default to login view on logout
+}
 
 
 // --- Funciones Creadoras de Elementos ---
@@ -301,6 +348,7 @@ function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, c
 
 function updateInicioKPIs() {
     const { transactions, accounts } = getState();
+    if(!transactions || !accounts) return;
     const currency = document.getElementById('inicio-chart-currency').value;
     const symbol = getCurrencySymbol(currency);
 
@@ -340,7 +388,7 @@ function updateInicioKPIs() {
 function renderAnnualFlowChart() {
     const { transactions } = getState();
     const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
-    if (!annualCtx) return;
+    if (!annualCtx || !transactions) return;
 
     if (charts.annualFlowChart) charts.annualFlowChart.destroy();
     
@@ -385,7 +433,7 @@ function renderAnnualFlowChart() {
 function renderExpenseDistributionChart() {
     const { transactions } = getState();
     const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
-    if (!ctx) return;
+    if (!ctx || !transactions) return;
 
     const currency = document.getElementById('inicio-chart-currency').value;
     const now = new Date();
@@ -408,7 +456,6 @@ function renderExpenseDistributionChart() {
     if (charts.expenseDistributionChart) charts.expenseDistributionChart.destroy();
     
     if (labels.length === 0) {
-        // Show a message if there's no data
         return;
     }
 
@@ -445,7 +492,7 @@ function renderExpenseDistributionChart() {
 function renderRecentTransactions() {
     const { transactions } = getState();
     const container = document.getElementById('recent-transactions-container');
-    if (!container) return;
+    if (!container || !transactions) return;
 
     const recent = transactions
         .filter(t => !t.isInitialBalance)
@@ -481,7 +528,7 @@ function renderRecentTransactions() {
 function renderMainBalances() {
     const { accounts } = getState();
     const container = document.getElementById('main-balances-container');
-    if (!container) return;
+    if (!container || !accounts) return;
 
     const sortedAccounts = [...accounts].sort((a, b) => b.balance - a.balance).slice(0, 4);
 
@@ -505,7 +552,7 @@ function renderMainBalances() {
 function renderPendingInvoices() {
     const { documents } = getState();
     const container = document.getElementById('pending-invoices-container');
-    if (!container) return;
+    if (!container || !documents) return;
 
     const pending = documents.filter(doc => doc.type === 'Factura' && doc.status === 'Adeudada');
 
@@ -572,7 +619,7 @@ function renderClients() {
 function renderClientsChart() {
     const { documents } = getState();
     const ctx = document.getElementById('clientsChart')?.getContext('2d');
-    if (!ctx) return;
+    if (!ctx || !documents) return;
 
     if (charts.clientsChart) charts.clientsChart.destroy();
 
@@ -592,7 +639,7 @@ function renderClientsChart() {
     const data = sortedClients.map(([, amount]) => amount);
 
     if (labels.length === 0) {
-        // Puedes mostrar un mensaje si no hay datos.
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         return;
     }
 
@@ -725,10 +772,9 @@ function renderReport() {
 
     const { type, title, columns, data } = activeReport;
 
-    // --- Construcción del Footer con Totales (si aplica) ---
     let footerHtml = '';
     if (type === 'movimientos') {
-        const totals = {}; // ej: { EUR: 100, USD: -50 }
+        const totals = {};
         const typeIndex = columns.indexOf("Tipo");
         const amountIndex = columns.indexOf("Monto");
         const currencyIndex = columns.indexOf("Moneda");
@@ -745,7 +791,7 @@ function renderReport() {
                 
                 if (type === 'Ingreso') {
                     totals[currency] += amount;
-                } else { // Egreso
+                } else {
                     totals[currency] -= amount;
                 }
             });
@@ -768,7 +814,6 @@ function renderReport() {
         }
     }
 
-    // --- Construcción de la Tabla ---
     let tableHtml = `<table class="w-full text-left"><thead><tr class="border-b border-gray-700">`;
     columns.forEach(col => tableHtml += `<th class="py-2 px-3 text-sm font-semibold text-gray-400">${col}</th>`);
     tableHtml += `</tr></thead><tbody>`;
@@ -918,9 +963,12 @@ export function switchPage(pageId, subpageId = null) {
     elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
     elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
     
-    // Render specific content based on the active page
     if (pageId === 'inicio') renderInicioDashboard();
     if (pageId === 'cuentas') renderBalanceLegendAndChart();
+    if (pageId === 'clientes') {
+        renderClients();
+        renderClientsChart();
+    }
     if (pageId === 'facturacion' && subpageId) {
         document.querySelectorAll('.tab-button-inner').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`facturacion-tab-${subpageId}`).classList.add('active');
@@ -996,7 +1044,7 @@ function populateReportAccounts() {
 export function populateClientSelectForInvoice() {
     const { clients } = getState();
     const select = elements.facturaSelectCliente;
-    if (!select) return;
+    if (!select || !clients) return;
     const selectedValue = select.value;
     while (select.options.length > 1) select.remove(1);
     clients.forEach(client => {
@@ -1292,7 +1340,6 @@ export function downloadInvoiceAsPDF() {
     const { jsPDF } = window.jspdf;
     const invoiceElement = document.getElementById('invoice-printable-area');
     
-    // Hack para obtener el número de documento actual del título
     const titleElement = elements.invoiceViewerModal.querySelector('h1');
     const isReceipt = titleElement && titleElement.textContent.toLowerCase() === 'recibo';
     const docNumberElement = invoiceElement.querySelector('strong');
@@ -1305,11 +1352,11 @@ export function downloadInvoiceAsPDF() {
         callback: (doc) => {
             doc.save(`${docType}-${docNumberText.replace(/[^a-z0-9]/gi, '_')}.pdf`);
         },
-        margin: [40, 0, 40, 0], // Se ajusta el margen para que el padding del HTML controle el espacio
+        margin: [40, 0, 40, 0], 
         autoPaging: 'text',
         x: 0,
         y: 0,
-        width: 595, // A4 width in points
+        width: 595,
         windowWidth: 700
     });
 }
@@ -1353,13 +1400,37 @@ export function hideSpinner() {
     elements.loadingOverlay.classList.remove('flex');
 }
 
+export function updateConnectionStatus(status, message) {
+    const { connectionStatus, statusIcon, statusText } = elements;
+    connectionStatus.classList.remove('opacity-0');
+
+    statusText.textContent = message;
+
+    switch (status) {
+        case 'loading':
+            statusIcon.innerHTML = `<div class="w-3 h-3 border-2 border-t-transparent border-yellow-400 rounded-full animate-spin"></div>`;
+            statusText.classList.remove('text-green-400', 'text-red-400');
+            statusText.classList.add('text-yellow-400');
+            break;
+        case 'success':
+            statusIcon.innerHTML = `<div class="w-3 h-3 bg-green-500 rounded-full"></div>`;
+            statusText.classList.remove('text-yellow-400', 'text-red-400');
+            statusText.classList.add('text-green-400');
+            break;
+        case 'error':
+            statusIcon.innerHTML = `<div class="w-3 h-3 bg-red-500 rounded-full"></div>`;
+            statusText.classList.remove('text-yellow-400', 'text-green-400');
+            statusText.classList.add('text-red-400');
+            break;
+    }
+    lucide.createIcons();
+}
 
 // --- Función Agregadora de Renderizado ---
 export function renderAll() {
     const state = getState();
-    if (!state.accounts) return;
+    if (!state || !state.accounts) return;
 
-    // Call render functions for the visible page
     const visiblePage = Array.from(elements.pages).find(p => !p.classList.contains('hidden'));
     if (visiblePage) {
         const pageId = visiblePage.id.replace('page-', '');
@@ -1382,7 +1453,7 @@ export function renderAll() {
                 break;
             case 'clientes':
                 renderClients();
-                renderClientsChart(); // Llamamos a la nueva función
+                renderClientsChart();
                 break;
             case 'inversiones':
                 renderInvestments();
@@ -1402,4 +1473,3 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
-
