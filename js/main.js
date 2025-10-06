@@ -5,6 +5,8 @@ import { onAuthChange, listenForDataChanges, initFirebase } from './api.js';
 
 // --- App Initialization ---
 
+// El evento 'DOMContentLoaded' se asegura de que el HTML está listo.
+// El atributo 'defer' en los <script> se asegura de que Firebase esté cargado.
 document.addEventListener('DOMContentLoaded', () => {
     // 0. Primero, inicializamos Firebase
     const firebaseReady = initFirebase();
@@ -32,15 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthChange(async (user) => {
         if (user) {
             // Si el usuario está autenticado:
-            // a. Muestra la aplicación principal
             showApp();
-            // b. Inicializa el estado (cargará los datos del usuario o creará unos nuevos)
             await initState();
-            // c. Escucha cambios en los datos de este usuario en tiempo real
             listenForDataChanges((newData) => {
                 setState(newData);
             });
-            // d. Muestra la página de inicio
             switchPage('inicio');
         } else {
             // Si no hay usuario, muestra la pantalla de autenticación
@@ -48,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 5. Establece valores por defecto en campos de fecha y mes (esto puede quedar aquí)
+    // 5. Establece valores por defecto en campos de fecha y mes
     const today = new Date().toISOString().slice(0, 10);
     ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date', 'investment-date'].forEach(id => {
         const el = document.getElementById(id);
