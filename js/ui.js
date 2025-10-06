@@ -70,6 +70,7 @@ const charts = {
     accountsBalanceChartUSD: null,
     annualFlowChart: null,
     expenseDistributionChart: null,
+    clientsChart: null, // Nuevo gráfico para clientes
 };
 
 
@@ -568,6 +569,67 @@ function renderClients() {
     tbody.appendChild(fragment);
 }
 
+function renderClientsChart() {
+    const { documents } = getState();
+    const ctx = document.getElementById('clientsChart')?.getContext('2d');
+    if (!ctx) return;
+
+    if (charts.clientsChart) charts.clientsChart.destroy();
+
+    const invoices = documents.filter(doc => doc.type === 'Factura' && doc.currency === 'EUR');
+    
+    const salesByClient = invoices.reduce((acc, invoice) => {
+        const clientName = invoice.client;
+        acc[clientName] = (acc[clientName] || 0) + invoice.amount;
+        return acc;
+    }, {});
+
+    const sortedClients = Object.entries(salesByClient)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10); // Mostramos los 10 mejores clientes
+
+    const labels = sortedClients.map(([name]) => name);
+    const data = sortedClients.map(([, amount]) => amount);
+
+    if (labels.length === 0) {
+        // Puedes mostrar un mensaje si no hay datos.
+        return;
+    }
+
+    charts.clientsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Facturado',
+                data: data,
+                backgroundColor: CHART_COLORS,
+                borderColor: '#1e3a8a',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Esto hace que el gráfico sea horizontal
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Monto en EUR'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
 function renderInvestments() {
     const { transactions, investmentAssets } = getState();
     const investmentsData = transactions.filter(t => t.category === 'Inversión');
@@ -699,8 +761,8 @@ function renderReport() {
             footerHtml = `
                 <tfoot>
                     <tr class="border-t-2 border-gray-600">
-                        <td colspan="${columns.length - 1}" class="py-3 px-3 text-right font-semibold">TOTAL NETO:</td>
-                        <td class="py-3 px-3 text-right">${totalsContent}</td>
+                        <td colspan="${columns.length - 2}" class="py-3 px-3 text-right font-semibold">TOTAL NETO:</td>
+                        <td class="py-3 px-3 text-right" colspan="2">${totalsContent}</td>
                     </tr>
                 </tfoot>`;
         }
@@ -1320,6 +1382,7 @@ export function renderAll() {
                 break;
             case 'clientes':
                 renderClients();
+                renderClientsChart(); // Llamamos a la nueva función
                 break;
             case 'inversiones':
                 renderInvestments();
