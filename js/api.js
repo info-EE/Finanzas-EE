@@ -1,6 +1,7 @@
 // --- Conexión con Firebase Firestore ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { updateConnectionStatus } from './ui.js';
 
 // La inicialización de Firebase ahora se maneja aquí,
 // asumiendo la configuración automática de Firebase Hosting.
@@ -18,17 +19,21 @@ const dataDocRef = doc(db, 'finanzas-ee-data', 'mainState');
  * @returns {Promise<object | null>} Una promesa que se resuelve con el estado guardado o null si no existe.
  */
 export async function loadData() {
+    updateConnectionStatus('loading', 'Cargando datos...');
     try {
         const docSnap = await getDoc(dataDocRef);
         if (docSnap.exists()) {
             console.log("Datos cargados desde Firebase.");
+            updateConnectionStatus('success', 'Datos cargados');
             return docSnap.data();
         } else {
             console.log("No se encontró ningún documento en Firebase, se usará el estado por defecto.");
+            updateConnectionStatus('success', 'Listo');
             return null; // No hay estado guardado en la nube.
         }
     } catch (error) {
         console.error("Error al cargar datos desde Firebase:", error);
+        updateConnectionStatus('error', 'Error de carga');
         // Devolvemos null para que la app pueda iniciar con el estado por defecto.
         return null;
     }
@@ -40,6 +45,7 @@ export async function loadData() {
  * @returns {Promise<void>}
  */
 export async function saveData(state) {
+    updateConnectionStatus('loading', 'Guardando...');
     try {
         // Excluimos datos volátiles que no necesitamos persistir.
         const stateToSave = { ...state, activeReport: { type: null, data: [] } };
@@ -48,9 +54,11 @@ export async function saveData(state) {
         // o para actualizarlo si ya existe, sin sobrescribir campos no incluidos.
         await setDoc(dataDocRef, stateToSave, { merge: true });
         console.log("Datos guardados en Firebase.");
+        updateConnectionStatus('success', 'Guardado');
 
     } catch (error) {
         console.error("Error al guardar datos en Firebase:", error);
+        updateConnectionStatus('error', 'Error al guardar');
     }
 }
 
@@ -63,9 +71,11 @@ export function listenForDataChanges(onDataChange) {
     onSnapshot(dataDocRef, (doc) => {
         if (doc.exists()) {
             console.log("Se detectó un cambio en Firebase. Actualizando estado local.");
+            updateConnectionStatus('success', 'Sincronizado');
             onDataChange(doc.data());
         }
     }, (error) => {
         console.error("Error en el listener de Firebase:", error);
+        updateConnectionStatus('error', 'Desconectado');
     });
 }
