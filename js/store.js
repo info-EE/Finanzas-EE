@@ -97,7 +97,7 @@ export async function initState() {
     
     // Aseguramos que las categorías esenciales no se pierdan si los datos cargados están corruptos o son de una versión anterior.
     state.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(loadedState?.incomeCategories || [])])];
-    state.expenseCategories = [...new Set([...default.expenseCategories, ...(loadedState?.expenseCategories || [])])];
+    state.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(loadedState?.expenseCategories || [])])];
     state.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(loadedState?.invoiceOperationTypes || [])])];
     
     // Si no había datos en Firebase, guardamos el estado inicial por defecto.
@@ -108,3 +108,4 @@ export async function initState() {
     // Forzamos una notificación inicial para que la UI se renderice con los datos cargados
     notify();
 }
+
