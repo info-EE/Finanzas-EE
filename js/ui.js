@@ -40,7 +40,7 @@ export const elements = {
     proformasTableBody: document.getElementById('proformas-table-body'),
     aeatSettingsCard: document.getElementById('aeat-settings-card'),
     aeatToggleContainer: document.getElementById('aeat-toggle-container'),
-    aeatConfigForm: document.getElementById('aeat-config-form'), 
+    aeatConfigForm: document.getElementById('aeat-config-form'),
     nuevaFacturaForm: document.getElementById('nueva-factura-form'),
     facturaItemsContainer: document.getElementById('factura-items-container'),
     facturaAddItemBtn: document.getElementById('factura-add-item-btn'),
