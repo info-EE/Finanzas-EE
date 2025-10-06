@@ -67,6 +67,8 @@ function notify() {
  * @returns {object} Una copia del estado.
  */
 export function getState() {
+    // Usamos JSON.parse y JSON.stringify para crear una copia profunda (deep copy)
+    // Esto previene que el estado interno sea modificado por accidente desde fuera del store.
     return JSON.parse(JSON.stringify(state));
 }
 
@@ -93,9 +95,9 @@ export async function initState() {
     // Esto asegura que las nuevas propiedades (como investmentAssets) existan.
     state = { ...defaultState, ...loadedState };
     
-    // Aseguramos que las categorías esenciales no se pierdan si los datos cargados están corruptos.
+    // Aseguramos que las categorías esenciales no se pierdan si los datos cargados están corruptos o son de una versión anterior.
     state.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(loadedState?.incomeCategories || [])])];
-    state.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(loadedState?.expenseCategories || [])])];
+    state.expenseCategories = [...new Set([...default.expenseCategories, ...(loadedState?.expenseCategories || [])])];
     state.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(loadedState?.invoiceOperationTypes || [])])];
     
     // Si no había datos en Firebase, guardamos el estado inicial por defecto.
