@@ -27,7 +27,7 @@ import {
     clearAuthError
 } from './ui.js';
 import { getState, resetState } from './store.js';
-import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
+import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
 
 // --- Helper for showing spinner during actions ---
@@ -272,13 +272,13 @@ function handleTransferFormSubmit(e) {
 function handleAddCategory(e, type) {
     e.preventDefault();
     const form = e.target;
-    const inputId = type === 'income' ? 'new-income-category' : (type === 'expense' ? 'new-expense-category' : 'new-operation-type');
+    const inputId = type === 'income' ? 'new-income-category' : (type === 'expense' ? 'new-expense-category' : (type === 'operationType' ? 'new-operation-type' : 'new-tax-id-type'));
     const input = form.querySelector(`#${inputId}`);
     const categoryName = input.value.trim();
 
     if (categoryName) {
-        const { incomeCategories, expenseCategories, invoiceOperationTypes } = getState();
-        const list = type === 'income' ? incomeCategories : (type === 'expense' ? expenseCategories : invoiceOperationTypes);
+        const { incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes } = getState();
+        const list = type === 'income' ? incomeCategories : (type === 'expense' ? expenseCategories : (type === 'operationType' ? invoiceOperationTypes : taxIdTypes));
         if (list.some(cat => cat.toLowerCase() === categoryName.toLowerCase())) {
             showAlertModal('Categoría Duplicada', `La categoría "${escapeHTML(categoryName)}" ya existe.`);
             return;
@@ -796,9 +796,11 @@ export function bindEventListeners() {
     elements.addIncomeCategoryForm.addEventListener('submit', (e) => handleAddCategory(e, 'income'));
     elements.addExpenseCategoryForm.addEventListener('submit', (e) => handleAddCategory(e, 'expense'));
     elements.addOperationTypeForm.addEventListener('submit', (e) => handleAddCategory(e, 'operationType'));
+    elements.addTaxIdTypeForm.addEventListener('submit', (e) => handleAddCategory(e, 'taxIdType'));
     elements.incomeCategoriesList.addEventListener('click', (e) => handleDeleteCategory(e, 'income', ESSENTIAL_INCOME_CATEGORIES));
     elements.expenseCategoriesList.addEventListener('click', (e) => handleDeleteCategory(e, 'expense', ESSENTIAL_EXPENSE_CATEGORIES));
     elements.operationTypesList.addEventListener('click', (e) => handleDeleteCategory(e, 'operationType', ESSENTIAL_OPERATION_TYPES));
+    elements.taxIdTypesList.addEventListener('click', (e) => handleDeleteCategory(e, 'taxIdType', ESSENTIAL_TAX_ID_TYPES));
     
     elements.addClientForm.addEventListener('submit', handleClientFormSubmit);
     elements.clientsTableBody.addEventListener('click', handleClientsTableClick);
@@ -861,3 +863,4 @@ export function bindEventListeners() {
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
 }
+
