@@ -1,4 +1,5 @@
 import { getState, setState } from './store.js';
+import { saveData } from './api.js';
 
 // --- Lógica Interna de Actualización Incremental de Balances ---
 
@@ -63,7 +64,7 @@ function revertTransactionFromBalances(accounts, transaction) {
 }
 
 
-// --- Acciones Públicas (modifican el estado) ---
+// --- Acciones Públicas (modifican el estado y lo guardan) ---
 
 export function saveTransaction(transactionData, transactionId) {
     let { transactions, accounts } = getState();
@@ -95,6 +96,7 @@ export function saveTransaction(transactionData, transactionId) {
     }
     
     setState({ transactions: updatedTransactions, accounts });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function deleteTransaction(transactionId) {
@@ -106,6 +108,7 @@ export function deleteTransaction(transactionId) {
         const updatedAccounts = revertTransactionFromBalances(accounts, transactionToDelete);
         const updatedTransactions = transactions.filter(t => t.id !== transactionId);
         setState({ transactions: updatedTransactions, accounts: updatedAccounts });
+        saveData(getState()); // Guardar el nuevo estado
     }
 }
 
@@ -139,8 +142,9 @@ export function addAccount(accountData) {
     }
 
     const updatedAccounts = [...accounts, newAccount];
-    // No se necesita recalcular todo, solo se añade la nueva cuenta.
+    
     setState({ accounts: updatedAccounts, transactions: updatedTransactions });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function deleteAccount(accountName) {
@@ -149,6 +153,7 @@ export function deleteAccount(accountName) {
     // Al eliminar la cuenta, también se eliminan sus transacciones asociadas.
     const updatedTransactions = transactions.filter(t => t.account !== accountName);
     setState({ accounts: updatedAccounts, transactions: updatedTransactions });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function updateBalance(accountName, newBalance) {
@@ -181,6 +186,7 @@ export function updateBalance(accountName, newBalance) {
         updatedAccounts[accountIndex] = { ...account, balance: newBalance };
         
         setState({ transactions: updatedTransactions, accounts: updatedAccounts });
+        saveData(getState()); // Guardar el nuevo estado
     }
 }
 
@@ -232,6 +238,7 @@ export function addTransfer(transferData) {
 
     const updatedTransactions = [...transactions, ...newTransactions];
     setState({ transactions: updatedTransactions, accounts: updatedAccounts });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function addCategory(categoryName, type) {
@@ -251,6 +258,7 @@ export function addCategory(categoryName, type) {
     }
     
     setState({ [key]: updatedList });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function deleteCategory(categoryName, type) {
@@ -270,6 +278,7 @@ export function deleteCategory(categoryName, type) {
     }
     
     setState({ [key]: updatedList });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function saveClient(clientData, clientId) {
@@ -286,18 +295,21 @@ export function saveClient(clientData, clientId) {
     }
     
     setState({ clients: updatedClients });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function deleteClient(clientId) {
     const { clients } = getState();
     const updatedClients = clients.filter(c => c.id !== clientId);
     setState({ clients: updatedClients });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function addDocument(docData) {
     const { documents } = getState();
     const newDocument = { ...docData, id: crypto.randomUUID() };
     setState({ documents: [...documents, newDocument] });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function toggleDocumentStatus(docId) {
@@ -309,12 +321,14 @@ export function toggleDocumentStatus(docId) {
         return doc;
     });
     setState({ documents: updatedDocuments });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function deleteDocument(docId) {
     const { documents } = getState();
     const updatedDocuments = documents.filter(doc => doc.id !== docId);
     setState({ documents: updatedDocuments });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function savePaymentDetails(invoiceId, paymentData) {
@@ -330,6 +344,7 @@ export function savePaymentDetails(invoiceId, paymentData) {
 
     if (updatedInvoice) {
         setState({ documents: updatedDocuments });
+        saveData(getState()); // Guardar el nuevo estado
     }
     
     return updatedInvoice;
@@ -339,18 +354,21 @@ export function saveAeatConfig(aeatConfig) {
     const { settings } = getState();
     const updatedSettings = { ...settings, aeatConfig };
     setState({ settings: updatedSettings });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function toggleAeatModule() {
     const { settings } = getState();
     const updatedSettings = { ...settings, aeatModuleActive: !settings.aeatModuleActive };
     setState({ settings: updatedSettings });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function saveFiscalParams(fiscalParams) {
     const { settings } = getState();
     const updatedSettings = { ...settings, fiscalParameters: fiscalParams };
     setState({ settings: updatedSettings });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function generateReport(filters) {
@@ -456,6 +474,7 @@ export function generateReport(filters) {
         ];
     }
     
+    // Los reportes son datos volátiles, no necesitan guardarse.
     setState({ activeReport: { type: filters.type, data, title, columns } });
 }
 
@@ -505,7 +524,7 @@ export function generateIvaReport(month) {
         },
         resultado: totalRepercutido - totalSoportado
     };
-
+    // El reporte de IVA es volátil, no necesita guardarse.
     setState({ activeIvaReport: ivaReport });
 }
 
@@ -547,6 +566,7 @@ export function closeYear(startDate, endDate) {
         documents: remainingDocuments,
         archivedData: newArchivedData
     });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 // --- Investment Actions ---
@@ -555,12 +575,14 @@ export function addInvestmentAsset(assetData) {
     const { investmentAssets } = getState();
     const newAsset = { ...assetData, id: crypto.randomUUID() };
     setState({ investmentAssets: [...investmentAssets, newAsset] });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function deleteInvestmentAsset(assetId) {
     const { investmentAssets } = getState();
     const updatedAssets = investmentAssets.filter(asset => asset.id !== assetId);
     setState({ investmentAssets: updatedAssets });
+    saveData(getState()); // Guardar el nuevo estado
 }
 
 export function addInvestment(investmentData) {
