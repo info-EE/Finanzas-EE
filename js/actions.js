@@ -252,9 +252,14 @@ export function addCategory(categoryName, type) {
     } else if (type === 'expense') {
         key = 'expenseCategories';
         updatedList = [...state.expenseCategories, categoryName];
-    } else {
+    } else if (type === 'operationType') {
         key = 'invoiceOperationTypes';
         updatedList = [...state.invoiceOperationTypes, categoryName];
+    } else if (type === 'taxIdType') {
+        key = 'taxIdTypes';
+        updatedList = [...state.taxIdTypes, categoryName];
+    } else {
+        return;
     }
     
     setState({ [key]: updatedList });
@@ -272,9 +277,14 @@ export function deleteCategory(categoryName, type) {
     } else if (type === 'expense') {
         key = 'expenseCategories';
         updatedList = state.expenseCategories.filter(cat => cat !== categoryName);
-    } else {
+    } else if (type === 'operationType') {
         key = 'invoiceOperationTypes';
         updatedList = state.invoiceOperationTypes.filter(cat => cat !== categoryName);
+    } else if (type === 'taxIdType') {
+        key = 'taxIdTypes';
+        updatedList = state.taxIdTypes.filter(cat => cat !== categoryName);
+    } else {
+        return;
     }
     
     setState({ [key]: updatedList });
@@ -607,3 +617,4 @@ export function addInvestment(investmentData) {
 
     saveTransaction(transactionData);
 }
+
