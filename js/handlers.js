@@ -37,14 +37,26 @@ function handleTransactionFormSubmit(e) {
         return;
     }
 
+    const amount = parseFloat(form.querySelector('#transaction-amount').value);
+    const description = form.querySelector('#transaction-description').value.trim();
+
+    if (!description) {
+        showAlertModal('Campo Requerido', 'La descripción no puede estar vacía.');
+        return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+        showAlertModal('Valor Inválido', 'El monto debe ser un número positivo.');
+        return;
+    }
+
     const transactionData = {
         date: form.querySelector('#transaction-date').value,
-        description: form.querySelector('#transaction-description').value,
+        description: description,
         type: form.querySelector('#transaction-type').value,
         part: form.querySelector('#transaction-part').value,
         account: accountName,
         category: form.querySelector('#transaction-category').value,
-        amount: parseFloat(form.querySelector('#transaction-amount').value),
+        amount: amount,
         iva: parseFloat(form.querySelector('#transaction-iva').value) || 0,
         currency: account.currency
     };
@@ -97,9 +109,19 @@ function handleTransactionsTableClick(e) {
 function handleAddAccount(e) {
     e.preventDefault();
     const form = e.target;
-    const name = form.querySelector('#new-account-name').value;
-    const { accounts } = getState();
+    const name = form.querySelector('#new-account-name').value.trim();
+    const balance = parseFloat(form.querySelector('#new-account-balance').value);
 
+    if (!name) {
+        showAlertModal('Campo Requerido', 'El nombre de la cuenta no puede estar vacío.');
+        return;
+    }
+    if (isNaN(balance)) {
+        showAlertModal('Valor Inválido', 'El saldo inicial debe ser un número.');
+        return;
+    }
+
+    const { accounts } = getState();
     if (accounts.some(acc => acc.name.toLowerCase() === name.toLowerCase())) {
         showAlertModal('Error', 'Ya existe una cuenta con ese nombre.');
         return;
@@ -108,7 +130,7 @@ function handleAddAccount(e) {
     const accountData = {
         name: name,
         currency: form.querySelector('#new-account-currency').value,
-        balance: parseFloat(form.querySelector('#new-account-balance').value) || 0,
+        balance: balance || 0,
         logoHtml: form.querySelector('#new-account-logo').value,
     };
     
@@ -134,6 +156,11 @@ function handleUpdateBalance(e) {
     const accountName = form.querySelector('#update-account-select').value;
     const newBalance = parseFloat(form.querySelector('#new-balance-amount').value);
 
+    if (isNaN(newBalance)) {
+        showAlertModal('Valor Inválido', 'El nuevo saldo debe ser un número.');
+        return;
+    }
+
     withSpinner(() => {
         actions.updateBalance(accountName, newBalance);
         showAlertModal('Éxito', `Se ha creado un ajuste de saldo para la cuenta ${escapeHTML(accountName)}.`);
@@ -152,15 +179,20 @@ function handleTransferFormSubmit(e) {
         return;
     }
 
+    const amount = parseFloat(form.querySelector('#transfer-amount').value);
+    if (isNaN(amount) || amount <= 0) {
+        showAlertModal('Valor Inválido', 'El monto a enviar debe ser un número positivo.');
+        return;
+    }
+
     const { accounts } = getState();
     const fromAccount = accounts.find(a => a.name === fromAccountName);
-    const amount = parseFloat(form.querySelector('#transfer-amount').value);
     let receivedAmount = amount;
     
     if (fromAccount.currency !== accounts.find(a=>a.name === toAccountName).currency) {
         receivedAmount = parseFloat(form.querySelector('#transfer-extra-field').value);
-        if (!receivedAmount || receivedAmount <= 0) {
-            showAlertModal('Error', 'Debes especificar el monto a recibir para transferencias entre monedas diferentes.');
+        if (isNaN(receivedAmount) || !receivedAmount || receivedAmount <= 0) {
+            showAlertModal('Error', 'Debes especificar un monto a recibir válido para transferencias entre monedas diferentes.');
             return;
         }
     }
@@ -177,6 +209,7 @@ function handleTransferFormSubmit(e) {
     withSpinner(() => {
         actions.addTransfer(transferData);
         form.reset();
+        updateTransferFormUI();
     })();
 }
 
@@ -188,10 +221,19 @@ function handleAddCategory(e, type) {
     const categoryName = input.value.trim();
 
     if (categoryName) {
+        const { incomeCategories, expenseCategories, invoiceOperationTypes } = getState();
+        const list = type === 'income' ? incomeCategories : (type === 'expense' ? expenseCategories : invoiceOperationTypes);
+        if (list.some(cat => cat.toLowerCase() === categoryName.toLowerCase())) {
+            showAlertModal('Categoría Duplicada', `La categoría "${escapeHTML(categoryName)}" ya existe.`);
+            return;
+        }
+
         withSpinner(() => {
             actions.addCategory(categoryName, type);
             input.value = '';
         }, 150)(); // Shorter delay for quick actions
+    } else {
+        showAlertModal('Campo Requerido', 'El nombre de la categoría no puede estar vacío.');
     }
 }
 
@@ -215,9 +257,20 @@ function handleClientFormSubmit(e) {
     e.preventDefault();
     const form = e.target;
     const id = form.querySelector('#client-id').value;
+    const name = form.querySelector('#client-name').value.trim();
+    const email = form.querySelector('#client-email').value.trim();
+
+    if (!name) {
+        showAlertModal('Campo Requerido', 'El nombre del cliente no puede estar vacío.');
+        return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showAlertModal('Formato Inválido', 'Por favor, introduce una dirección de email válida.');
+        return;
+    }
     
     const clientData = {
-        name: form.querySelector('#client-name').value,
+        name: name,
         taxIdType: form.querySelector('#client-tax-id-type').value,
         taxId: form.querySelector('#client-tax-id').value,
         address: form.querySelector('#client-address').value,
@@ -225,7 +278,7 @@ function handleClientFormSubmit(e) {
         phoneLandline: form.querySelector('#client-phone-landline').value,
         phoneMobilePrefix: form.querySelector('#client-phone-mobile-prefix').value,
         phoneMobile: form.querySelector('#client-phone-mobile').value,
-        email: form.querySelector('#client-email').value,
+        email: email,
         industry: form.querySelector('#client-industry').value,
     };
 
@@ -281,18 +334,31 @@ function handleClientsTableClick(e) {
 function handleDocumentSubmit(e, type) {
     e.preventDefault();
     const form = e.target;
+    const amount = parseFloat(form.querySelector(`#${type.toLowerCase()}-amount`).value);
+    const number = form.querySelector(`#${type.toLowerCase()}-number`).value.trim();
+
+    if (!number) {
+        showAlertModal('Campo Requerido', `El número de ${type.toLowerCase()} no puede estar vacío.`);
+        return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+        showAlertModal('Valor Inválido', 'El monto debe ser un número positivo.');
+        return;
+    }
+
     const docData = {
         type: type,
         date: form.querySelector(`#${type.toLowerCase()}-date`).value,
-        number: form.querySelector(`#${type.toLowerCase()}-number`).value,
+        number: number,
         client: form.querySelector(`#${type.toLowerCase()}-client`).value,
-        amount: parseFloat(form.querySelector(`#${type.toLowerCase()}-amount`).value),
+        amount: amount,
         currency: form.querySelector(`#${type.toLowerCase()}-currency`).value,
         status: 'Adeudada',
     };
     withSpinner(() => {
         actions.addDocument(docData);
         form.reset();
+        document.getElementById(`${type.toLowerCase()}-date`).value = new Date().toISOString().slice(0, 10);
     })();
 }
 
@@ -352,13 +418,18 @@ function handleGenerateInvoice(e) {
         const description = itemEl.querySelector('.item-description').value;
         const quantity = parseFloat(itemEl.querySelector('.item-quantity').value);
         const price = parseFloat(itemEl.querySelector('.item-price').value);
-        if (description && !isNaN(quantity) && !isNaN(price)) {
+        if (description && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0) {
             items.push({ description, quantity, price });
         }
     });
 
     if (items.length === 0) {
-        showAlertModal('Factura Vacía', 'Debes añadir al menos un concepto a la factura.');
+        showAlertModal('Factura Vacía', 'Debes añadir al menos un concepto válido a la factura (descripción, cantidad positiva y precio).');
+        return;
+    }
+
+    if (!form.querySelector('#factura-cliente').value.trim()) {
+        showAlertModal('Campo Requerido', 'El nombre del cliente es obligatorio.');
         return;
     }
 
@@ -391,6 +462,7 @@ function handleGenerateInvoice(e) {
         actions.addDocument(newInvoice);
         
         form.reset();
+        document.getElementById('factura-fecha').value = new Date().toISOString().slice(0, 10);
         elements.facturaItemsContainer.innerHTML = '';
         document.getElementById('factura-add-item-btn').click();
 
@@ -536,8 +608,15 @@ function handleReportDownloadClick(e) {
 function handleAddInvestmentAsset(e) {
     e.preventDefault();
     const form = e.target;
+    const name = form.querySelector('#new-investment-asset-name').value.trim();
+
+    if (!name) {
+        showAlertModal('Campo Requerido', 'El nombre del activo no puede estar vacío.');
+        return;
+    }
+
     const assetData = {
-        name: form.querySelector('#new-investment-asset-name').value,
+        name: name,
         category: form.querySelector('#new-investment-asset-category').value,
     };
     withSpinner(() => {
@@ -562,16 +641,21 @@ function handleAddInvestment(e) {
     const { investmentAssets } = getState();
     const assetId = form.querySelector('#investment-asset').value;
     const asset = investmentAssets.find(a => a.id === assetId);
+    const amount = parseFloat(form.querySelector('#investment-amount').value);
 
     if (!asset) {
         showAlertModal('Error', 'Por favor, selecciona un activo de inversión válido. Puedes definirlos en Ajustes.');
+        return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+        showAlertModal('Valor Inválido', 'El monto invertido debe ser un número positivo.');
         return;
     }
 
     const investmentData = {
         date: form.querySelector('#investment-date').value,
         account: form.querySelector('#investment-account').value,
-        amount: parseFloat(form.querySelector('#investment-amount').value),
+        amount: amount,
         description: form.querySelector('#investment-description').value,
         assetId: asset.id,
         assetName: asset.name,
@@ -579,6 +663,7 @@ function handleAddInvestment(e) {
     withSpinner(() => {
         actions.addInvestment(investmentData);
         form.reset();
+        document.getElementById('investment-date').value = new Date().toISOString().slice(0, 10);
     })();
 }
 
@@ -668,8 +753,8 @@ export function bindEventListeners() {
         itemDiv.className = 'grid grid-cols-12 gap-2 items-center factura-item';
         itemDiv.innerHTML = `
             <div class="col-span-6"><input type="text" class="form-input item-description" required></div>
-            <div class="col-span-2"><input type="number" value="1" class="form-input item-quantity" required></div>
-            <div class="col-span-3"><input type="number" class="form-input item-price" required></div>
+            <div class="col-span-2"><input type="number" value="1" min="0.01" step="0.01" class="form-input item-quantity" required></div>
+            <div class="col-span-3"><input type="number" min="0" step="0.01" class="form-input item-price" required></div>
             <div class="col-span-1 flex justify-center"><button type="button" class="remove-item-btn p-2 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
         elements.facturaItemsContainer.appendChild(itemDiv);
         lucide.createIcons();
