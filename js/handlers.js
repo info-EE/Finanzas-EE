@@ -26,7 +26,7 @@ import {
     showRegisterView,
     clearAuthError
 } from './ui.js';
-import { getState, setState, resetState } from './store.js';
+import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
 
@@ -164,6 +164,9 @@ function handleAddAccount(e) {
     const form = e.target;
     const name = form.querySelector('#new-account-name').value.trim();
     const balance = parseFloat(form.querySelector('#new-account-balance').value);
+    const { logoCatalog } = getState();
+    const logoKey = elements.newAccountLogoSelect.value;
+    const logoHtml = logoCatalog[logoKey];
 
     if (!name) {
         showAlertModal('Campo Requerido', 'El nombre de la cuenta no puede estar vacío.');
@@ -184,7 +187,7 @@ function handleAddAccount(e) {
         name: name,
         currency: form.querySelector('#new-account-currency').value,
         balance: balance || 0,
-        logoHtml: form.querySelector('#new-account-logo').value,
+        logoHtml: logoHtml,
     };
     
     withSpinner(() => {
