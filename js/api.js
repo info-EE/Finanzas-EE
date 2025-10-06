@@ -79,3 +79,4 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
+
