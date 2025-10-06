@@ -666,6 +666,15 @@
                         </div>
                 </div>
                 <div class="card p-6 rounded-xl">
+                    <h3 class="font-semibold text-lg mb-4">Gestión de Tipos de ID Fiscal</h3>
+                     <form id="add-tax-id-type-form" class="flex gap-2 mb-3">
+                        <input type="text" id="new-tax-id-type" class="form-input" placeholder="Nuevo tipo de ID (Ej: VAT)" required>
+                        <button type="submit" class="p-3 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </form>
+                    <div id="tax-id-types-list" class="space-y-2 max-h-32 overflow-y-auto">
+                        </div>
+                </div>
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold text-lg mb-4">Actualizar Saldo de Cuenta</h3>
                     <p class="text-sm text-gray-400 mb-4">Esto crea una transacción de ajuste para conciliar el saldo real con el del sistema.</p>
                     <form id="update-balance-form" class="space-y-4">
@@ -1232,3 +1241,4 @@
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
+
