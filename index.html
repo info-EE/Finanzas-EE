@@ -15,13 +15,60 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
-    <!-- Los scripts de Firebase ya no se importan aquí, se manejan en api.js -->
-
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="flex min-h-screen">
+<body class="flex min-h-screen bg-black">
 
-    <aside id="sidebar" class="w-20 bg-black/50 p-4 flex flex-col fixed h-full transition-all duration-300 ease-in-out">
+    <!-- Auth Overlay -->
+    <div id="auth-container" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90">
+        <div class="card w-full max-w-sm p-8">
+            <!-- Login Form -->
+            <div id="login-view">
+                <h2 class="text-2xl font-bold text-center text-white mb-6">Iniciar Sesión</h2>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                        <input type="email" id="login-email" class="form-input" required autocomplete="email">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
+                        <input type="password" id="login-password" class="form-input" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                        Ingresar
+                    </button>
+                </form>
+                <p class="text-center text-sm text-gray-400 mt-4">
+                    ¿No tienes una cuenta? <a href="#" id="show-register-view" class="font-medium text-blue-400 hover:underline">Regístrate</a>
+                </p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-view" class="hidden">
+                <h2 class="text-2xl font-bold text-center text-white mb-6">Crear Cuenta</h2>
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label for="register-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                        <input type="email" id="register-email" class="form-input" required autocomplete="email">
+                    </div>
+                    <div>
+                        <label for="register-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
+                        <input type="password" id="register-password" class="form-input" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                        Registrarse
+                    </button>
+                </form>
+                <p class="text-center text-sm text-gray-400 mt-4">
+                    ¿Ya tienes una cuenta? <a href="#" id="show-login-view" class="font-medium text-blue-400 hover:underline">Inicia Sesión</a>
+                </p>
+            </div>
+             <div id="auth-error" class="mt-4 text-center text-sm text-red-400"></div>
+        </div>
+    </div>
+
+
+    <aside id="sidebar" class="w-20 bg-black/50 p-4 flex-col fixed h-full transition-all duration-300 ease-in-out hidden">
         <div id="sidebar-toggle" class="flex items-center justify-center gap-3 mb-10 cursor-pointer">
             <div class="flex items-center gap-3 overflow-hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package flex-shrink-0">
@@ -67,6 +114,11 @@
             </a>
         </nav>
 
+        <!-- Logout Button -->
+        <a href="#" id="logout-btn" class="nav-link flex items-center justify-center gap-3 p-3 rounded-r-lg mt-4 text-red-400 hover:bg-red-500/10 hover:border-red-500">
+            <i data-lucide="log-out"></i> <span class="nav-text hidden">Cerrar Sesión</span>
+        </a>
+
         <!-- Connection Status Indicator -->
         <div id="connection-status" class="mt-auto p-2 flex items-center justify-center gap-2 text-xs text-gray-400 opacity-0 transition-opacity duration-300">
             <span id="status-icon"></span>
@@ -74,7 +126,7 @@
         </div>
     </aside>
 
-    <main id="main-content" class="flex-1 ml-20 p-8 main-content">
+    <main id="main-content" class="flex-1 ml-20 p-8 main-content hidden">
         
         <div id="page-inicio" class="page-content">
             <div class="flex justify-between items-center mb-6">
@@ -1177,9 +1229,6 @@
     </template>
     <!-- =========== END TEMPLATES =========== -->
     
-    <!-- Se eliminó el script de inicialización de Firebase de aquí. -->
-    <!-- main.js ahora es un módulo e importará api.js, que maneja la inicialización. -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
-
