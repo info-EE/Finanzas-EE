@@ -89,38 +89,46 @@ const charts = {
 // --- Funciones de UI para Autenticación ---
 
 export function showAuthError(message) {
-    elements.authError.textContent = message;
+    if (elements.authError) elements.authError.textContent = message;
 }
 
 export function clearAuthError() {
-    elements.authError.textContent = '';
+    if (elements.authError) elements.authError.textContent = '';
 }
 
 export function showLoginView() {
-    elements.loginView.classList.remove('hidden');
-    elements.registerView.classList.add('hidden');
-    clearAuthError();
+    if (elements.loginView && elements.registerView) {
+        elements.loginView.classList.remove('hidden');
+        elements.registerView.classList.add('hidden');
+        clearAuthError();
+    }
 }
 
 export function showRegisterView() {
-    elements.loginView.classList.add('hidden');
-    elements.registerView.classList.remove('hidden');
-    clearAuthError();
+    if (elements.loginView && elements.registerView) {
+        elements.loginView.classList.add('hidden');
+        elements.registerView.classList.remove('hidden');
+        clearAuthError();
+    }
 }
 
 export function showApp() {
-    elements.authContainer.classList.add('hidden');
-    elements.sidebar.classList.remove('hidden');
-    elements.sidebar.classList.add('flex'); // Make sure it's flex
-    elements.mainContent.classList.remove('hidden');
+    if (elements.authContainer && elements.sidebar && elements.mainContent) {
+        elements.authContainer.classList.add('hidden');
+        elements.sidebar.classList.remove('hidden');
+        elements.sidebar.classList.add('flex');
+        elements.mainContent.classList.remove('hidden');
+    }
 }
 
 export function hideApp() {
-    elements.authContainer.classList.remove('hidden');
-    elements.sidebar.classList.add('hidden');
-    elements.sidebar.classList.remove('flex');
-    elements.mainContent.classList.add('hidden');
-    showLoginView(); // Default to login view on logout
+    if (elements.authContainer && elements.sidebar && elements.mainContent) {
+        elements.authContainer.classList.remove('hidden');
+        elements.sidebar.classList.add('hidden');
+        elements.sidebar.classList.remove('flex');
+        elements.mainContent.classList.add('hidden');
+        showLoginView();
+    }
 }
 
 
@@ -249,11 +257,15 @@ function createInvestmentRow(t, allAssets) {
 function renderTransactions() {
     const { transactions } = getState();
     const tbody = elements.transactionsTableBody;
+    if (!tbody) return;
+
     tbody.innerHTML = '';
     const fragment = document.createDocumentFragment();
     
     let filteredTransactions = transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
-    const searchTerm = document.getElementById('cashflow-search').value.toLowerCase();
+    const searchInput = document.getElementById('cashflow-search');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
     if (searchTerm) {
         filteredTransactions = filteredTransactions.filter(t => 
             t.description.toLowerCase().includes(searchTerm) ||
@@ -275,6 +287,7 @@ function renderTransactions() {
 function renderAccountsTab() {
     const { accounts } = getState();
     const accountsGrid = document.getElementById('accounts-grid');
+    if (!accountsGrid) return;
     accountsGrid.innerHTML = '';
     const fragment = document.createDocumentFragment();
     accounts.forEach(account => fragment.appendChild(createAccountCard(account)));
@@ -284,6 +297,8 @@ function renderAccountsTab() {
 function renderBalanceLegendAndChart() {
     const { accounts } = getState();
     const totalsContainer = document.getElementById('balance-totals');
+    if (!totalsContainer) return;
+
     const totalEUR = accounts.filter(a => a.currency === 'EUR').reduce((sum, a) => sum + a.balance, 0);
     const totalUSD = accounts.filter(a => a.currency === 'USD').reduce((sum, a) => sum + a.balance, 0);
     totalsContainer.innerHTML = `
@@ -297,6 +312,8 @@ function renderBalanceLegendAndChart() {
 function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, containerId) {
     const { accounts } = getState();
     const container = document.getElementById(containerId);
+    if (!container) return;
+
     const accountsForChart = accounts.filter(a => a.currency === currency && a.balance > 0);
     
     if (accountsForChart.length === 0) {
@@ -352,9 +369,11 @@ function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, c
 function updateInicioKPIs() {
     const { transactions, accounts } = getState();
     if(!transactions || !accounts) return;
-    const currency = document.getElementById('inicio-chart-currency').value;
-    const symbol = getCurrencySymbol(currency);
 
+    const currencySelect = document.getElementById('inicio-chart-currency');
+    if (!currencySelect) return;
+    const currency = currencySelect.value;
+    
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -378,14 +397,21 @@ function updateInicioKPIs() {
     const monthlyProfit = monthlyIncome - monthlyExpense;
     const totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
 
-    document.getElementById('kpi-monthly-income').textContent = formatCurrency(monthlyIncome, currency);
-    document.getElementById('kpi-monthly-expense').textContent = formatCurrency(monthlyExpense, currency);
-    document.getElementById('kpi-monthly-profit').textContent = formatCurrency(monthlyProfit, currency);
-    document.getElementById('kpi-total-balance').textContent = formatCurrency(totalBalance, currency);
+    const kpiIncomeEl = document.getElementById('kpi-monthly-income');
+    if (kpiIncomeEl) kpiIncomeEl.textContent = formatCurrency(monthlyIncome, currency);
+
+    const kpiExpenseEl = document.getElementById('kpi-monthly-expense');
+    if (kpiExpenseEl) kpiExpenseEl.textContent = formatCurrency(monthlyExpense, currency);
     
-    const profitEl = document.getElementById('kpi-monthly-profit');
-    profitEl.classList.remove('text-green-400', 'text-red-400');
-    profitEl.classList.add(monthlyProfit >= 0 ? 'text-green-400' : 'text-red-400');
+    const kpiProfitEl = document.getElementById('kpi-monthly-profit');
+    if (kpiProfitEl) {
+        kpiProfitEl.textContent = formatCurrency(monthlyProfit, currency);
+        kpiProfitEl.classList.remove('text-green-400', 'text-red-400');
+        kpiProfitEl.classList.add(monthlyProfit >= 0 ? 'text-green-400' : 'text-red-400');
+    }
+
+    const kpiTotalBalanceEl = document.getElementById('kpi-total-balance');
+    if (kpiTotalBalanceEl) kpiTotalBalanceEl.textContent = formatCurrency(totalBalance, currency);
 }
 
 function renderAnnualFlowChart() {
@@ -395,7 +421,10 @@ function renderAnnualFlowChart() {
 
     if (charts.annualFlowChart) charts.annualFlowChart.destroy();
     
-    const selectedCurrency = document.getElementById('inicio-chart-currency').value;
+    const currencySelect = document.getElementById('inicio-chart-currency');
+    if (!currencySelect) return;
+    const selectedCurrency = currencySelect.value;
+
     const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
     const currentYear = new Date().getFullYear();
     const incomeData = Array(12).fill(0);
@@ -438,7 +467,10 @@ function renderExpenseDistributionChart() {
     const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
     if (!ctx || !transactions) return;
 
-    const currency = document.getElementById('inicio-chart-currency').value;
+    const currencySelect = document.getElementById('inicio-chart-currency');
+    if (!currencySelect) return;
+    const currency = currencySelect.value;
+    
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -582,8 +614,11 @@ function renderPendingInvoices() {
 
 function renderDocuments(type, tableBody, searchInputId) {
     const { documents } = getState();
+    const searchInput = document.getElementById(searchInputId);
+    if (!tableBody || !searchInput) return;
+
     const filteredDocs = documents.filter(d => d.type === type);
-    const searchTerm = document.getElementById(searchInputId).value.toLowerCase();
+    const searchTerm = searchInput.value.toLowerCase();
     let displayDocs = filteredDocs;
     
     if (searchTerm) {
@@ -607,6 +642,7 @@ function renderDocuments(type, tableBody, searchInputId) {
 function renderClients() {
     const { clients } = getState();
     const tbody = elements.clientsTableBody;
+    if (!tbody) return;
     tbody.innerHTML = '';
     
     if (clients.length === 0) {
@@ -659,7 +695,7 @@ function renderClientsChart() {
             }]
         },
         options: {
-            indexAxis: 'y', // Esto hace que el gráfico sea horizontal
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             scales: {
@@ -684,12 +720,17 @@ function renderInvestments() {
     const { transactions, investmentAssets } = getState();
     const investmentsData = transactions.filter(t => t.category === 'Inversión');
     const tbody = elements.investmentsTableBody;
+    if (!tbody) return;
     tbody.innerHTML = '';
     
     const totalInvestedEUR = investmentsData.filter(t => t.currency === 'EUR').reduce((sum, t) => sum + t.amount, 0);
     const totalInvestedUSD = investmentsData.filter(t => t.currency === 'USD').reduce((sum, t) => sum + t.amount, 0);
-    document.getElementById('total-invested-eur').textContent = formatCurrency(totalInvestedEUR, 'EUR');
-    document.getElementById('total-invested-usd').textContent = formatCurrency(totalInvestedUSD, 'USD');
+    
+    const totalEurEl = document.getElementById('total-invested-eur');
+    if (totalEurEl) totalEurEl.textContent = formatCurrency(totalInvestedEUR, 'EUR');
+
+    const totalUsdEl = document.getElementById('total-invested-usd');
+    if (totalUsdEl) totalUsdEl.textContent = formatCurrency(totalInvestedUSD, 'USD');
 
     if (investmentsData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay movimientos de inversión.</td></tr>`;
@@ -704,6 +745,7 @@ function renderInvestments() {
 function renderInvestmentAssetsList() {
     const { investmentAssets } = getState();
     const listEl = elements.investmentAssetsList;
+    if (!listEl) return;
     listEl.innerHTML = '';
     if (investmentAssets.length === 0) {
         listEl.innerHTML = `<p class="text-sm text-gray-500 text-center">No hay activos definidos.</p>`;
@@ -728,17 +770,20 @@ function renderInvestmentAssetsList() {
 function renderSettings() {
     const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes, settings } = getState();
     
-    elements.settingsAccountsList.innerHTML = '';
-    accounts.forEach(acc => {
-        const div = document.createElement('div');
-        div.className = "flex items-center justify-between bg-gray-800/50 p-2 rounded";
-        div.innerHTML = `
-            <div class="flex items-center gap-2 text-sm">${acc.logoHtml || ''}<span>${escapeHTML(acc.name)}</span></div>
-            <button class="delete-account-btn p-1 text-red-400 hover:text-red-300" data-name="${escapeHTML(acc.name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
-        elements.settingsAccountsList.appendChild(div);
-    });
+    if (elements.settingsAccountsList) {
+        elements.settingsAccountsList.innerHTML = '';
+        accounts.forEach(acc => {
+            const div = document.createElement('div');
+            div.className = "flex items-center justify-between bg-gray-800/50 p-2 rounded";
+            div.innerHTML = `
+                <div class="flex items-center gap-2 text-sm">${acc.logoHtml || ''}<span>${escapeHTML(acc.name)}</span></div>
+                <button class="delete-account-btn p-1 text-red-400 hover:text-red-300" data-name="${escapeHTML(acc.name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+            elements.settingsAccountsList.appendChild(div);
+        });
+    }
 
     const renderCategoryList = (listEl, categories, essentialCategories) => {
+        if (!listEl) return;
         listEl.innerHTML = '';
         categories.forEach(cat => {
             const div = document.createElement('div');
@@ -758,16 +803,22 @@ function renderSettings() {
 
     renderInvestmentAssetsList();
 
-    const isActive = settings.aeatModuleActive;
-    elements.aeatToggleContainer.innerHTML = isActive
-        ? `<button class="aeat-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg"><i data-lucide="check-circle" class="w-4 h-4"></i> Activado</button>`
-        : `<button class="aeat-toggle-btn border border-blue-800 text-blue-400 font-bold py-2 px-3 rounded-lg">Activar</button>`;
+    if (elements.aeatToggleContainer) {
+        const isActive = settings.aeatModuleActive;
+        elements.aeatToggleContainer.innerHTML = isActive
+            ? `<button class="aeat-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg"><i data-lucide="check-circle" class="w-4 h-4"></i> Activado</button>`
+            : `<button class="aeat-toggle-btn border border-blue-800 text-blue-400 font-bold py-2 px-3 rounded-lg">Activar</button>`;
+    }
     
-    elements.fiscalParamsForm.querySelector('#corporate-tax-rate').value = settings.fiscalParameters.corporateTaxRate;
+    const taxRateInput = elements.fiscalParamsForm?.querySelector('#corporate-tax-rate');
+    if (taxRateInput) {
+        taxRateInput.value = settings.fiscalParameters.corporateTaxRate;
+    }
 }
 
 function renderReport() {
     const { activeReport } = getState();
+    if (!elements.reportDisplayArea) return;
     if (!activeReport || !activeReport.type || activeReport.data.length === 0) {
         elements.reportDisplayArea.innerHTML = `<div class="text-center text-gray-500 flex flex-col items-center justify-center h-full"><i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i><h3 class="font-semibold text-lg">No hay datos para el reporte</h3><p class="text-sm">Pruebe con otros filtros o añada datos.</p></div>`;
         lucide.createIcons();
@@ -861,6 +912,7 @@ function renderReport() {
 function renderIvaReport() {
     const { activeIvaReport } = getState();
     const displayArea = elements.ivaReportDisplay;
+    if (!displayArea) return;
 
     if (!activeIvaReport) {
         displayArea.innerHTML = `
@@ -955,11 +1007,11 @@ function renderInicioDashboard() {
 }
 
 function toggleIvaField() {
-    const type = elements.transactionForm.querySelector('#transaction-type').value;
+    const type = elements.transactionForm?.querySelector('#transaction-type').value;
     if (type === 'Egreso') {
-        elements.transactionIvaContainer.classList.remove('hidden');
+        elements.transactionIvaContainer?.classList.remove('hidden');
     } else {
-        elements.transactionIvaContainer.classList.add('hidden');
+        elements.transactionIvaContainer?.classList.add('hidden');
     }
 }
 
@@ -975,9 +1027,12 @@ export function switchPage(pageId, subpageId = null) {
     }
     if (pageId === 'facturacion' && subpageId) {
         document.querySelectorAll('.tab-button-inner').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`facturacion-tab-${subpageId}`).classList.add('active');
+        const tabButton = document.getElementById(`facturacion-tab-${subpageId}`);
+        if(tabButton) tabButton.classList.add('active');
+        
         ['crear', 'listado', 'config'].forEach(id => {
-            document.getElementById(`facturacion-content-${id}`).classList.toggle('hidden', id !== subpageId);
+            const content = document.getElementById(`facturacion-content-${id}`);
+            if (content) content.classList.toggle('hidden', id !== subpageId);
         });
     }
 
@@ -1031,10 +1086,13 @@ function populateInvestmentAssetSelect() {
 
 export function populateCategories() {
     const { incomeCategories, expenseCategories } = getState();
-    if (!incomeCategories || !expenseCategories) return;
+    if (!incomeCategories || !expenseCategories || !elements.transactionForm) return;
     const type = elements.transactionForm.querySelector('#transaction-type').value;
     const categories = type === 'Ingreso' ? incomeCategories : expenseCategories;
-    elements.transactionForm.querySelector('#transaction-category').innerHTML = categories.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join('');
+    const categorySelect = elements.transactionForm.querySelector('#transaction-category');
+    if (categorySelect) {
+        categorySelect.innerHTML = categories.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join('');
+    }
     toggleIvaField();
 }
 
@@ -1088,50 +1146,87 @@ export function populateClientSelectForInvoice() {
 
 export function updateCurrencySymbol() {
     const { accounts } = getState();
+    if (!elements.transactionForm) return;
     const accountName = elements.transactionForm.querySelector('#transaction-account').value;
     const account = accounts.find(acc => acc.name === accountName);
     if (account) {
-        document.getElementById('amount-currency-symbol').textContent = getCurrencySymbol(account.currency);
-        document.getElementById('iva-currency-symbol').textContent = getCurrencySymbol(account.currency);
+        const amountSymbol = document.getElementById('amount-currency-symbol');
+        if (amountSymbol) amountSymbol.textContent = getCurrencySymbol(account.currency);
+        const ivaSymbol = document.getElementById('iva-currency-symbol');
+        if (ivaSymbol) ivaSymbol.textContent = getCurrencySymbol(account.currency);
     }
 }
 
 export function updateTransferFormUI() {
     const { accounts } = getState();
-    const fromAccount = accounts.find(a => a.name === document.getElementById('transfer-from').value);
-    const toAccount = accounts.find(a => a.name === document.getElementById('transfer-to').value);
-    if (!fromAccount || !toAccount) return;
+    const fromSelect = document.getElementById('transfer-from');
+    const toSelect = document.getElementById('transfer-to');
+    if (!fromSelect || !toSelect) return;
 
-    document.getElementById('transfer-amount-currency-symbol').textContent = getCurrencySymbol(fromAccount.currency);
-    document.getElementById('transfer-fee-source-currency-symbol').textContent = getCurrencySymbol(fromAccount.currency);
-    document.getElementById('transfer-extra-currency-symbol').textContent = getCurrencySymbol(toAccount.currency);
+    const fromAccount = accounts.find(a => a.name === fromSelect.value);
+    const toAccount = accounts.find(a => a.name === toSelect.value);
+    if (!fromAccount || !toAccount) return;
     
-    if (fromAccount.currency !== toAccount.currency) {
-        document.getElementById('transfer-extra-label').textContent = `Monto a Recibir (${getCurrencySymbol(toAccount.currency)})`;
-        document.getElementById('transfer-extra-field').required = true;
-    } else {
-        document.getElementById('transfer-extra-label').textContent = "Comisión Destino (Opcional)";
-        document.getElementById('transfer-extra-field').required = false;
+    const amountSymbol = document.getElementById('transfer-amount-currency-symbol');
+    if(amountSymbol) amountSymbol.textContent = getCurrencySymbol(fromAccount.currency);
+
+    const feeSourceSymbol = document.getElementById('transfer-fee-source-currency-symbol');
+    if(feeSourceSymbol) feeSourceSymbol.textContent = getCurrencySymbol(fromAccount.currency);
+
+    const extraSymbol = document.getElementById('transfer-extra-currency-symbol');
+    if(extraSymbol) extraSymbol.textContent = getCurrencySymbol(toAccount.currency);
+    
+    const extraLabel = document.getElementById('transfer-extra-label');
+    const extraField = document.getElementById('transfer-extra-field');
+
+    if (extraLabel && extraField) {
+        if (fromAccount.currency !== toAccount.currency) {
+            extraLabel.textContent = `Monto a Recibir (${getCurrencySymbol(toAccount.currency)})`;
+            extraField.required = true;
+        } else {
+            extraLabel.textContent = "Comisión Destino (Opcional)";
+            extraField.required = false;
+        }
     }
 }
 
 export function resetTransactionForm() {
+    if (!elements.transactionForm) return;
     elements.transactionForm.reset();
-    elements.transactionForm.querySelector('#transaction-id').value = '';
-    elements.transactionForm.querySelector('#transaction-iva').value = '';
-    elements.transactionForm.querySelector('#form-title').textContent = 'Agregar Nuevo Movimiento';
-    elements.transactionForm.querySelector('#form-submit-button-text').textContent = 'Guardar';
-    elements.transactionForm.querySelector('#form-cancel-button').classList.add('hidden');
-    document.getElementById('transaction-date').value = new Date().toISOString().slice(0, 10);
+    
+    const idInput = elements.transactionForm.querySelector('#transaction-id');
+    if (idInput) idInput.value = '';
+    
+    const ivaInput = elements.transactionForm.querySelector('#transaction-iva');
+    if (ivaInput) ivaInput.value = '';
+
+    const formTitle = elements.transactionForm.querySelector('#form-title');
+    if(formTitle) formTitle.textContent = 'Agregar Nuevo Movimiento';
+
+    const submitText = elements.transactionForm.querySelector('#form-submit-button-text');
+    if(submitText) submitText.textContent = 'Guardar';
+    
+    const cancelBtn = elements.transactionForm.querySelector('#form-cancel-button');
+    if (cancelBtn) cancelBtn.classList.add('hidden');
+
+    const dateInput = document.getElementById('transaction-date');
+    if(dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+    
     populateCategories();
     updateCurrencySymbol();
 }
 
 export function showConfirmationModal(title, message, onConfirm) {
     const modal = document.getElementById('confirmation-modal');
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-message').textContent = message;
+    const titleEl = document.getElementById('modal-title');
+    const messageEl = document.getElementById('modal-message');
     const confirmBtn = document.getElementById('modal-confirm-btn');
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+
+    if (!modal || !titleEl || !messageEl || !confirmBtn || !cancelBtn) return;
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
     
     const confirmHandler = () => {
         onConfirm();
@@ -1140,16 +1235,22 @@ export function showConfirmationModal(title, message, onConfirm) {
     };
     
     confirmBtn.onclick = confirmHandler;
-    document.getElementById('modal-cancel-btn').onclick = () => modal.classList.add('hidden');
+    cancelBtn.onclick = () => modal.classList.add('hidden');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
 
 export function showAlertModal(title, message) {
     const modal = document.getElementById('alert-modal');
-    document.getElementById('alert-modal-title').textContent = title;
-    document.getElementById('alert-modal-message').textContent = message;
-    document.getElementById('alert-modal-ok-btn').onclick = () => modal.classList.add('hidden');
+    const titleEl = document.getElementById('alert-modal-title');
+    const messageEl = document.getElementById('alert-modal-message');
+    const okBtn = document.getElementById('alert-modal-ok-btn');
+
+    if (!modal || !titleEl || !messageEl || !okBtn) return;
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    okBtn.onclick = () => modal.classList.add('hidden');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
@@ -1157,7 +1258,7 @@ export function showAlertModal(title, message) {
 export function showInvoiceViewer(invoiceId) {
     const { documents } = getState();
     const invoice = documents.find(doc => doc.id === invoiceId);
-    if (!invoice) return;
+    if (!invoice || !elements.invoiceContentArea) return;
 
     const itemsHtml = invoice.items.map(item => `
         <tr class="border-b border-gray-200">
@@ -1250,7 +1351,7 @@ export function showInvoiceViewer(invoiceId) {
 }
 
 export function showReceiptViewer(invoice) {
-    if (!invoice || !invoice.paymentDetails) return;
+    if (!invoice || !invoice.paymentDetails || !elements.invoiceContentArea) return;
 
     elements.invoiceContentArea.innerHTML = `
     <div id="invoice-printable-area" style="padding: 40px;" class="bg-white text-gray-800 font-sans">
@@ -1320,9 +1421,13 @@ export function hideInvoiceViewer() {
 }
 
 export function showPaymentDetailsModal(invoiceId) {
-    elements.paymentDetailsForm.reset();
-    document.getElementById('payment-details-invoice-id').value = invoiceId;
-    document.getElementById('payment-date').value = new Date().toISOString().slice(0, 10);
+    if (elements.paymentDetailsForm) {
+        elements.paymentDetailsForm.reset();
+        const idInput = document.getElementById('payment-details-invoice-id');
+        if (idInput) idInput.value = invoiceId;
+        const dateInput = document.getElementById('payment-date');
+        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+    }
     elements.paymentDetailsModal.classList.remove('hidden');
     elements.paymentDetailsModal.classList.add('flex');
 }
@@ -1333,7 +1438,8 @@ export function hidePaymentDetailsModal() {
 }
 
 export function printInvoice() {
-    const printContent = document.getElementById('invoice-printable-area').innerHTML;
+    const printContent = document.getElementById('invoice-printable-area')?.innerHTML;
+    if (!printContent) return;
     const printWindow = window.open('', '', 'height=800,width=800');
     printWindow.document.write(`
         <html>
@@ -1369,6 +1475,7 @@ export function printInvoice() {
 export function downloadInvoiceAsPDF() {
     const { jsPDF } = window.jspdf;
     const invoiceElement = document.getElementById('invoice-printable-area');
+    if (!invoiceElement) return;
     
     const titleElement = elements.invoiceViewerModal.querySelector('h1');
     const isReceipt = titleElement && titleElement.textContent.toLowerCase() === 'recibo';
@@ -1432,6 +1539,7 @@ export function hideSpinner() {
 
 export function updateConnectionStatus(status, message) {
     const { connectionStatus, statusIcon, statusText } = elements;
+    if (!connectionStatus || !statusIcon || !statusText) return;
     connectionStatus.classList.remove('opacity-0');
 
     statusText.textContent = message;
@@ -1503,4 +1611,3 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
-
