@@ -58,6 +58,10 @@ export const elements = {
     addInvestmentForm: document.getElementById('add-investment-form'),
     addInvestmentAssetForm: document.getElementById('add-investment-asset-form'),
     investmentAssetsList: document.getElementById('investment-assets-list'),
+    // Indicador de estado
+    connectionStatus: document.getElementById('connection-status'),
+    statusIcon: document.getElementById('status-icon'),
+    statusText: document.getElementById('status-text'),
 };
 
 const charts = {
@@ -782,6 +786,49 @@ function renderIvaReport() {
 }
 
 // --- Funciones de Utilidad y Ayuda para la UI ---
+
+/**
+ * Actualiza el indicador de estado de la conexión en la UI.
+ * @param {'loading' | 'success' | 'error' | 'idle'} status El estado a mostrar.
+ * @param {string} message El mensaje de texto a mostrar.
+ */
+export function updateConnectionStatus(status, message) {
+    const { connectionStatus, statusIcon, statusText } = elements;
+    
+    connectionStatus.classList.remove('text-green-400', 'text-red-400', 'text-yellow-400');
+    let iconHtml = '';
+
+    switch (status) {
+        case 'loading':
+            iconHtml = `<div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>`;
+            connectionStatus.classList.add('text-yellow-400');
+            break;
+        case 'success':
+            iconHtml = `<i data-lucide="check-circle" class="w-4 h-4"></i>`;
+            connectionStatus.classList.add('text-green-400');
+            break;
+        case 'error':
+            iconHtml = `<i data-lucide="x-circle" class="w-4 h-4"></i>`;
+            connectionStatus.classList.add('text-red-400');
+            break;
+        case 'idle':
+            connectionStatus.classList.add('opacity-0');
+            return; // Ocultar y salir
+    }
+
+    statusIcon.innerHTML = iconHtml;
+    statusText.textContent = message;
+    lucide.createIcons();
+    connectionStatus.classList.remove('opacity-0');
+
+    // Ocultar automáticamente después de un tiempo para 'success' y 'error'
+    if (status === 'success' || status === 'error') {
+        setTimeout(() => {
+            connectionStatus.classList.add('opacity-0');
+        }, 3000);
+    }
+}
+
 
 function renderInicioDashboard() {
     updateInicioKPIs();
