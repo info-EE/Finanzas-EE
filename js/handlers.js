@@ -470,8 +470,13 @@ function handleGenerateInvoice(e) {
     const items = [];
     form.querySelectorAll('.factura-item').forEach(itemEl => {
         const description = itemEl.querySelector('.item-description').value;
-        const quantity = parseFloat(itemEl.querySelector('.item-quantity').value);
-        const price = parseFloat(itemEl.querySelector('.item-price').value);
+        // Robust parsing: replace comma with dot before parseFloat
+        const quantityRaw = itemEl.querySelector('.item-quantity').value;
+        const priceRaw = itemEl.querySelector('.item-price').value;
+        
+        const quantity = parseFloat(quantityRaw.replace(',', '.'));
+        const price = parseFloat(priceRaw.replace(',', '.'));
+
         if (description && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0) {
             items.push({ description, quantity, price });
         }
@@ -773,7 +778,10 @@ export function bindEventListeners() {
         populateCategories();
     });
 
-    document.getElementById('clients-chart-currency')?.addEventListener('change', renderAll);
+    const clientsChartCurrencySelector = document.getElementById('clients-chart-currency');
+    if (clientsChartCurrencySelector) {
+        clientsChartCurrencySelector.addEventListener('change', renderAll);
+    }
 
     elements.transactionForm.addEventListener('submit', handleTransactionFormSubmit);
     elements.transactionsTableBody.addEventListener('click', handleTransactionsTableClick);
@@ -820,8 +828,8 @@ export function bindEventListeners() {
         itemDiv.className = 'grid grid-cols-12 gap-2 items-center factura-item';
         itemDiv.innerHTML = `
             <div class="col-span-6"><input type="text" class="form-input item-description" required></div>
-            <div class="col-span-2"><input type="number" value="1" step="any" class="form-input item-quantity" required></div>
-            <div class="col-span-3"><input type="number" min="0" step="any" class="form-input item-price" required></div>
+            <div class="col-span-2"><input type="text" inputmode="decimal" value="1" class="form-input item-quantity" required></div>
+            <div class="col-span-3"><input type="text" inputmode="decimal" placeholder="0.00" class="form-input item-price" required></div>
             <div class="col-span-1 flex justify-center"><button type="button" class="remove-item-btn p-2 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
         elements.facturaItemsContainer.appendChild(itemDiv);
         lucide.createIcons();
@@ -864,6 +872,4 @@ export function bindEventListeners() {
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
 }
-
-
 
