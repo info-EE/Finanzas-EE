@@ -820,7 +820,7 @@ export function bindEventListeners() {
         itemDiv.className = 'grid grid-cols-12 gap-2 items-center factura-item';
         itemDiv.innerHTML = `
             <div class="col-span-6"><input type="text" class="form-input item-description" required></div>
-            <div class="col-span-2"><input type="number" value="1" min="0.01" step="0.01" class="form-input item-quantity" required></div>
+            <div class="col-span-2"><input type="number" value="1" min="0.01" step="0.001" class="form-input item-quantity" required></div>
             <div class="col-span-3"><input type="number" min="0" step="0.01" class="form-input item-price" required></div>
             <div class="col-span-1 flex justify-center"><button type="button" class="remove-item-btn p-2 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
         elements.facturaItemsContainer.appendChild(itemDiv);
