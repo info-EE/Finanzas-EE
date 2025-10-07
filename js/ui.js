@@ -639,9 +639,19 @@ function renderDocuments(type, tableBody, searchInputId) {
     }
 }
 
-// ... existing code ... -->
 function renderClients() {
-// ... existing code ... -->
+    const { clients } = getState();
+    const tbody = elements.clientsTableBody;
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    if (clients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay clientes registrados.</td></tr>`;
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    clients.forEach(client => fragment.appendChild(createClientRow(client)));
     tbody.appendChild(fragment);
 }
 
@@ -704,85 +714,6 @@ function renderClientsChart() {
                     title: {
                         display: true,
                         text: `Monto en ${selectedCurrency}`
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        }
-    });
-}
-
-function renderInvestments() {
-// ... existing code ... -->
-
-    const { clients } = getState();
-    const tbody = elements.clientsTableBody;
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    
-    if (clients.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay clientes registrados.</td></tr>`;
-        return;
-    }
-
-    const fragment = document.createDocumentFragment();
-    clients.forEach(client => fragment.appendChild(createClientRow(client)));
-    tbody.appendChild(fragment);
-}
-
-function renderClientsChart() {
-    const { documents } = getState();
-    const ctx = document.getElementById('clientsChart')?.getContext('2d');
-    if (!ctx || !documents) return;
-
-    if (charts.clientsChart) charts.clientsChart.destroy();
-
-    const invoices = documents.filter(doc => doc.type === 'Factura' && doc.currency === 'EUR');
-    
-    const salesByClient = invoices.reduce((acc, invoice) => {
-        const clientName = invoice.client;
-        acc[clientName] = (acc[clientName] || 0) + invoice.amount;
-        return acc;
-    }, {});
-
-    const sortedClients = Object.entries(salesByClient)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10); // Mostramos los 10 mejores clientes
-
-    const labels = sortedClients.map(([name]) => name);
-    const data = sortedClients.map(([, amount]) => amount);
-
-    if (labels.length === 0) {
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        return;
-    }
-
-    charts.clientsChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Total Facturado',
-                data: data,
-                backgroundColor: CHART_COLORS,
-                borderColor: '#1e3a8a',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Monto en EUR'
                     }
                 }
             },
@@ -1690,3 +1621,4 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
+

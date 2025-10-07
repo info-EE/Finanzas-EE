@@ -767,7 +767,6 @@ export function bindEventListeners() {
         document.getElementById('transaction-type').value = 'Ingreso';
         populateCategories();
     });
-    // ... existing code ... -->
     document.getElementById('quick-add-expense').addEventListener('click', () => {
         switchPage('cashflow');
         document.getElementById('transaction-type').value = 'Egreso';
@@ -775,17 +774,6 @@ export function bindEventListeners() {
     });
 
     document.getElementById('clients-chart-currency')?.addEventListener('change', renderAll);
-
-
-    elements.transactionForm.addEventListener('submit', handleTransactionFormSubmit);
-    elements.transactionsTableBody.addEventListener('click', handleTransactionsTableClick);
-// ... existing code ... -->
-
-        switchPage('cashflow');
-        document.getElementById('transaction-type').value = 'Egreso';
-        populateCategories();
-    });
-
 
     elements.transactionForm.addEventListener('submit', handleTransactionFormSubmit);
     elements.transactionsTableBody.addEventListener('click', handleTransactionsTableClick);
