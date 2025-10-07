@@ -77,19 +77,30 @@ export function resetState() {
 
 export async function initState() {
     const defaultState = getDefaultState();
-    const loadedState = await loadData();
+    try {
+        const loadedStateResult = await loadData();
 
-    if (!loadedState) {
+        if (loadedStateResult.exists) {
+            // Si existen datos en Firebase, los fusionamos con el estado por defecto
+            const remoteData = loadedStateResult.data || {};
+            state = { ...defaultState, ...remoteData };
+            // Nos aseguramos de que las categorías esenciales siempre estén presentes
+            state.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(remoteData.incomeCategories || [])])];
+            state.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(remoteData.expenseCategories || [])])];
+            state.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(remoteData.invoiceOperationTypes || [])])];
+            state.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(remoteData.taxIdTypes || [])])];
+        } else {
+            // Si no existen datos, es un usuario nuevo. Creamos y guardamos el estado inicial.
+            console.log("No se encontró estado remoto, inicializando con estado por defecto.");
+            state = defaultState;
+            await saveData(state);
+        }
+    } catch (error) {
+        // Si ocurre un error al cargar, NO guardamos nada para evitar sobrescribir.
+        // Usamos el estado por defecto localmente para que la app no se rompa.
+        console.error("Falló la inicialización del estado por un error de carga:", error);
         state = defaultState;
-        await saveData(state);
-    } else {
-        state = { ...defaultState, ...loadedState };
-        state.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(loadedState?.incomeCategories || [])])];
-        state.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(loadedState?.expenseCategories || [])])];
-        state.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(loadedState?.invoiceOperationTypes || [])])];
-        state.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(loadedState?.taxIdTypes || [])])];
     }
     
     notify();
 }
-

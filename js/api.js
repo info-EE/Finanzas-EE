@@ -109,7 +109,7 @@ export async function logoutUser() {
 export async function loadData() {
     if (!currentUserId || !dataDocRef) {
         updateConnectionStatus('error', 'No autenticado');
-        return null;
+        throw new Error("User not authenticated for data loading.");
     }
     updateConnectionStatus('loading', 'Cargando datos...');
     try {
@@ -117,16 +117,19 @@ export async function loadData() {
         if (docSnap.exists()) {
             console.log("Datos cargados desde Firebase.");
             updateConnectionStatus('success', 'Datos cargados');
-            return docSnap.data();
+            // Devolvemos un objeto indicando que los datos existen
+            return { data: docSnap.data(), exists: true };
         } else {
             console.log("No se encontró ningún documento, se usará el estado por defecto.");
-            updateConnectionStatus('success', 'Listo');
-            return null;
+            updateConnectionStatus('success', 'Listo para inicializar');
+            // Devolvemos un objeto indicando que no existen datos remotos
+            return { data: null, exists: false };
         }
     } catch (error) {
         console.error("Error al cargar datos desde Firebase:", error);
         updateConnectionStatus('error', 'Error de carga');
-        return null;
+        // Propagamos el error para que sea manejado por initState
+        throw error;
     }
 }
 
@@ -137,6 +140,7 @@ export async function saveData(state) {
     }
     updateConnectionStatus('loading', 'Guardando...');
     try {
+        // Excluimos los datos volátiles del guardado para no almacenarlos en la BD
         const stateToSave = { ...state, activeReport: { type: null, data: [] }, activeIvaReport: null };
         await setDoc(dataDocRef, stateToSave, { merge: true });
         console.log("Datos guardados en Firebase.");
@@ -164,4 +168,3 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
-
