@@ -639,7 +639,86 @@ function renderDocuments(type, tableBody, searchInputId) {
     }
 }
 
+// ... existing code ... -->
 function renderClients() {
+// ... existing code ... -->
+    tbody.appendChild(fragment);
+}
+
+function renderClientsChart() {
+    const { documents } = getState();
+    const ctx = document.getElementById('clientsChart')?.getContext('2d');
+    if (!ctx || !documents) return;
+
+    if (charts.clientsChart) charts.clientsChart.destroy();
+
+    const currencySelect = document.getElementById('clients-chart-currency');
+    if (!currencySelect) return;
+    const selectedCurrency = currencySelect.value;
+
+    const invoices = documents.filter(doc => doc.type === 'Factura' && doc.currency === selectedCurrency);
+
+    const salesByClient = invoices.reduce((acc, invoice) => {
+        const clientName = invoice.client;
+        acc[clientName] = (acc[clientName] || 0) + invoice.amount;
+        return acc;
+    }, {});
+
+    const sortedClients = Object.entries(salesByClient)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10); // Mostramos los 10 mejores clientes
+
+    const labels = sortedClients.map(([name]) => name);
+    const data = sortedClients.map(([, amount]) => amount);
+
+    if (labels.length === 0) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#6b7280'; // gray-500
+        ctx.font = "16px 'Inter', sans-serif";
+        ctx.fillText(`No hay datos de facturación en ${selectedCurrency}.`, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        ctx.restore();
+        return;
+    }
+
+    charts.clientsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Facturado',
+                data: data,
+                backgroundColor: CHART_COLORS,
+                borderColor: '#1e3a8a',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: `Monto en ${selectedCurrency}`
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function renderInvestments() {
+// ... existing code ... -->
+
     const { clients } = getState();
     const tbody = elements.clientsTableBody;
     if (!tbody) return;
