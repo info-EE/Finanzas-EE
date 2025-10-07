@@ -468,22 +468,31 @@ function handleGenerateInvoice(e) {
     const form = e.target;
     
     const items = [];
+    let parsingError = false;
     form.querySelectorAll('.factura-item').forEach(itemEl => {
+        if (parsingError) return;
+
         const description = itemEl.querySelector('.item-description').value;
-        // Robust parsing: replace comma with dot before parseFloat
         const quantityRaw = itemEl.querySelector('.item-quantity').value;
         const priceRaw = itemEl.querySelector('.item-price').value;
         
+        // Robust parsing: replace comma with dot before parseFloat
         const quantity = parseFloat(quantityRaw.replace(',', '.'));
         const price = parseFloat(priceRaw.replace(',', '.'));
 
         if (description && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0) {
             items.push({ description, quantity, price });
+        } else if (description || quantityRaw || priceRaw) { 
+            // Only show error if the row is not completely empty
+            showAlertModal('Valor Inválido', `Por favor, revise la línea con descripción "${description}". La cantidad y el precio deben ser números válidos.`);
+            parsingError = true;
         }
     });
 
+    if (parsingError) return;
+
     if (items.length === 0) {
-        showAlertModal('Factura Vacía', 'Debes añadir al menos un concepto válido a la factura (descripción, cantidad positiva y precio).');
+        showAlertModal('Factura Vacía', 'Debes añadir al menos un concepto válido a la factura.');
         return;
     }
 
