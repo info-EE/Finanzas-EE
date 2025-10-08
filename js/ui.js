@@ -12,6 +12,7 @@ export const elements = {
     sidebarOverlay: document.getElementById('sidebar-overlay'),
     sidebarOpenBtn: document.getElementById('sidebar-open-btn'),
     sidebarCloseBtn: document.getElementById('sidebar-close-btn'),
+    sidebarToggleDesktopBtn: document.getElementById('sidebar-toggle-desktop'),
 
 
     // Formularios de autenticación
@@ -1635,3 +1636,4 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
+

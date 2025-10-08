@@ -764,6 +764,15 @@ export function bindEventListeners() {
     elements.sidebarCloseBtn.addEventListener('click', closeSidebar);
     elements.sidebarOverlay.addEventListener('click', closeSidebar);
 
+    // Desktop navigation
+    elements.sidebarToggleDesktopBtn.addEventListener('click', () => {
+        elements.sidebar.classList.toggle('w-64');
+        elements.sidebar.classList.toggle('w-20');
+        elements.mainContent.classList.toggle('md:ml-64');
+        elements.mainContent.classList.toggle('md:ml-20');
+        document.querySelectorAll('.nav-text').forEach(text => text.classList.toggle('hidden'));
+    });
+
 
     elements.navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -880,3 +889,4 @@ export function bindEventListeners() {
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
 }
+
