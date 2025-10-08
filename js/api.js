@@ -8,7 +8,10 @@ import {
     doc, 
     getDoc, 
     setDoc, 
-    onSnapshot
+    onSnapshot,
+    collection,
+    getDocs,
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 import { updateConnectionStatus, showAuthError } from './ui.js';
@@ -67,7 +70,6 @@ function translateAuthError(errorCode) {
 export async function getUserProfile(uid) {
     if (!uid) return null;
     try {
-        // Corregido: Apunta a la colección 'usuarios'
         const userDocRef = doc(db, 'usuarios', uid);
         const docSnap = await getDoc(userDocRef);
         return docSnap.exists() ? docSnap.data() : null;
@@ -79,11 +81,35 @@ export async function getUserProfile(uid) {
 
 export async function createUserProfile(uid, email, status) {
     try {
-        // Corregido: Apunta a la colección 'usuarios'
         const userDocRef = doc(db, 'usuarios', uid);
         await setDoc(userDocRef, { email, status }, { merge: true });
     } catch (error) {
         console.error("Error al crear el perfil del usuario:", error);
+    }
+}
+
+export async function getAllUsers() {
+    try {
+        const usersCollection = collection(db, 'usuarios');
+        const userSnapshot = await getDocs(usersCollection);
+        const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return userList;
+    } catch (error) {
+        console.error("Error obteniendo todos los usuarios:", error);
+        return [];
+    }
+}
+
+export async function updateUserStatus(uid, newStatus) {
+    try {
+        const userDocRef = doc(db, 'usuarios', uid);
+        await updateDoc(userDocRef, {
+            status: newStatus
+        });
+        return true;
+    } catch (error) {
+        console.error("Error actualizando el estado del usuario:", error);
+        return false;
     }
 }
 
@@ -92,7 +118,6 @@ export async function registerUser(email, password) {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        // Corregido: Crea el perfil en la colección 'usuarios'
         await createUserProfile(user.uid, user.email, 'pendiente');
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
         await signOut(auth);

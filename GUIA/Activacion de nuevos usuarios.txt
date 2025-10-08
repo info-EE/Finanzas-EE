@@ -1,0 +1,51 @@
+Cómo Aprobar un Nuevo Usuario y Asignarle Datos
+Para dar acceso a un nuevo usuario que se ha registrado, sigue estos pasos directamente en la base de datos de Firebase.
+
+Parte 1: Aprobar el Acceso del Usuario
+Accede a tu Consola de Firebase.
+Ve a https://console.firebase.google.com/ y selecciona tu proyecto europa-envios-gestor.
+
+Ve a la Base de Datos (Firestore).
+En el menú de la izquierda, dentro de la sección "Compilación" (o "Build"), haz clic en Firestore Database.
+
+Localiza la Colección usuarios.
+En la pantalla principal de Firestore, verás tus colecciones. Haz clic en la que se llama usuarios.
+
+Encuentra al Usuario Pendiente.
+Verás una lista de documentos. Cada documento es un usuario, identificado por un ID único. Para saber a quién pertenece cada uno, haz clic en ellos y mira el campo email. Busca el documento que tenga el status en "pendiente".
+
+Cambia el Estado a "activo".
+Una vez dentro del documento del usuario, edita el campo status:
+
+Haz clic en el valor "pendiente".
+
+Bórralo y escribe activo (todo en minúsculas).
+
+Haz clic en el botón "Actualizar" (o "Update").
+
+¡Listo! Con esto, el usuario ya tiene permiso para iniciar sesión. Sin embargo, si entra ahora, verá la aplicación vacía. El siguiente paso es darle acceso a los datos.
+
+Parte 2: Asignar los Datos Financieros
+Para que el nuevo usuario vea las cuentas y movimientos, debes copiarle la base de datos principal.
+
+Copia los Datos del Administrador.
+
+En la misma colección usuarios, busca y entra a tu propio documento de usuario (el que corresponde a tu email de administrador).
+
+Dentro de tu documento, verás una sub-colección llamada estado. Haz clic en ella.
+
+Dentro de estado, verás un documento llamado mainState. Haz clic en él.
+
+Ahora verás todos los datos de tu aplicación (accounts, transactions, clients, etc.). Necesitamos copiar toda esta información. La forma más fácil es hacer clic en los tres puntos verticales (⋮) en la esquina superior derecha y seleccionar "Copiar todo el contenido" o seleccionar manualmente todos los campos.
+
+Pega los Datos en el Nuevo Usuario.
+
+Vuelve a la lista de usuarios y entra de nuevo al documento del nuevo usuario (el que acabas de activar).
+
+Si no tiene la sub-colección estado, créala haciendo clic en "Iniciar colección". Nómbrala estado.
+
+Dentro de estado, crea un nuevo documento. Dale el ID mainState.
+
+Ahora, dentro de este nuevo documento mainState, pega todos los campos que copiaste del perfil del administrador. Agrega campo por campo (accounts, transactions, etc.) y pega el contenido correspondiente.
+
+Una vez que completes estos pasos, el nuevo usuario podrá iniciar sesión y verá exactamente la misma información que tú, listo para empezar a trabajar.
