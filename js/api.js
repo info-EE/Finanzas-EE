@@ -8,8 +8,7 @@ import {
     doc, 
     getDoc, 
     setDoc, 
-    onSnapshot,
-    collection
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 import { updateConnectionStatus, showAuthError } from './ui.js';
@@ -37,7 +36,7 @@ export function getAuthInstance() {
 export function setCurrentUser(uid) {
     currentUserId = uid;
     if (uid) {
-        // La sintaxis de v9 para obtener una referencia a un documento
+        // La ruta principal para los datos de la aplicación del usuario.
         dataDocRef = doc(db, 'usuarios', uid, 'estado', 'mainState');
     } else {
         dataDocRef = null;
@@ -68,7 +67,8 @@ function translateAuthError(errorCode) {
 export async function getUserProfile(uid) {
     if (!uid) return null;
     try {
-        const userDocRef = doc(db, 'users', uid);
+        // Corregido: Apunta a la colección 'usuarios'
+        const userDocRef = doc(db, 'usuarios', uid);
         const docSnap = await getDoc(userDocRef);
         return docSnap.exists() ? docSnap.data() : null;
     } catch (error) {
@@ -79,17 +79,20 @@ export async function getUserProfile(uid) {
 
 export async function createUserProfile(uid, email, status) {
     try {
-        const userDocRef = doc(db, 'users', uid);
-        await setDoc(userDocRef, { email, status });
+        // Corregido: Apunta a la colección 'usuarios'
+        const userDocRef = doc(db, 'usuarios', uid);
+        await setDoc(userDocRef, { email, status }, { merge: true });
     } catch (error) {
         console.error("Error al crear el perfil del usuario:", error);
     }
 }
 
+
 export async function registerUser(email, password) {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        // Corregido: Crea el perfil en la colección 'usuarios'
         await createUserProfile(user.uid, user.email, 'pendiente');
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
         await signOut(auth);

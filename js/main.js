@@ -36,15 +36,14 @@ function main() {
     } catch (error) {
         console.error("Error CRÍTICO al inicializar Firebase:", error);
         updateConnectionStatus('error', 'Error de Conexión');
-        // Si Firebase falla, muestra un mensaje de error y detiene la app
         document.body.innerHTML = `<div style="color: white; text-align: center; padding: 50px; font-family: sans-serif;">
             <h1 style="font-size: 24px; margin-bottom: 20px;">Error Crítico de Conexión</h1>
             <p>No se pudo conectar con los servicios de la base de datos. Por favor, intente refrescar la página.</p>
         </div>`;
-        return; // Detiene la ejecución si Firebase no se inicializa
+        return;
     }
 
-    // 3. Configuración de la App (igual que antes)
+    // 3. Configuración de la App
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#e0e0e0';
     
@@ -56,11 +55,12 @@ function main() {
         if (user) {
             let userProfile = await api.getUserProfile(user.uid);
 
-            if (!userProfile) {
-                // Si el perfil no existe, es un usuario antiguo. Lo creamos como activo.
-                console.log(`Creando perfil para usuario existente: ${user.uid}`);
+            if (!userProfile || !userProfile.status) {
+                // Si el perfil no existe o no tiene un estado definido (caso de usuarios antiguos),
+                // se lo creamos/actualizamos como 'activo'.
+                console.log(`Creando/actualizando perfil para usuario existente: ${user.uid}`);
                 await api.createUserProfile(user.uid, user.email, 'activo');
-                userProfile = { status: 'activo' }; // Asumimos que ahora es activo.
+                userProfile = { status: 'activo' }; // Asumimos que ahora es activo para continuar.
             }
 
             if (userProfile.status === 'activo') {
@@ -73,7 +73,7 @@ function main() {
                 });
                 switchPage('inicio');
             } else {
-                // El usuario no está aprobado.
+                // El usuario está 'pendiente' u otro estado no válido.
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
                 await api.logoutUser();
             }
@@ -100,3 +100,4 @@ function main() {
 
 // Envuelve la ejecución en un listener que espera a que el DOM esté completamente cargado.
 document.addEventListener('DOMContentLoaded', main);
+
