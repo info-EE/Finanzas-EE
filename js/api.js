@@ -70,15 +70,19 @@ export async function getUserProfile(uid) {
     try {
         const userDocRef = doc(db, 'users', uid);
         const docSnap = await getDoc(userDocRef);
-        if (docSnap.exists()) {
-            return docSnap.data();
-        } else {
-            console.warn(`No se encontró perfil para el usuario ${uid}`);
-            return null;
-        }
+        return docSnap.exists() ? docSnap.data() : null;
     } catch (error) {
         console.error("Error al obtener el perfil del usuario:", error);
         return null;
+    }
+}
+
+export async function createUserProfile(uid, email, status) {
+    try {
+        const userDocRef = doc(db, 'users', uid);
+        await setDoc(userDocRef, { email, status });
+    } catch (error) {
+        console.error("Error al crear el perfil del usuario:", error);
     }
 }
 
@@ -86,17 +90,9 @@ export async function registerUser(email, password) {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
-        const userDocRef = doc(db, 'users', user.uid);
-        await setDoc(userDocRef, {
-            email: user.email,
-            status: 'pendiente'
-        });
-
+        await createUserProfile(user.uid, user.email, 'pendiente');
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
-        
         await signOut(auth);
-
     } catch (error) {
         console.error("Error en el registro:", error.code);
         showAuthError(translateAuthError(error.code));
@@ -134,18 +130,15 @@ export async function loadData() {
         if (docSnap.exists()) {
             console.log("Datos cargados desde Firebase.");
             updateConnectionStatus('success', 'Datos cargados');
-            // Devolvemos un objeto indicando que los datos existen
             return { data: docSnap.data(), exists: true };
         } else {
             console.log("No se encontró ningún documento, se usará el estado por defecto.");
             updateConnectionStatus('success', 'Listo para inicializar');
-            // Devolvemos un objeto indicando que no existen datos remotos
             return { data: null, exists: false };
         }
     } catch (error) {
         console.error("Error al cargar datos desde Firebase:", error);
         updateConnectionStatus('error', 'Error de carga');
-        // Propagamos el error para que sea manejado por initState
         throw error;
     }
 }
@@ -157,7 +150,6 @@ export async function saveData(state) {
     }
     updateConnectionStatus('loading', 'Guardando...');
     try {
-        // Excluimos los datos volátiles del guardado para no almacenarlos en la BD
         const stateToSave = { ...state, activeReport: { type: null, data: [] }, activeIvaReport: null };
         await setDoc(dataDocRef, stateToSave, { merge: true });
         console.log("Datos guardados en Firebase.");
@@ -185,3 +177,4 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
+

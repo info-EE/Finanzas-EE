@@ -54,10 +54,16 @@ function main() {
     // 4. Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
         if (user) {
-            // El usuario ha iniciado sesión, pero ¿está aprobado?
-            const userProfile = await api.getUserProfile(user.uid);
+            let userProfile = await api.getUserProfile(user.uid);
 
-            if (userProfile && userProfile.status === 'activo') {
+            if (!userProfile) {
+                // Si el perfil no existe, es un usuario antiguo. Lo creamos como activo.
+                console.log(`Creando perfil para usuario existente: ${user.uid}`);
+                await api.createUserProfile(user.uid, user.email, 'activo');
+                userProfile = { status: 'activo' }; // Asumimos que ahora es activo.
+            }
+
+            if (userProfile.status === 'activo') {
                 // El usuario está aprobado, carga la aplicación.
                 api.setCurrentUser(user.uid);
                 showApp();
@@ -67,9 +73,9 @@ function main() {
                 });
                 switchPage('inicio');
             } else {
-                // El usuario no está aprobado o su perfil no existe.
+                // El usuario no está aprobado.
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
-                await api.logoutUser(); // Desconéctalo para que no quede en un estado intermedio.
+                await api.logoutUser();
             }
         } else {
             // El usuario no está conectado.
