@@ -80,6 +80,5 @@ function main() {
     });
 }
 
-// Llama a la función principal para iniciar la aplicación
-main();
-
+// Envuelve la ejecución en un listener que espera a que el DOM esté completamente cargado.
+document.addEventListener('DOMContentLoaded', main);
