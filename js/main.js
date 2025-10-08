@@ -8,6 +8,7 @@ import { subscribe, initState, setState } from './store.js';
 import { bindEventListeners } from './handlers.js';
 import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
+import * as actions from './actions.js';
 
 // --- Configuración de Firebase ---
 const firebaseConfig = {
@@ -55,30 +56,31 @@ function main() {
         if (user) {
             let userProfile = await api.getUserProfile(user.uid);
 
-            if (!userProfile || !userProfile.status) {
-                // Si el perfil no existe o no tiene un estado definido (caso de usuarios antiguos),
-                // se lo creamos/actualizamos como 'activo'.
-                console.log(`Creando/actualizando perfil para usuario existente: ${user.uid}`);
+            if (!userProfile) {
+                // Si el perfil no existe, es un usuario antiguo (como el admin). Se lo creamos.
                 await api.createUserProfile(user.uid, user.email, 'activo');
-                userProfile = { status: 'activo' }; // Asumimos que ahora es activo para continuar.
+                userProfile = await api.getUserProfile(user.uid); // Volvemos a leerlo
             }
 
-            if (userProfile.status === 'activo') {
-                // El usuario está aprobado, carga la aplicación.
+            if (userProfile && userProfile.status === 'activo') {
                 api.setCurrentUser(user.uid);
                 showApp();
                 await initState();
+
+                // Si es administrador, carga la lista de todos los usuarios
+                if (getState().settings.adminUids.includes(user.uid)) {
+                    await actions.loadAndSetAllUsers();
+                }
+
                 api.listenForDataChanges((newData) => {
                     setState(newData);
                 });
                 switchPage('inicio');
             } else {
-                // El usuario está 'pendiente' u otro estado no válido.
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
                 await api.logoutUser();
             }
         } else {
-            // El usuario no está conectado.
             api.setCurrentUser(null);
             hideApp();
         }
@@ -98,6 +100,5 @@ function main() {
     });
 }
 
-// Envuelve la ejecución en un listener que espera a que el DOM esté completamente cargado.
 document.addEventListener('DOMContentLoaded', main);
 

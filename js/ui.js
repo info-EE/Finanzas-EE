@@ -1,6 +1,8 @@
 import { getState } from './store.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
 import { CHART_COLORS, ESSENTIAL_TAX_ID_TYPES } from './config.js';
+import { getAuthInstance } from './api.js';
+
 
 // --- Almacenamiento de Referencias a Elementos del DOM y Gráficos ---
 
@@ -81,6 +83,8 @@ export const elements = {
     statusIcon: document.getElementById('status-icon'),
     statusText: document.getElementById('status-text'),
     newAccountLogoSelect: document.getElementById('new-account-logo-select'),
+    userManagementCard: document.getElementById('user-management-card'),
+    usersList: document.getElementById('users-list'),
 };
 
 const charts = {
@@ -768,6 +772,48 @@ function renderInvestmentAssetsList() {
     });
 }
 
+function renderUserManagement() {
+    const { allUsers, settings } = getState();
+    const auth = getAuthInstance();
+    const currentUser = auth.currentUser;
+
+    if (!currentUser || !settings.adminUids.includes(currentUser.uid)) {
+        elements.userManagementCard.classList.add('hidden');
+        return;
+    }
+
+    elements.userManagementCard.classList.remove('hidden');
+    const listEl = elements.usersList;
+    if (!listEl) return;
+
+    if (allUsers.length === 0) {
+        listEl.innerHTML = `<p class="text-sm text-gray-500 text-center">No hay otros usuarios registrados.</p>`;
+        return;
+    }
+
+    listEl.innerHTML = allUsers
+        .filter(user => user.id !== currentUser.uid) // No mostrar el admin actual en la lista
+        .map(user => {
+            const isActivo = user.status === 'activo';
+            const statusColor = isActivo ? 'text-green-400' : 'text-yellow-400';
+            const buttonColor = isActivo ? 'bg-red-600/20 hover:bg-red-600/40 text-red-300' : 'bg-green-600/20 hover:bg-green-600/40 text-green-300';
+            const buttonText = isActivo ? 'Desactivar' : 'Activar';
+            const icon = isActivo ? 'user-x' : 'user-check';
+
+            return `
+                <div class="flex items-center justify-between bg-gray-800/50 p-3 rounded text-sm">
+                    <div>
+                        <p class="font-semibold">${escapeHTML(user.email)}</p>
+                        <p class="text-xs ${statusColor} capitalize">${escapeHTML(user.status)}</p>
+                    </div>
+                    <button class="toggle-status-btn p-2 rounded-lg ${buttonColor} transition-colors" data-id="${user.id}" data-status="${user.status}" title="${buttonText}">
+                        <i data-lucide="${icon}" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+}
+
 
 function renderSettings() {
     const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes, settings } = getState();
@@ -804,6 +850,7 @@ function renderSettings() {
     renderCategoryList(elements.taxIdTypesList, taxIdTypes, ESSENTIAL_TAX_ID_TYPES);
 
     renderInvestmentAssetsList();
+    renderUserManagement(); // Llamamos a la nueva función aquí
 
     if (elements.aeatToggleContainer) {
         const isActive = settings.aeatModuleActive;
@@ -1636,4 +1683,3 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
-

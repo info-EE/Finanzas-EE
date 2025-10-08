@@ -742,6 +742,26 @@ function handleInvestmentsTableClick(e) {
     }
 }
 
+function handleUserManagementClick(e) {
+    const toggleBtn = e.target.closest('.toggle-status-btn');
+    if (toggleBtn) {
+        const userId = toggleBtn.dataset.id;
+        const currentStatus = toggleBtn.dataset.status;
+        const actionText = currentStatus === 'activo' ? 'desactivar' : 'activar';
+        
+        showConfirmationModal(
+            `Confirmar Acción`,
+            `¿Estás seguro de que quieres ${actionText} a este usuario?`,
+            withSpinner(async () => {
+                const success = await actions.toggleUserStatusAction(userId, currentStatus);
+                if (!success) {
+                    showAlertModal('Error', 'No se pudo actualizar el estado del usuario.');
+                }
+            })
+        );
+    }
+}
+
 
 // --- Vinculación de Eventos (Event Binding) ---
 
@@ -900,5 +920,7 @@ export function bindEventListeners() {
     elements.investmentAssetsList.addEventListener('click', handleInvestmentAssetListClick);
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
+    
+    // User Management
+    elements.usersList.addEventListener('click', handleUserManagementClick);
 }
-

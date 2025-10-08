@@ -1,5 +1,5 @@
 import { getState, setState } from './store.js';
-import { saveData } from './api.js';
+import { saveData, getAllUsers, updateUserStatus } from './api.js';
 
 // --- Lógica Interna de Actualización Incremental de Balances ---
 
@@ -65,6 +65,21 @@ function revertTransactionFromBalances(accounts, transaction) {
 
 
 // --- Acciones Públicas (modifican el estado y lo guardan) ---
+
+export async function loadAndSetAllUsers() {
+    const users = await getAllUsers();
+    setState({ allUsers: users });
+}
+
+export async function toggleUserStatusAction(userId, currentStatus) {
+    const newStatus = currentStatus === 'activo' ? 'pendiente' : 'activo';
+    const success = await updateUserStatus(userId, newStatus);
+    if (success) {
+        // Si la actualización fue exitosa, volvemos a cargar la lista de usuarios para reflejar el cambio.
+        await loadAndSetAllUsers();
+    }
+    return success;
+}
 
 export function saveTransaction(transactionData, transactionId) {
     let { transactions, accounts } = getState();
@@ -617,4 +632,3 @@ export function addInvestment(investmentData) {
 
     saveTransaction(transactionData);
 }
-
