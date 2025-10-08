@@ -14,7 +14,7 @@
 
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="flex min-h-screen bg-black">
+<body class="flex min-h-screen bg-black text-gray-200">
 
     <!-- Auth Overlay -->
     <div id="auth-container" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90">
@@ -64,114 +64,136 @@
         </div>
     </div>
 
-    <!-- Mobile sidebar overlay -->
+    <!-- Sidebar Overlay (for mobile) -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden"></div>
-    
-    <aside id="sidebar" class="w-64 bg-black/50 p-4 flex-col fixed h-full transition-transform duration-300 ease-in-out z-40 hidden -translate-x-full md:relative md:translate-x-0 md:flex">
-        <div class="flex items-center justify-between mb-10">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 bg-black/50 p-4 flex-col h-full
+                           transform -translate-x-full md:translate-x-0
+                           w-64
+                           transition-all duration-300 ease-in-out z-40 flex">
+
+        <!-- Close button (mobile) -->
+        <button id="sidebar-close-btn" class="md:hidden absolute top-4 right-4 text-gray-400 hover:text-white">
+            <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+
+        <!-- Logo / Desktop Toggle -->
+        <div id="sidebar-toggle-desktop" class="hidden md:flex items-center justify-center gap-3 mb-10 cursor-pointer">
             <div class="flex items-center gap-3 overflow-hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package flex-shrink-0">
                     <path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
                 </svg>
-                <span class="text-xl font-bold text-white whitespace-nowrap nav-text">Finanzas EE</span>
+                <span class="text-xl font-bold text-white whitespace-nowrap nav-text">Finanazas EE</span>
             </div>
-             <!-- Mobile close button -->
-            <button id="sidebar-close-btn" class="p-1 md:hidden">
-                <i data-lucide="x" class="text-gray-400"></i>
-            </button>
         </div>
+        
+        <!-- Mobile Header (Logo only) -->
+        <div class="flex md:hidden items-center justify-center gap-3 mb-10">
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package flex-shrink-0">
+                <path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+            </svg>
+             <span class="text-xl font-bold text-white whitespace-nowrap">Finanazas EE</span>
+        </div>
+
         <nav class="flex flex-col gap-2 flex-grow">
-            <a href="#" id="nav-inicio" class="nav-link active flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-inicio" class="nav-link active flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="layout-dashboard"></i> <span class="nav-text">Inicio</span>
             </a>
-            <a href="#" id="nav-cashflow" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-cashflow" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="arrow-left-right"></i> <span class="nav-text">Cash Flow</span>
             </a>
-            <a href="#" id="nav-iva" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-iva" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="percent-circle"></i> <span class="nav-text">Control IVA</span>
             </a>
-            <a href="#" id="nav-cuentas" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-cuentas" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="landmark"></i> <span class="nav-text">Cuentas & Bancos</span>
             </a>
-            <a href="#" id="nav-proformas" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-proformas" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="file-check-2"></i> <span class="nav-text">Proformas</span>
             </a>
-            <a href="#" id="nav-reportes" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-reportes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="file-line-chart"></i> <span class="nav-text">Reportes</span>
             </a>
-            <a href="#" id="nav-archivos" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-archivos" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="archive"></i> <span class="nav-text">Archivos</span>
             </a>
-            <a href="#" id="nav-ajustes" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-ajustes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="settings"></i> <span class="nav-text">Ajustes</span>
             </a>
             <hr class="border-gray-700 my-2">
-            <a href="#" id="nav-facturacion" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-facturacion" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="file-text"></i> <span class="nav-text">Facturación</span>
             </a>
-            <a href="#" id="nav-inversiones" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-inversiones" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="trending-up"></i> <span class="nav-text">Inversiones</span>
             </a>
-            <a href="#" id="nav-clientes" class="nav-link flex items-center gap-3 p-3 rounded-lg">
+            <a href="#" id="nav-clientes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
                 <i data-lucide="contact"></i> <span class="nav-text">Clientes</span>
             </a>
         </nav>
 
-        <a href="#" id="logout-btn" class="nav-link flex items-center gap-3 p-3 rounded-lg mt-4 text-red-400 hover:bg-red-500/10 hover:border-red-500">
+        <!-- Logout Button -->
+        <a href="#" id="logout-btn" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg mt-4 text-red-400 hover:bg-red-500/10 hover:border-red-500">
             <i data-lucide="log-out"></i> <span class="nav-text">Cerrar Sesión</span>
         </a>
 
-        <div id="connection-status" class="mt-auto p-2 flex items-center gap-2 text-xs text-gray-400 opacity-0 transition-opacity duration-300">
+        <!-- Connection Status Indicator -->
+        <div id="connection-status" class="mt-auto p-2 flex items-center justify-center gap-2 text-xs text-gray-400 opacity-0 transition-opacity duration-300">
             <span id="status-icon"></span>
             <span id="status-text" class="nav-text"></span>
         </div>
     </aside>
 
-    <main id="main-content" class="flex-1 p-4 md:p-8 main-content hidden">
-         <header class="md:hidden flex justify-between items-center mb-4">
-            <button id="sidebar-open-btn" class="p-2">
-                <i data-lucide="menu" class="text-white"></i>
-            </button>
-            <h1 class="text-lg font-bold text-white">Finanzas EE</h1>
-            <div></div> <!-- Spacer -->
-        </header>
+    <main id="main-content" class="flex-1 md:ml-64 p-4 md:p-8 main-content transition-all duration-300 ease-in-out">
         
+        <header class="md:hidden flex justify-between items-center mb-6">
+             <button id="sidebar-open-btn" class="text-gray-300 hover:text-white">
+                <i data-lucide="menu" class="w-6 h-6"></i>
+             </button>
+             <h1 class="text-xl font-bold text-white">Finanzas EE</h1>
+             <div></div> <!-- Spacer -->
+        </header>
+
         <div id="page-inicio" class="page-content">
-             <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
-                <h2 class="text-2xl md:text-3xl font-bold text-white uppercase tracking-wider">Centro de Mando</h2>
+            <div class="hidden md:flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-white uppercase tracking-wider">Centro de Mando</h2>
                 <div class="flex items-center gap-2">
-                    <button id="quick-add-income" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
+                    <button id="quick-add-income" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
                         <i data-lucide="plus-circle" class="w-4 h-4"></i> Ingreso
                     </button>
-                    <button id="quick-add-expense" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
+                    <button id="quick-add-expense" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
                         <i data-lucide="minus-circle" class="w-4 h-4"></i> Egreso
                     </button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- KPIs Mensuales -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="card p-4 rounded-xl">
                     <p class="text-sm text-gray-400">Ingresos (Mes Actual)</p>
-                    <p id="kpi-monthly-income" class="text-2xl md:text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    <p id="kpi-monthly-income" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
                 </div>
                 <div class="card p-4 rounded-xl">
                     <p class="text-sm text-gray-400">Egresos (Mes Actual)</p>
-                    <p id="kpi-monthly-expense" class="text-2xl md:text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    <p id="kpi-monthly-expense" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
                 </div>
                 <div class="card p-4 rounded-xl">
-                    <p class="text-sm text-gray-400">Beneficio Neto (Mes)</p>
-                    <p id="kpi-monthly-profit" class="text-2xl md:text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    <p class="text-sm text-gray-400">Beneficio Neto (Mes Actual)</p>
+                    <p id="kpi-monthly-profit" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
                 </div>
                 <div class="card p-4 rounded-xl">
                     <p class="text-sm text-gray-400">Saldo Total Disponible</p>
-                    <p id="kpi-total-balance" class="text-2xl md:text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    <p id="kpi-total-balance" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
                 </div>
             </div>
 
+            <!-- Layout Principal -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Columna Izquierda -->
                 <div class="lg:col-span-2 space-y-6">
-                    <div class="card p-4 md:p-6 rounded-xl">
-                        <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                    <div class="card p-6 rounded-xl">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
                             <h3 class="font-semibold">Flujo de Caja Anual</h3>
                             <div>
                                 <label for="inicio-chart-currency" class="text-sm text-gray-400 mr-2">Moneda:</label>
@@ -183,26 +205,30 @@
                         </div>
                         <div class="h-80"><canvas id="annualFlowChart"></canvas></div>
                     </div>
-                    <div class="card p-4 md:p-6 rounded-xl">
+                    <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
                         <div id="recent-transactions-container" class="overflow-x-auto">
+                            <!-- Contenido se generará dinámicamente -->
                         </div>
                     </div>
                 </div>
 
+                <!-- Columna Derecha -->
                 <div class="space-y-6">
-                    <div class="card p-4 md:p-6 rounded-xl">
+                    <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Distribución de Gastos (Mes)</h3>
                         <div class="h-64"><canvas id="expenseDistributionChart"></canvas></div>
                     </div>
-                    <div class="card p-4 md:p-6 rounded-xl">
+                    <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Saldos Principales</h3>
                         <div id="main-balances-container" class="space-y-3">
+                            <!-- Contenido se generará dinámicamente -->
                         </div>
                     </div>
-                    <div class="card p-4 md:p-6 rounded-xl">
+                    <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Facturas Pendientes</h3>
                         <div id="pending-invoices-container">
+                            <!-- Contenido se generará dinámicamente -->
                         </div>
                     </div>
                 </div>
@@ -213,7 +239,7 @@
         <div id="page-cashflow" class="page-content hidden">
             <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Flujo de Caja (Cash Flow)</h2>
             <div class="grid grid-cols-1 gap-6">
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 id="form-title" class="font-semibold mb-4 text-lg">Agregar Nuevo Movimiento</h3>
                     <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <input type="hidden" id="transaction-id">
@@ -273,7 +299,7 @@
                     </form>
                 </div>
 
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold mb-4 text-lg">Transferencia entre Cuentas</h3>
                     <form id="transfer-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
@@ -317,7 +343,7 @@
                     </form>
                 </div>
 
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
                     <div class="mb-4">
                         <input type="text" id="cashflow-search" class="form-input" placeholder="Buscar por descripción, cuenta o categoría...">
@@ -346,17 +372,18 @@
 
         <div id="page-iva" class="page-content hidden">
             <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Control Mensual de IVA</h2>
-            <div class="card p-4 md:p-6 rounded-xl mb-6">
-                <div class="flex flex-col sm:flex-row items-end gap-4">
-                    <div class="w-full sm:w-auto">
+            <div class="card p-6 rounded-xl mb-6">
+                <div class="flex items-end gap-4">
+                    <div>
                         <label for="iva-month" class="block text-sm font-medium text-gray-400 mb-1">Seleccionar Mes</label>
                         <input type="month" id="iva-month" class="form-input">
                     </div>
-                    <button id="iva-generate-report-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Generar</button>
+                    <button id="iva-generate-report-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Generar</button>
                 </div>
             </div>
         
             <div id="iva-report-display">
+                <!-- El contenido del reporte de IVA se generará aquí -->
             </div>
         </div>
 
@@ -365,13 +392,13 @@
             <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Cuentas y Bancos</h2>
             <div id="accounts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 </div>
-            <div class="card p-4 md:p-6 rounded-xl mt-6">
+            <div class="card p-6 rounded-xl mt-6">
                 <h3 class="font-semibold mb-4">Distribución de Saldos</h3>
-                <div id="balance-totals" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 border-b border-gray-700 pb-4">
+                <div id="balance-totals" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border-b border-gray-700 pb-4">
                     </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                     <div id="eur-chart-container" class="hidden">
-                        <h4 class="font-semibold text-center mb-2">Saldos en Euros (€)</h4>
+                        <h4 class="font-semibold text-center mb-2">Distribución de Saldos en Euros (€)</h4>
                         <div class="flex flex-col-reverse md:flex-row gap-6 items-center">
                             <div id="balance-legend-eur" class="w-full md:w-1/2 lg:w-2/3"></div>
                             <div class="w-full md:w-1/2 lg:w-1/3 h-40">
@@ -380,7 +407,7 @@
                         </div>
                     </div>
                     <div id="usd-chart-container" class="hidden">
-                        <h4 class="font-semibold text-center mb-2">Saldos en Dólares ($)</h4>
+                        <h4 class="font-semibold text-center mb-2">Distribución de Saldos en Dólares ($)</h4>
                         <div class="flex flex-col-reverse md:flex-row gap-6 items-center">
                             <div id="balance-legend-usd" class="w-full md:w-1/2 lg:w-2/3"></div>
                             <div class="w-full md:w-1/2 lg:w-1/3 h-40">
@@ -395,7 +422,7 @@
         <div id="page-proformas" class="page-content hidden">
             <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Proformas</h2>
             <div class="grid grid-cols-1 gap-6">
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold mb-4 text-lg">Agregar Nueva Proforma</h3>
                     <form id="proforma-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
@@ -427,7 +454,7 @@
                         </div>
                     </form>
                 </div>
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold mb-4">Listado de Proformas</h3>
                     <div class="mb-4">
                         <input type="text" id="proformas-search" class="form-input" placeholder="Buscar por N° de proforma o cliente...">
@@ -455,7 +482,7 @@
         <div id="page-reportes" class="page-content hidden">
             <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Centro de Reportes</h2>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="card p-4 md:p-6 rounded-xl lg:col-span-1">
+                <div class="card p-6 rounded-xl lg:col-span-1">
                     <h3 class="font-semibold mb-4">Generar Nuevo Reporte</h3>
                     <form id="report-form" class="space-y-4">
                         <div>
@@ -469,6 +496,7 @@
                         </div>
                         
                         <div id="report-filters" class="space-y-4">
+                            <!-- Filtros para reportes estándar -->
                             <div id="default-filters-container" class="space-y-4">
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
@@ -480,6 +508,7 @@
                                             <option value="annual">Anual</option>
                                         </select>
                                     </div>
+                                    <!-- Contenedor para los inputs de fecha que se mostrarán/ocultarán -->
                                     <div id="date-inputs-container">
                                         <div id="date-input-daily" class="hidden">
                                             <label for="report-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
@@ -515,6 +544,7 @@
                                 </div>
                             </div>
 
+                            <!-- Filtros para reporte de Sociedades -->
                             <div id="sociedades-filters-container" class="hidden space-y-4">
                                 <div>
                                     <label for="report-year-sociedades" class="block text-sm font-medium text-gray-400 mb-1">Año Fiscal</label>
@@ -536,8 +566,13 @@
                         </button>
                     </form>
                 </div>
-                <div class="card p-4 md:p-6 rounded-xl lg:col-span-2">
+                <div class="card p-6 rounded-xl lg:col-span-2">
                     <div id="report-display-area" class="h-full">
+                        <div class="text-center text-gray-500 flex flex-col items-center justify-center h-full">
+                            <i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i>
+                            <h3 class="font-semibold text-lg">Seleccione los filtros y genere un reporte</h3>
+                            <p class="text-sm">Los resultados se mostrarán aquí.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -545,7 +580,7 @@
 
         <div id="page-archivos" class="page-content hidden">
             <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Archivos Anuales</h2>
-            <div class="card p-4 md:p-6 rounded-xl">
+            <div class="card p-6 rounded-xl">
                 <div class="flex items-end gap-4 mb-6">
                     <div class="flex-grow">
                         <label for="archive-year-select" class="block text-sm font-medium text-gray-400">Seleccionar Año</label>
@@ -554,6 +589,10 @@
                     <button id="view-archive-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Ver Archivo</button>
                 </div>
                 <div id="archive-display-area">
+                    <div class="text-center text-gray-500 py-10">
+                        <i data-lucide="archive" class="w-16 h-16 mx-auto mb-4"></i>
+                        <p>Seleccione un año para ver los datos archivados.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -576,7 +615,7 @@
                     </div>
                 </div>
 
-                <div class="card p-4 md:p-6 rounded-xl lg:col-span-2">
+                <div class="card p-6 rounded-xl lg:col-span-2">
                     <h3 class="font-semibold text-lg mb-4">Parámetros Fiscales</h3>
                     <form id="fiscal-params-form" class="max-w-md">
                         <div class="space-y-2">
@@ -589,7 +628,7 @@
                     </form>
                 </div>
 
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold text-lg mb-4">Gestión de Cuentas</h3>
                     <form id="add-account-form" class="space-y-4 mb-6">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -621,7 +660,7 @@
                     <div id="settings-accounts-list" class="space-y-2 max-h-48 overflow-y-auto">
                         </div>
                 </div>
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold text-lg mb-4">Gestión de Categorías</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
@@ -644,7 +683,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold text-lg mb-4">Gestión de Tipos de Operación</h3>
                      <form id="add-operation-type-form" class="flex gap-2 mb-3">
                         <input type="text" id="new-operation-type" class="form-input" placeholder="Nuevo tipo de operación" required>
@@ -653,7 +692,7 @@
                     <div id="operation-types-list" class="space-y-2 max-h-32 overflow-y-auto">
                         </div>
                 </div>
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold text-lg mb-4">Gestión de Tipos de ID Fiscal</h3>
                      <form id="add-tax-id-type-form" class="flex gap-2 mb-3">
                         <input type="text" id="new-tax-id-type" class="form-input" placeholder="Nuevo tipo de ID (Ej: VAT)" required>
@@ -662,7 +701,7 @@
                     <div id="tax-id-types-list" class="space-y-2 max-h-32 overflow-y-auto">
                         </div>
                 </div>
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold text-lg mb-4">Actualizar Saldo de Cuenta</h3>
                     <p class="text-sm text-gray-400 mb-4">Esto crea una transacción de ajuste para conciliar el saldo real con el del sistema.</p>
                     <form id="update-balance-form" class="space-y-4">
@@ -680,7 +719,8 @@
                     </form>
                 </div>
 
-                <div class="card p-4 md:p-6 rounded-xl">
+                <!-- Nueva tarjeta para gestión de activos de inversión -->
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold text-lg mb-4">Gestión de Activos de Inversión</h3>
                     <form id="add-investment-asset-form" class="space-y-4 mb-6">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -699,13 +739,14 @@
                     </form>
                     <h4 class="font-semibold text-md mb-2">Activos Existentes</h4>
                     <div id="investment-assets-list" class="space-y-2 max-h-48 overflow-y-auto">
+                        <!-- La lista se generará aquí -->
                     </div>
                 </div>
 
-                <div class="card p-4 md:p-6 rounded-xl bg-red-900/20 border-red-500/30 lg:col-span-2">
+                <div class="card p-6 rounded-xl bg-red-900/20 border-red-500/30 lg:col-span-2">
                     <h3 class="font-semibold text-lg mb-4 text-red-300">Cierre Anual</h3>
                     <p class="text-sm text-red-200 mb-4">Esta acción archivará todos los movimientos y documentos dentro del rango de fechas seleccionado. Esta acción no se puede deshacer.</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <label for="cierre-start-date" class="block text-sm font-medium text-red-200 mb-1">Fecha de Inicio</label>
                             <input type="date" id="cierre-start-date" class="form-input" required>
@@ -736,7 +777,7 @@
             <div id="facturacion-content-crear">
                 <div class="grid lg:grid-cols-5 gap-6">
                     <div class="lg:col-span-3">
-                        <div class="card p-4 md:p-6 rounded-xl">
+                        <div class="card p-6 rounded-xl">
                             <h3 class="font-semibold mb-4 text-lg">Nueva Factura</h3>
                             <form id="nueva-factura-form" class="space-y-4">
                                 <div>
@@ -772,16 +813,16 @@
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div>
+                                <div class="grid grid-cols-12 gap-4">
+                                    <div class="col-span-4">
                                         <label for="factura-numero" class="block text-sm text-gray-400 mb-1">Nº Factura</label>
                                         <input type="text" id="factura-numero" class="form-input" value="2024-0001" required>
                                     </div>
-                                    <div>
+                                    <div class="col-span-4">
                                         <label for="factura-fecha" class="block text-sm text-gray-400 mb-1">Fecha</label>
                                         <input type="date" id="factura-fecha" class="form-input" required>
                                     </div>
-                                    <div>
+                                    <div class="col-span-4">
                                         <label for="factura-currency" class="block text-sm text-gray-400 mb-1">Moneda</label>
                                         <select id="factura-currency" class="form-input">
                                             <option value="EUR">EUR (€)</option>
@@ -806,7 +847,7 @@
                         </div>
                     </div>
                     <div class="lg:col-span-2">
-                        <div class="card p-4 md:p-6 rounded-xl">
+                        <div class="card p-6 rounded-xl">
                             <h3 class="font-semibold mb-4 text-lg">Resumen y Resultado</h3>
                             <div class="space-y-3 text-sm border-b border-gray-700 pb-3 mb-3">
                                 <div class="flex justify-between"><span class="text-gray-400">Subtotal:</span> <span id="factura-subtotal">€0.00</span></div>
@@ -814,6 +855,7 @@
                                 <div class="flex justify-between text-lg font-bold text-white"><span >TOTAL:</span> <span id="factura-total">€0.00</span></div>
                             </div>
                             <div id="factura-api-response" class="min-h-[150px]">
+                                <p class="text-center text-gray-500 pt-8">El resultado de la generación aparecerá aquí.</p>
                             </div>
                         </div>
                     </div>
@@ -821,7 +863,7 @@
             </div>
 
             <div id="facturacion-content-listado" class="hidden">
-                <div class="card p-4 md:p-6 rounded-xl">
+                <div class="card p-6 rounded-xl">
                     <h3 class="font-semibold mb-4">Listado de Facturas</h3>
                     <div class="mb-4">
                         <input type="text" id="facturas-search" class="form-input" placeholder="Buscar por N° de factura o cliente...">
@@ -846,7 +888,7 @@
             </div>
 
             <div id="facturacion-content-config" class="hidden">
-                <div class="card p-4 md:p-6 rounded-xl max-w-4xl mx-auto">
+                <div class="card p-6 rounded-xl max-w-4xl mx-auto">
                     <h3 class="font-semibold text-lg mb-4">Configuración del Backend</h3>
                     <p class="text-sm text-gray-400 mb-6">Introduce y guarda los datos de configuración para conectar con los servicios de la AEAT. Estos datos se almacenan localmente en tu navegador.</p>
                     <form id="aeat-config-form">
@@ -893,7 +935,7 @@
             <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Clientes</h2>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-1">
-                    <div class="card p-4 md:p-6 rounded-xl">
+                    <div class="card p-6 rounded-xl">
                         <h3 id="client-form-title" class="font-semibold mb-4 text-lg">Agregar Nuevo Cliente</h3>
                         <form id="add-client-form" class="space-y-4">
                             <input type="hidden" id="client-id">
@@ -905,6 +947,10 @@
                                 <div class="col-span-1">
                                     <label for="client-tax-id-type" class="block text-sm font-medium text-gray-400 mb-1">Tipo ID</label>
                                     <select id="client-tax-id-type" class="form-input">
+                                        <option>NIF</option>
+                                        <option>CIF</option>
+                                        <option>RUC</option>
+                                        <option>CUIT</option>
                                     </select>
                                 </div>
                                 <div class="col-span-2">
@@ -961,8 +1007,8 @@
                     </div>
                 </div>
 
-                <div class="lg:col-span-2 space-y-6">
-                     <div class="card p-4 md:p-6 rounded-xl">
+                <div class="lg:col-span-2">
+                     <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Listado de Clientes</h3>
                          <div class="overflow-x-auto">
                             <table class="w-full text-left min-w-[700px]">
@@ -980,7 +1026,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="card p-4 md:p-6 rounded-xl mt-6">
+                    <div class="card p-6 rounded-xl mt-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-semibold">Total Facturado por Cliente</h3>
                             <div>
@@ -1002,8 +1048,9 @@
         <div id="page-inversiones" class="page-content hidden">
             <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Inversiones</h2>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Columna Izquierda: Formulario y Totales -->
                 <div class="lg:col-span-1 space-y-6">
-                    <div class="card p-4 md:p-6 rounded-xl">
+                    <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4 text-lg">Registrar Inversión</h3>
                         <form id="add-investment-form" class="space-y-4">
                             <div>
@@ -1031,7 +1078,7 @@
                             </button>
                         </form>
                     </div>
-                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="card p-4 rounded-xl text-center">
                             <p class="text-gray-400">Total Invertido (EUR)</p>
                             <p id="total-invested-eur" class="text-2xl font-bold kpi-value mt-2">€0.00</p>
@@ -1043,8 +1090,9 @@
                     </div>
                 </div>
 
+                <!-- Columna Derecha: Listado -->
                 <div class="lg:col-span-2">
-                    <div class="card p-4 md:p-6 rounded-xl">
+                    <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Movimientos de Inversión</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left min-w-[600px]">
@@ -1069,7 +1117,7 @@
 
         <!-- MODALS -->
         <div id="confirmation-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
-            <div id="confirmation-modal-backdrop" class="absolute inset-0"></div>
+            <div id="confirmation-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
             <div class="card rounded-xl p-8 z-10 w-full max-w-md">
                 <h3 id="modal-title" class="text-xl font-bold text-white mb-4">Confirmar Acción</h3>
                 <p id="modal-message" class="text-gray-300 mb-6">¿Estás seguro de que quieres continuar?</p>
@@ -1096,7 +1144,7 @@
         </div>
 
         <div id="alert-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
-            <div id="alert-modal-backdrop" class="absolute inset-0"></div>
+            <div id="alert-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
             <div class="card rounded-xl p-8 z-10 w-full max-w-md">
                 <h3 id="alert-modal-title" class="text-xl font-bold text-yellow-300 mb-4">Aviso</h3>
                 <p id="alert-modal-message" class="text-gray-300 mb-6">Mensaje de alerta.</p>
@@ -1137,8 +1185,10 @@
                 </form>
             </div>
         </div>
+        <!-- END MODALS -->
     </main>
 
+    <!-- Global Loading Overlay -->
     <div id="loading-overlay" class="fixed inset-0 z-[100] items-center justify-center hidden bg-black/70 backdrop-blur-sm">
         <div class="spinner" role="status"></div>
     </div>
@@ -1146,3 +1196,4 @@
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
+
