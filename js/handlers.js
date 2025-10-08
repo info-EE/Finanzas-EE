@@ -24,7 +24,9 @@ import {
     renderAll,
     showLoginView,
     showRegisterView,
-    clearAuthError
+    clearAuthError,
+    openSidebar,
+    closeSidebar
 } from './ui.js';
 import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
@@ -476,14 +478,12 @@ function handleGenerateInvoice(e) {
         const quantityRaw = itemEl.querySelector('.item-quantity').value;
         const priceRaw = itemEl.querySelector('.item-price').value;
         
-        // Robust parsing: replace comma with dot before parseFloat
         const quantity = parseFloat(quantityRaw.replace(',', '.'));
         const price = parseFloat(priceRaw.replace(',', '.'));
 
         if (description && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0) {
             items.push({ description, quantity, price });
         } else if (description || quantityRaw || priceRaw) { 
-            // Only show error if the row is not completely empty
             showAlertModal('Valor Inválido', `Por favor, revise la línea con descripción "${description}". La cantidad y el precio deben ser números válidos.`);
             parsingError = true;
         }
@@ -758,14 +758,13 @@ export function bindEventListeners() {
         e.preventDefault();
         showLoginView();
     });
+    
+    // Mobile navigation
+    elements.sidebarOpenBtn.addEventListener('click', openSidebar);
+    elements.sidebarCloseBtn.addEventListener('click', closeSidebar);
+    elements.sidebarOverlay.addEventListener('click', closeSidebar);
 
-    elements.sidebar.querySelector('#sidebar-toggle').addEventListener('click', () => {
-        elements.sidebar.classList.toggle('w-64');
-        elements.sidebar.classList.toggle('w-20');
-        elements.mainContent.classList.toggle('ml-64');
-        elements.mainContent.classList.toggle('ml-20');
-        document.querySelectorAll('.nav-text').forEach(text => text.classList.toggle('hidden'));
-    });
+
     elements.navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -881,4 +880,3 @@ export function bindEventListeners() {
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
 }
-

@@ -9,6 +9,10 @@ export const elements = {
     authContainer: document.getElementById('auth-container'),
     sidebar: document.getElementById('sidebar'),
     mainContent: document.getElementById('main-content'),
+    sidebarOverlay: document.getElementById('sidebar-overlay'),
+    sidebarOpenBtn: document.getElementById('sidebar-open-btn'),
+    sidebarCloseBtn: document.getElementById('sidebar-close-btn'),
+
 
     // Formularios de autenticación
     loginView: document.getElementById('login-view'),
@@ -135,49 +139,45 @@ export function hideApp() {
 // --- Funciones Creadoras de Elementos ---
 
 function createTransactionRow(t) {
-    const row = document.createElement('tr');
-    row.className = 'border-b border-gray-800 hover:bg-gray-800/50 transition-colors';
     const amountColor = t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400';
     const sign = t.type === 'Ingreso' ? '+' : '-';
-    row.innerHTML = `
-        <td class="py-3 px-3">${t.date}</td>
-        <td class="py-3 px-3">${escapeHTML(t.description)}</td>
-        <td class="py-3 px-3">${escapeHTML(t.account)}</td>
-        <td class="py-3 px-3">${escapeHTML(t.category)}</td>
-        <td class="py-3 px-3">${escapeHTML(t.part)}</td>
-        <td class="py-3 px-3 text-right text-gray-400">${t.iva > 0 ? formatCurrency(t.iva, t.currency) : '-'}</td>
-        <td class="py-3 px-3 text-right font-medium ${amountColor}">${sign} ${formatCurrency(t.amount, t.currency)}</td>
-        <td class="py-3 px-3">
-            <div class="flex items-center justify-center gap-2">
-                <button class="edit-btn p-2 text-blue-400 hover:text-blue-300" data-id="${t.id}" title="Editar">
-                    <i data-lucide="edit" class="w-4 h-4"></i>
-                </button>
-                <button class="delete-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </td>`;
-    return row;
+    return `
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+            <td class="py-3 px-3">${t.date}</td>
+            <td class="py-3 px-3">${escapeHTML(t.description)}</td>
+            <td class="py-3 px-3">${escapeHTML(t.account)}</td>
+            <td class="py-3 px-3">${escapeHTML(t.category)}</td>
+            <td class="py-3 px-3">${escapeHTML(t.part)}</td>
+            <td class="py-3 px-3 text-right text-gray-400">${t.iva > 0 ? formatCurrency(t.iva, t.currency) : '-'}</td>
+            <td class="py-3 px-3 text-right font-medium ${amountColor}">${sign} ${formatCurrency(t.amount, t.currency)}</td>
+            <td class="py-3 px-3">
+                <div class="flex items-center justify-center gap-2">
+                    <button class="edit-btn p-2 text-blue-400 hover:text-blue-300" data-id="${t.id}" title="Editar">
+                        <i data-lucide="edit" class="w-4 h-4"></i>
+                    </button>
+                    <button class="delete-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
 }
 
 function createAccountCard(account) {
-    const card = document.createElement('div');
-    card.className = 'card p-6 rounded-xl flex flex-col';
-    card.innerHTML = `
-        <div class="flex justify-between items-start mb-2">
-            <h3 class="font-semibold text-lg">${escapeHTML(account.name)}</h3>
-            <div>${account.logoHtml || '<i data-lucide="wallet" class="text-gray-500"></i>'}</div>
-        </div>
-        <div class="mt-auto">
-            <p class="text-gray-400 text-sm">Saldo Actual</p>
-            <p class="text-4xl font-bold kpi-value mt-2">${formatCurrency(account.balance, account.currency)}</p>
+    return `
+        <div class="card p-6 rounded-xl flex flex-col">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-semibold text-lg">${escapeHTML(account.name)}</h3>
+                <div>${account.logoHtml || '<i data-lucide="wallet" class="text-gray-500"></i>'}</div>
+            </div>
+            <div class="mt-auto">
+                <p class="text-gray-400 text-sm">Saldo Actual</p>
+                <p class="text-4xl font-bold kpi-value mt-2">${formatCurrency(account.balance, account.currency)}</p>
+            </div>
         </div>`;
-    return card;
 }
 
 function createDocumentRow(doc, type) {
-    const row = document.createElement('tr');
-    row.className = "border-b border-gray-800 hover:bg-gray-800/50";
     const statusClass = doc.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
     
     let actionsHtml = `
@@ -199,57 +199,56 @@ function createDocumentRow(doc, type) {
         }
     }
 
-    row.innerHTML = `
-        <td class="py-3 px-3">${doc.date}</td>
-        <td class="py-2 px-3">${escapeHTML(doc.number)}</td>
-        <td class="py-2 px-3">${escapeHTML(doc.client)}</td>
-        <td class="py-2 px-3 text-right">${formatCurrency(doc.amount, doc.currency)}</td>
-        <td class="py-2 px-3 text-center">
-            <button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${doc.id}">${doc.status}</button>
-        </td>
-        <td class="py-2 px-3">
-            <div class="flex items-center justify-center gap-2">${actionsHtml}</div>
-        </td>`;
-    return row;
+    return `
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+            <td class="py-3 px-3">${doc.date}</td>
+            <td class="py-2 px-3">${escapeHTML(doc.number)}</td>
+            <td class="py-2 px-3">${escapeHTML(doc.client)}</td>
+            <td class="py-2 px-3 text-right">${formatCurrency(doc.amount, doc.currency)}</td>
+            <td class="py-2 px-3 text-center">
+                <button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${doc.id}">${doc.status}</button>
+            </td>
+            <td class="py-2 px-3">
+                <div class="flex items-center justify-center gap-2">${actionsHtml}</div>
+            </td>
+        </tr>`;
 }
 
 function createClientRow(client) {
-    const row = document.createElement('tr');
-    row.className = 'border-b border-gray-800 hover:bg-gray-800/50';
-    row.innerHTML = `
-        <td class="py-3 px-3">${escapeHTML(client.name)}</td>
-        <td class="py-3 px-3">${escapeHTML(client.taxIdType)} ${escapeHTML(client.taxId)}</td>
-        <td class="py-3 px-3">${escapeHTML(client.email)}</td>
-        <td class="py-3 px-3">${escapeHTML(client.phoneMobilePrefix)}${escapeHTML(client.phoneMobile)}</td>
-        <td class="py-3 px-3">
-            <div class="flex items-center justify-center gap-2">
-                <button class="edit-client-btn p-2 text-blue-400 hover:text-blue-300" data-id="${client.id}" title="Editar">
-                    <i data-lucide="edit" class="w-4 h-4"></i>
-                </button>
-                <button class="delete-client-btn p-2 text-red-400 hover:text-red-300" data-id="${client.id}" title="Eliminar">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </td>`;
-    return row;
+    return `
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+            <td class="py-3 px-3">${escapeHTML(client.name)}</td>
+            <td class="py-3 px-3">${escapeHTML(client.taxIdType)} ${escapeHTML(client.taxId)}</td>
+            <td class="py-3 px-3">${escapeHTML(client.email)}</td>
+            <td class="py-3 px-3">${escapeHTML(client.phoneMobilePrefix)}${escapeHTML(client.phoneMobile)}</td>
+            <td class="py-3 px-3">
+                <div class="flex items-center justify-center gap-2">
+                    <button class="edit-client-btn p-2 text-blue-400 hover:text-blue-300" data-id="${client.id}" title="Editar">
+                        <i data-lucide="edit" class="w-4 h-4"></i>
+                    </button>
+                    <button class="delete-client-btn p-2 text-red-400 hover:text-red-300" data-id="${client.id}" title="Eliminar">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
 }
 
 function createInvestmentRow(t, allAssets) {
     const asset = allAssets.find(a => a.id === t.investmentAssetId);
     const assetName = asset ? asset.name : 'Activo Desconocido';
-    const row = document.createElement('tr');
-    row.className = "border-b border-gray-800 hover:bg-gray-800/50";
-    row.innerHTML = `
-        <td class="py-3 px-3">${t.date}</td>
-        <td class="py-2 px-3">${escapeHTML(assetName)}</td>
-        <td class="py-2 px-3">${escapeHTML(t.account)}</td>
-        <td class="py-2 px-3 text-right">${formatCurrency(t.amount, t.currency)}</td>
-        <td class="py-2 px-3 text-center">
-            <button class="delete-investment-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar Inversión">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-        </td>`;
-    return row;
+    return `
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+            <td class="py-3 px-3">${t.date}</td>
+            <td class="py-2 px-3">${escapeHTML(assetName)}</td>
+            <td class="py-2 px-3">${escapeHTML(t.account)}</td>
+            <td class="py-2 px-3 text-right">${formatCurrency(t.amount, t.currency)}</td>
+            <td class="py-2 px-3 text-center">
+                <button class="delete-investment-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar Inversión">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </td>
+        </tr>`;
 }
 
 // --- Funciones de Renderizado Principales ---
@@ -259,9 +258,6 @@ function renderTransactions() {
     const tbody = elements.transactionsTableBody;
     if (!tbody) return;
 
-    tbody.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-    
     let filteredTransactions = transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
     const searchInput = document.getElementById('cashflow-search');
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
@@ -277,10 +273,11 @@ function renderTransactions() {
     if (filteredTransactions.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">No hay movimientos.</td></tr>`;
     } else {
-        filteredTransactions
+        const rowsHtml = filteredTransactions
             .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .forEach(t => fragment.appendChild(createTransactionRow(t)));
-        tbody.appendChild(fragment);
+            .map(createTransactionRow)
+            .join('');
+        tbody.innerHTML = rowsHtml;
     }
 }
 
@@ -288,10 +285,7 @@ function renderAccountsTab() {
     const { accounts } = getState();
     const accountsGrid = document.getElementById('accounts-grid');
     if (!accountsGrid) return;
-    accountsGrid.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-    accounts.forEach(account => fragment.appendChild(createAccountCard(account)));
-    accountsGrid.appendChild(fragment);
+    accountsGrid.innerHTML = accounts.map(createAccountCard).join('');
 }
 
 function renderBalanceLegendAndChart() {
@@ -632,10 +626,10 @@ function renderDocuments(type, tableBody, searchInputId) {
     if (displayDocs.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay ${type.toLowerCase()}s.</td></tr>`;
     } else {
-        const fragment = document.createDocumentFragment();
-        displayDocs.sort((a, b) => new Date(b.date) - new Date(a.date))
-                   .forEach(doc => fragment.appendChild(createDocumentRow(doc, type)));
-        tableBody.appendChild(fragment);
+        const rowsHtml = displayDocs.sort((a, b) => new Date(b.date) - new Date(a.date))
+                   .map(doc => createDocumentRow(doc, type))
+                   .join('');
+        tableBody.innerHTML = rowsHtml;
     }
 }
 
@@ -649,10 +643,8 @@ function renderClients() {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay clientes registrados.</td></tr>`;
         return;
     }
-
-    const fragment = document.createDocumentFragment();
-    clients.forEach(client => fragment.appendChild(createClientRow(client)));
-    tbody.appendChild(fragment);
+    
+    tbody.innerHTML = clients.map(createClientRow).join('');
 }
 
 function renderClientsChart() {
@@ -676,7 +668,7 @@ function renderClientsChart() {
 
     const sortedClients = Object.entries(salesByClient)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 10); // Mostramos los 10 mejores clientes
+        .slice(0, 10);
 
     const labels = sortedClients.map(([name]) => name);
     const data = sortedClients.map(([, amount]) => amount);
@@ -685,7 +677,7 @@ function renderClientsChart() {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.save();
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#6b7280'; // gray-500
+        ctx.fillStyle = '#6b7280';
         ctx.font = "16px 'Inter', sans-serif";
         ctx.fillText(`No hay datos de facturación en ${selectedCurrency}.`, ctx.canvas.width / 2, ctx.canvas.height / 2);
         ctx.restore();
@@ -731,7 +723,6 @@ function renderInvestments() {
     const investmentsData = transactions.filter(t => t.category === 'Inversión');
     const tbody = elements.investmentsTableBody;
     if (!tbody) return;
-    tbody.innerHTML = '';
     
     const totalInvestedEUR = investmentsData.filter(t => t.currency === 'EUR').reduce((sum, t) => sum + t.amount, 0);
     const totalInvestedUSD = investmentsData.filter(t => t.currency === 'USD').reduce((sum, t) => sum + t.amount, 0);
@@ -745,10 +736,10 @@ function renderInvestments() {
     if (investmentsData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay movimientos de inversión.</td></tr>`;
     } else {
-        const fragment = document.createDocumentFragment();
-        investmentsData.sort((a, b) => new Date(b.date) - new Date(a.date))
-                       .forEach(t => fragment.appendChild(createInvestmentRow(t, investmentAssets)));
-        tbody.appendChild(fragment);
+        const rowsHtml = investmentsData.sort((a, b) => new Date(b.date) - new Date(a.date))
+                       .map(t => createInvestmentRow(t, investmentAssets))
+                       .join('');
+        tbody.innerHTML = rowsHtml;
     }
 }
 
@@ -1007,6 +998,25 @@ function renderIvaReport() {
 
 // --- Funciones de Utilidad y Ayuda para la UI ---
 
+export function openSidebar() {
+    const sidebar = elements.sidebar;
+    const overlay = elements.sidebarOverlay;
+    if (sidebar && overlay) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+    }
+}
+
+export function closeSidebar() {
+    const sidebar = elements.sidebar;
+    const overlay = elements.sidebarOverlay;
+    if (sidebar && overlay) {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+    }
+}
+
+
 function renderInicioDashboard() {
     updateInicioKPIs();
     renderAnnualFlowChart();
@@ -1044,6 +1054,10 @@ export function switchPage(pageId, subpageId = null) {
             const content = document.getElementById(`facturacion-content-${id}`);
             if (content) content.classList.toggle('hidden', id !== subpageId);
         });
+    }
+
+    if (window.innerWidth < 768) {
+        closeSidebar();
     }
 
     renderAll();
@@ -1621,4 +1635,3 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
-

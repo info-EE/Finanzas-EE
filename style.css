@@ -49,10 +49,6 @@ body {
     opacity: 0.6;
 }
 
-.main-content {
-    transition: margin-left 0.3s ease-in-out;
-}
-
 #confirmation-modal-backdrop, #alert-modal-backdrop {
     background-color: rgba(0,0,0,0.7);
     backdrop-filter: blur(5px);
