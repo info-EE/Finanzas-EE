@@ -766,22 +766,23 @@ export function bindEventListeners() {
 
     // Desktop navigation
     elements.sidebarToggleDesktopBtn.addEventListener('click', () => {
-        elements.sidebar.classList.toggle('w-64');
-        elements.sidebar.classList.toggle('w-20');
-        elements.mainContent.classList.toggle('md:ml-64');
-        elements.mainContent.classList.toggle('md:ml-20');
+        const isCollapsed = elements.sidebar.classList.contains('w-20');
         
-        // Selecciona solo los nav-text que NO están en el botón de toggle
-        document.querySelectorAll('nav .nav-text, #logout-btn .nav-text, #connection-status .nav-text').forEach(text => {
+        if (isCollapsed) {
+            elements.sidebar.classList.remove('w-20');
+            elements.sidebar.classList.add('w-64');
+            elements.mainContent.classList.remove('md:ml-20');
+            elements.mainContent.classList.add('md:ml-64');
+        } else {
+            elements.sidebar.classList.remove('w-64');
+            elements.sidebar.classList.add('w-20');
+            elements.mainContent.classList.remove('md:ml-64');
+            elements.mainContent.classList.add('md:ml-20');
+        }
+
+        document.querySelectorAll('.nav-text').forEach(text => {
             text.classList.toggle('hidden');
         });
-        // Maneja el nav-text del header por separado para que se oculte al encoger
-         const headerNavText = elements.sidebarToggleDesktopBtn.querySelector('.nav-text');
-        if (elements.sidebar.classList.contains('w-20')) {
-            headerNavText.classList.add('hidden');
-        } else {
-            headerNavText.classList.remove('hidden');
-        }
     });
 
 
@@ -900,14 +901,4 @@ export function bindEventListeners() {
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
 }
-```
-
-### **Instrucciones Importantes**
-
-1.  **Reemplaza** el contenido completo de tu archivo `handlers.js`.
-2.  **Guarda** los cambios.
-3.  **Despliega** los cambios a Firebase con el comando:
-    ```bash
-    firebase deploy --only hosting
-    
 
