@@ -6,7 +6,7 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase
 
 import { subscribe, initState, setState } from './store.js';
 import { bindEventListeners } from './handlers.js';
-import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus } from './ui.js';
+import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
 
 // --- Configuración de Firebase ---
@@ -22,11 +22,12 @@ const firebaseConfig = {
 
 // Función principal que se ejecuta al cargar la página
 function main() {
+    let db;
     try {
         // 1. Inicializa Firebase y obtén las instancias de los servicios
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        db = getFirestore(app);
         
         // 2. Pasa estas instancias a tu módulo de API para que las use
         api.initFirebaseServices(app, auth, db);
@@ -53,14 +54,25 @@ function main() {
     // 4. Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
         if (user) {
-            api.setCurrentUser(user.uid);
-            showApp();
-            await initState();
-            api.listenForDataChanges((newData) => {
-                setState(newData);
-            });
-            switchPage('inicio');
+            // El usuario ha iniciado sesión, pero ¿está aprobado?
+            const userProfile = await api.getUserProfile(user.uid);
+
+            if (userProfile && userProfile.status === 'activo') {
+                // El usuario está aprobado, carga la aplicación.
+                api.setCurrentUser(user.uid);
+                showApp();
+                await initState();
+                api.listenForDataChanges((newData) => {
+                    setState(newData);
+                });
+                switchPage('inicio');
+            } else {
+                // El usuario no está aprobado o su perfil no existe.
+                showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
+                await api.logoutUser(); // Desconéctalo para que no quede en un estado intermedio.
+            }
         } else {
+            // El usuario no está conectado.
             api.setCurrentUser(null);
             hideApp();
         }

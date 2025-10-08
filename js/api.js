@@ -65,6 +65,23 @@ function translateAuthError(errorCode) {
     }
 }
 
+export async function getUserProfile(uid) {
+    if (!uid) return null;
+    try {
+        const userDocRef = doc(db, 'users', uid);
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+            return docSnap.data();
+        } else {
+            console.warn(`No se encontró perfil para el usuario ${uid}`);
+            return null;
+        }
+    } catch (error) {
+        console.error("Error al obtener el perfil del usuario:", error);
+        return null;
+    }
+}
+
 export async function registerUser(email, password) {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
