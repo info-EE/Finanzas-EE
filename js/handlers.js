@@ -81,15 +81,18 @@ function withSpinner(action, delay = 300) {
 
 // --- Auth Handlers ---
 
+// --- INICIO CÓDIGO CORREGIDO ---
 function handleLoginSubmit(e) {
     e.preventDefault();
     clearAuthError();
     const email = elements.loginForm.querySelector('#login-email').value;
     const password = elements.loginForm.querySelector('#login-password').value;
     withSpinner(async () => {
+        // CORRECCIÓN: Se cambió api.logister por api.loginUser
         await api.loginUser(email, password);
     })();
 }
+// --- FIN CÓDIGO CORREGIDO ---
 
 function handleRegisterSubmit(e) {
     e.preventDefault();
@@ -101,15 +104,13 @@ function handleRegisterSubmit(e) {
     })();
 }
 
-// --- INICIO CÓDIGO CORREGIDO ---
 function handleLogout() {
     withSpinner(async () => {
-        // CORRECCIÓN: Se cambió api.logUser por api.logoutUser
         await api.logoutUser();
         resetState(); // Limpiamos el estado local al cerrar sesión
     })();
 }
-// --- FIN CÓDIGO CORREGIDO ---
+
 
 
 // --- INICIO CÓDIGO AÑADIDO Y MODIFICADO (Fase 2.4) ---
