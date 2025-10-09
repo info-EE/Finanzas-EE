@@ -632,3 +632,4 @@ export function addInvestment(investmentData) {
 
     saveTransaction(transactionData);
 }
+

@@ -20,6 +20,7 @@ function getDefaultState() {
         transactions: [],
         documents: [],
         clients: [],
+        allUsers: [], // Para la gestión de usuarios
         investmentAssets: [
             { id: crypto.randomUUID(), name: 'Bitcoin', category: 'Criptomoneda' },
             { id: crypto.randomUUID(), name: 'Acciones Apple (AAPL)', category: 'Acción' },
@@ -32,6 +33,8 @@ function getDefaultState() {
         activeReport: { type: null, data: [], title: '', columns: [] },
         activeIvaReport: null,
         settings: {
+            // IMPORTANTE: Reemplaza esto con tu User UID de Firebase Authentication
+            adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'], // <<<< ¡¡¡CAMBIAR ESTO!!!
             aeatModuleActive: false,
             aeatConfig: {
                 certPath: '',
@@ -62,6 +65,7 @@ function notify() {
 }
 
 export function getState() {
+    // Devuelve una copia profunda para evitar mutaciones directas del estado.
     return JSON.parse(JSON.stringify(state));
 }
 
@@ -81,26 +85,29 @@ export async function initState() {
         const loadedStateResult = await loadData();
 
         if (loadedStateResult.exists) {
-            // Si existen datos en Firebase, los fusionamos con el estado por defecto
             const remoteData = loadedStateResult.data || {};
-            state = { ...defaultState, ...remoteData };
-            // Nos aseguramos de que las categorías esenciales siempre estén presentes
+            state = { ...defaultState, ...remoteData, allUsers: [] }; // Mantenemos allUsers vacío al inicio
+            
             state.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(remoteData.incomeCategories || [])])];
             state.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(remoteData.expenseCategories || [])])];
             state.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(remoteData.invoiceOperationTypes || [])])];
             state.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(remoteData.taxIdTypes || [])])];
+            
+            // Fusionar adminUids de forma segura
+            if (remoteData.settings && remoteData.settings.adminUids) {
+                state.settings.adminUids = [...new Set([...defaultState.settings.adminUids, ...remoteData.settings.adminUids])];
+            }
+
         } else {
-            // Si no existen datos, es un usuario nuevo. Creamos y guardamos el estado inicial.
             console.log("No se encontró estado remoto, inicializando con estado por defecto.");
             state = defaultState;
             await saveData(state);
         }
     } catch (error) {
-        // Si ocurre un error al cargar, NO guardamos nada para evitar sobrescribir.
-        // Usamos el estado por defecto localmente para que la app no se rompa.
         console.error("Falló la inicialización del estado por un error de carga:", error);
         state = defaultState;
     }
     
     notify();
 }
+

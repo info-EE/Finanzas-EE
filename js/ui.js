@@ -775,9 +775,7 @@ function renderInvestmentAssetsList() {
 function renderUserManagement() {
     const { allUsers, settings } = getState();
     
-    // Defensive check: if settings is not loaded yet, do nothing.
-    if (!settings) {
-        elements.userManagementCard.classList.add('hidden');
+    if (!settings || !elements.userManagementCard) {
         return;
     }
     
@@ -825,6 +823,10 @@ function renderUserManagement() {
 function renderSettings() {
     const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes, settings } = getState();
     
+    if (!settings) {
+        return; 
+    }
+
     if (elements.settingsAccountsList) {
         elements.settingsAccountsList.innerHTML = '';
         accounts.forEach(acc => {
@@ -857,7 +859,7 @@ function renderSettings() {
     renderCategoryList(elements.taxIdTypesList, taxIdTypes, ESSENTIAL_TAX_ID_TYPES);
 
     renderInvestmentAssetsList();
-    renderUserManagement(); // Llamamos a la nueva función aquí
+    renderUserManagement();
 
     if (elements.aeatToggleContainer && settings) {
         const isActive = settings.aeatModuleActive;

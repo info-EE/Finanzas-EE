@@ -4,7 +4,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-import { subscribe, initState, setState } from './store.js';
+import { subscribe, initState, setState, getState } from './store.js';
 import { bindEventListeners } from './handlers.js';
 import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
@@ -67,13 +67,16 @@ function main() {
                 showApp();
                 await initState();
 
-                // Si es administrador, carga la lista de todos los usuarios
-                if (getState().settings.adminUids.includes(user.uid)) {
+                const { settings } = getState();
+                // Comprobación de seguridad para adminUids
+                if (settings && settings.adminUids && settings.adminUids.includes(user.uid)) {
                     await actions.loadAndSetAllUsers();
                 }
 
                 api.listenForDataChanges((newData) => {
-                    setState(newData);
+                    const currentState = getState();
+                    const mergedState = { ...currentState, ...newData };
+                    setState(mergedState);
                 });
                 switchPage('inicio');
             } else {
@@ -101,4 +104,3 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
-
