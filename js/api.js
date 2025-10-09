@@ -173,13 +173,6 @@ export async function updateUserStatus(uid, newStatus) {
     }
 }
 
-// --- INICIO DE CÓDIGO AÑADIDO (Fase 2.3) ---
-/**
- * Actualiza el objeto de permisos para un usuario específico en Firestore.
- * @param {string} uid - El ID del usuario a actualizar.
- * @param {Object} permissions - El nuevo objeto de permisos a guardar.
- * @returns {boolean} - Devuelve true si la actualización fue exitosa, false en caso contrario.
- */
 export async function updateUserPermissions(uid, permissions) {
     if (!uid) return false;
     try {
@@ -193,7 +186,6 @@ export async function updateUserPermissions(uid, permissions) {
         return false;
     }
 }
-// --- FIN DE CÓDIGO AÑADIDO (Fase 2.3) ---
 
 
 export async function registerUser(email, password) {
@@ -205,6 +197,15 @@ export async function registerUser(email, password) {
         await signOut(auth);
     } catch (error) {
         console.error("Error en el registro:", error.code);
+        showAuthError(translateAuthError(error.code));
+    }
+}
+
+export async function loginUser(email, password) {
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        console.error("Error en el inicio de sesión:", error.code);
         showAuthError(translateAuthError(error.code));
     }
 }
