@@ -922,6 +922,8 @@ export function bindEventListeners() {
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
     
     // User Management
-    elements.usersList.addEventListener('click', handleUserManagementClick);
+    if (elements.usersList) {
+        elements.usersList.addEventListener('click', handleUserManagementClick);
+    }
 }
 
