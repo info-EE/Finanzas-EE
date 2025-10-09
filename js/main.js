@@ -8,6 +8,7 @@ import { subscribe, initState, setState, getState } from './store.js';
 import { bindEventListeners } from './handlers.js';
 import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
+import * as actions from './actions.js'; // Importamos actions
 
 // --- Configuración de Firebase ---
 const firebaseConfig = {
@@ -56,8 +57,9 @@ function main() {
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile) {
+                // Si el perfil no existe, es un usuario antiguo (como el admin). Se lo creamos.
                 await api.createUserProfile(user.uid, user.email, 'activo');
-                userProfile = await api.getUserProfile(user.uid);
+                userProfile = await api.getUserProfile(user.uid); // Volvemos a leerlo
             }
 
             if (userProfile && userProfile.status === 'activo') {
@@ -65,22 +67,15 @@ function main() {
                 showApp();
                 await initState();
 
-                const state = getState();
-                const isAdmin = state.settings && Array.isArray(state.settings.adminUids) && state.settings.adminUids.includes(user.uid);
-
-                if (isAdmin) {
-                    // Si es administrador, inicia el listener para ver usuarios en tiempo real.
-                    api.listenForAllUsersChanges((allUsers) => {
-                        setState({ allUsers });
-                    });
+                // Si es administrador, carga la lista de todos los usuarios
+                if (getState().settings.adminUids.includes(user.uid)) {
+                    await actions.loadAndSetAllUsers(); // <-- ESTA LÍNEA ES LA QUE RESTAURAMOS
                 }
 
                 api.listenForDataChanges((newData) => {
                     setState(newData);
                 });
-                
                 switchPage('inicio');
-
             } else {
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
                 await api.logoutUser();
@@ -106,4 +101,3 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
-
