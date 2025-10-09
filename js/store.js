@@ -33,7 +33,7 @@ function getDefaultState() {
         activeIvaReport: null,
         settings: {
             // IMPORTANTE: Añade aquí los IDs de los usuarios que serán administradores.
-            adminUids: ['REEMPLAZA_CON_TU_UID_DE_ADMIN'], 
+            adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'], 
             aeatModuleActive: false,
             aeatConfig: {
                 certPath: '',
@@ -86,10 +86,11 @@ export async function initState() {
         if (loadedStateResult.exists) {
             const remoteData = loadedStateResult.data || {};
             
-            // Construimos el estado final de forma segura
-            const finalState = { ...defaultState, ...remoteData };
+            // Construimos el estado final de forma segura, empezando por los valores por defecto
+            let finalState = { ...defaultState, ...remoteData };
             
-            // Fusión profunda y segura para el objeto 'settings', evitando que sea nulo o indefinido
+            // Fusión profunda y segura para el objeto 'settings', garantizando que nunca sea nulo o indefinido
+            // y que siempre contenga las claves por defecto (como adminUids).
             finalState.settings = { 
                 ...defaultState.settings, 
                 ...(remoteData.settings && typeof remoteData.settings === 'object' ? remoteData.settings : {}) 

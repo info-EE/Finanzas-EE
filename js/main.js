@@ -68,15 +68,26 @@ function main() {
                 await initState();
 
                 const { settings } = getState();
-                // Comprobación de seguridad para adminUids
-                if (settings && settings.adminUids && settings.adminUids.includes(user.uid)) {
+                // Comprobación de seguridad robusta para adminUids
+                const isAdmin = settings && Array.isArray(settings.adminUids) && settings.adminUids.includes(user.uid);
+                if (isAdmin) {
                     await actions.loadAndSetAllUsers();
                 }
 
                 api.listenForDataChanges((newData) => {
+                    // Al recibir datos de Firebase, nos aseguramos de que el estado local
+                    // no pierda propiedades esenciales (como 'settings') si no vienen en la actualización.
                     const currentState = getState();
-                    const mergedState = { ...currentState, ...newData };
-                    setState(mergedState);
+                    const remoteData = newData || {};
+
+                    // Creamos el nuevo estado, asegurando que settings no sea sobreescrito por null o undefined
+                    const finalState = { ...currentState, ...remoteData };
+                    finalState.settings = { 
+                        ...(currentState.settings || {}), 
+                        ...(remoteData.settings && typeof remoteData.settings === 'object' ? remoteData.settings : {}) 
+                    };
+                    
+                    setState(finalState);
                 });
                 switchPage('inicio');
             } else {
@@ -104,3 +115,4 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
+

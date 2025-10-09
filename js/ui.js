@@ -774,15 +774,13 @@ function renderInvestmentAssetsList() {
 
 function renderUserManagement() {
     const { allUsers, settings } = getState();
-    
-    if (!settings || !elements.userManagementCard) {
-        return;
-    }
-    
     const auth = getAuthInstance();
     const currentUser = auth.currentUser;
 
-    if (!currentUser || !settings.adminUids.includes(currentUser.uid)) {
+    // Comprobación de seguridad robusta para evitar errores si settings o adminUids no existen.
+    const isAdmin = currentUser && settings && Array.isArray(settings.adminUids) && settings.adminUids.includes(currentUser.uid);
+
+    if (!isAdmin) {
         elements.userManagementCard.classList.add('hidden');
         return;
     }
@@ -823,10 +821,6 @@ function renderUserManagement() {
 function renderSettings() {
     const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes, settings } = getState();
     
-    if (!settings) {
-        return; 
-    }
-
     if (elements.settingsAccountsList) {
         elements.settingsAccountsList.innerHTML = '';
         accounts.forEach(acc => {
@@ -859,7 +853,7 @@ function renderSettings() {
     renderCategoryList(elements.taxIdTypesList, taxIdTypes, ESSENTIAL_TAX_ID_TYPES);
 
     renderInvestmentAssetsList();
-    renderUserManagement();
+    renderUserManagement(); // Llamamos a la nueva función aquí
 
     if (elements.aeatToggleContainer && settings) {
         const isActive = settings.aeatModuleActive;
@@ -869,7 +863,7 @@ function renderSettings() {
     }
     
     const taxRateInput = elements.fiscalParamsForm?.querySelector('#corporate-tax-rate');
-    if (taxRateInput && settings) {
+    if (taxRateInput && settings && settings.fiscalParameters) {
         taxRateInput.value = settings.fiscalParameters.corporateTaxRate;
     }
 }
