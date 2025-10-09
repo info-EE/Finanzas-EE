@@ -1206,12 +1206,11 @@ function toggleIvaField() {
     }
 }
 
-// --- INICIO CÓDIGO MODIFICADO (Fase 3.4) ---
+// --- INICIO CÓDIGO CORREGIDO Y SIMPLIFICADO ---
 export function switchPage(pageId, subpageId = null) {
     const { permissions } = getState();
     if (!permissions) return; // Salir si los permisos aún no se han cargado
 
-    // Mapeo de página a permiso de VISTA requerido.
     const viewPermissionMap = {
         'inicio': 'view_dashboard',
         'cashflow': 'view_cashflow',
@@ -1243,7 +1242,10 @@ export function switchPage(pageId, subpageId = null) {
         pageId = 'inicio'; // Forzamos la redirección a la página de inicio.
     }
 
+    // Oculta todas las páginas y muestra solo la activa
     elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
+    
+    // Actualiza el link activo en la navegación
     elements.navLinks.forEach(link => {
         link.classList.remove('active');
         if (link.id === `nav-${pageId}`) {
@@ -1251,12 +1253,7 @@ export function switchPage(pageId, subpageId = null) {
         }
     });
     
-    if (pageId === 'inicio') renderInicioDashboard();
-    if (pageId === 'cuentas') renderBalanceLegendAndChart();
-    if (pageId === 'clientes') {
-        renderClients();
-        renderClientsChart();
-    }
+    // Manejo de sub-páginas (como en facturación)
     if (pageId === 'facturacion' && subpageId) {
         document.querySelectorAll('.tab-button-inner').forEach(btn => btn.classList.remove('active'));
         const tabButton = document.getElementById(`facturacion-tab-${subpageId}`);
@@ -1268,14 +1265,16 @@ export function switchPage(pageId, subpageId = null) {
         });
     }
 
+    // Cierra el menú lateral en móvil
     if (window.innerWidth < 768) {
         closeSidebar();
     }
 
+    // Llama a la función principal de renderizado UNA SOLA VEZ después de cambiar la página.
+    // Esto asegura que solo se renderice el contenido de la página visible.
     renderAll();
-    lucide.createIcons();
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 3.4) ---
+// --- FIN CÓDIGO CORREGIDO Y SIMPLIFICADO ---
 
 function populateLogoSelect() {
     const { logoCatalog } = getState();
@@ -1924,4 +1923,3 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
-
