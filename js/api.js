@@ -25,6 +25,41 @@ let dataDocRef = null;
 let unsubscribeFromData = null;
 let unsubscribeFromUsers = null; // Listener para la lista de usuarios
 
+// --- INICIO DE CÓDIGO AÑADIDO (Tarea 1.3) ---
+/**
+ * Devuelve un objeto con todos los permisos del sistema establecidos en 'false'.
+ * Esta es la configuración por defecto para cualquier usuario nuevo.
+ * @returns {Object} El objeto de permisos por defecto.
+ */
+function getDefaultPermissions() {
+    return {
+        view_dashboard: false,
+        view_accounts: false,
+        view_cashflow: false,
+        manage_cashflow: false,
+        execute_transfers: false,
+        view_documents: false,
+        manage_invoices: false,
+        manage_proformas: false,
+        change_document_status: false,
+        view_clients: false,
+        manage_clients: false,
+        view_reports: false,
+        view_iva_control: false,
+        view_archives: false,
+        view_investments: false,
+        manage_investments: false,
+        manage_accounts: false,
+        manage_categories: false,
+        execute_balance_adjustment: false,
+        execute_year_close: false,
+        manage_fiscal_settings: false,
+        manage_users: false,
+    };
+}
+// --- FIN DE CÓDIGO AÑADIDO (Tarea 1.3) ---
+
+
 // Esta función recibe las instancias desde main.js
 export function initFirebaseServices(firebaseApp, firebaseAuth, firestoreDb) {
     app = firebaseApp;
@@ -85,14 +120,24 @@ export async function getUserProfile(uid) {
     }
 }
 
+// --- INICIO DE CÓDIGO MODIFICADO (Tarea 1.3) ---
+// Se ha modificado esta función para que incluya el objeto de permisos por defecto.
 export async function createUserProfile(uid, email, status) {
     try {
         const userDocRef = doc(db, 'usuarios', uid);
-        await setDoc(userDocRef, { email, status }, { merge: true });
+        const defaultPermissions = getDefaultPermissions();
+        
+        await setDoc(userDocRef, { 
+            email, 
+            status,
+            permisos: defaultPermissions  // Añadimos el nuevo campo de permisos
+        }, { merge: true });
+
     } catch (error) {
         console.error("Error al crear el perfil del usuario:", error);
     }
 }
+// --- FIN DE CÓDIGO MODIFICADO (Tarea 1.3) ---
 
 // Esta función se mantiene para un solo uso si fuera necesario, pero no la usaremos para la vista principal
 export async function getAllUsers() {
@@ -141,20 +186,12 @@ export async function registerUser(email, password) {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
+        // Ahora, al llamar a createUserProfile, se crearán los permisos por defecto.
         await createUserProfile(user.uid, user.email, 'pendiente');
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
         await signOut(auth);
     } catch (error) {
         console.error("Error en el registro:", error.code);
-        showAuthError(translateAuthError(error.code));
-    }
-}
-
-export async function loginUser(email, password) {
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-        console.error("Error en el inicio de sesión:", error.code);
         showAuthError(translateAuthError(error.code));
     }
 }
