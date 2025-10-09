@@ -101,12 +101,15 @@ function handleRegisterSubmit(e) {
     })();
 }
 
+// --- INICIO CÓDIGO CORREGIDO ---
 function handleLogout() {
     withSpinner(async () => {
+        // CORRECCIÓN: Se cambió api.logUser por api.logoutUser
         await api.logoutUser();
         resetState(); // Limpiamos el estado local al cerrar sesión
     })();
 }
+// --- FIN CÓDIGO CORREGIDO ---
 
 
 // --- INICIO CÓDIGO AÑADIDO Y MODIFICADO (Fase 2.4) ---
@@ -1047,3 +1050,4 @@ export function bindEventListeners() {
     }
     // --- FIN CÓDIGO AÑADIDO (Fase 2.4) ---
 }
+
