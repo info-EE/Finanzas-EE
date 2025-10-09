@@ -924,3 +924,4 @@ export function bindEventListeners() {
     // User Management
     elements.usersList.addEventListener('click', handleUserManagementClick);
 }
+

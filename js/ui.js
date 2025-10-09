@@ -774,6 +774,13 @@ function renderInvestmentAssetsList() {
 
 function renderUserManagement() {
     const { allUsers, settings } = getState();
+    
+    // Defensive check: if settings is not loaded yet, do nothing.
+    if (!settings) {
+        elements.userManagementCard.classList.add('hidden');
+        return;
+    }
+    
     const auth = getAuthInstance();
     const currentUser = auth.currentUser;
 
@@ -786,14 +793,14 @@ function renderUserManagement() {
     const listEl = elements.usersList;
     if (!listEl) return;
 
-    if (allUsers.length === 0) {
+    const otherUsers = allUsers.filter(user => user.id !== currentUser.uid);
+
+    if (otherUsers.length === 0) {
         listEl.innerHTML = `<p class="text-sm text-gray-500 text-center">No hay otros usuarios registrados.</p>`;
         return;
     }
 
-    listEl.innerHTML = allUsers
-        .filter(user => user.id !== currentUser.uid) // No mostrar el admin actual en la lista
-        .map(user => {
+    listEl.innerHTML = otherUsers.map(user => {
             const isActivo = user.status === 'activo';
             const statusColor = isActivo ? 'text-green-400' : 'text-yellow-400';
             const buttonColor = isActivo ? 'bg-red-600/20 hover:bg-red-600/40 text-red-300' : 'bg-green-600/20 hover:bg-green-600/40 text-green-300';
@@ -852,7 +859,7 @@ function renderSettings() {
     renderInvestmentAssetsList();
     renderUserManagement(); // Llamamos a la nueva función aquí
 
-    if (elements.aeatToggleContainer) {
+    if (elements.aeatToggleContainer && settings) {
         const isActive = settings.aeatModuleActive;
         elements.aeatToggleContainer.innerHTML = isActive
             ? `<button class="aeat-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg"><i data-lucide="check-circle" class="w-4 h-4"></i> Activado</button>`
@@ -860,7 +867,7 @@ function renderSettings() {
     }
     
     const taxRateInput = elements.fiscalParamsForm?.querySelector('#corporate-tax-rate');
-    if (taxRateInput) {
+    if (taxRateInput && settings) {
         taxRateInput.value = settings.fiscalParameters.corporateTaxRate;
     }
 }
@@ -1683,3 +1690,4 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
+
