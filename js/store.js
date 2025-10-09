@@ -12,12 +12,6 @@ const LOGO_CATALOG = {
     default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
 };
 
-// --- INICIO CÓDIGO AÑADIDO (Fase 3.1) ---
-/**
- * Devuelve un objeto con todos los permisos establecidos en 'true'.
- * Se utiliza para la compatibilidad con administradores existentes.
- * @returns {Object} El objeto de permisos de administrador.
- */
 function getAdminPermissions() {
     return {
         view_dashboard: true, view_accounts: true, view_cashflow: true, manage_cashflow: true,
@@ -28,9 +22,7 @@ function getAdminPermissions() {
         execute_year_close: true, manage_fiscal_settings: true, manage_users: true,
     };
 }
-// --- FIN CÓDIGO AÑADIDO (Fase 3.1) ---
 
-// --- Estado Inicial por Defecto ---
 function getDefaultState() {
     return {
         logoCatalog: LOGO_CATALOG,
@@ -63,12 +55,11 @@ function getDefaultState() {
             }
         },
         allUsers: [],
-        permissions: {} // --- CAMPO AÑADIDO (Fase 3.1) ---
+        permissions: {}
     };
 }
 
 
-// --- Lógica del Store ---
 let state = {};
 const listeners = [];
 
@@ -96,8 +87,6 @@ export function resetState() {
     notify();
 }
 
-// --- INICIO CÓDIGO MODIFICADO (Fase 3.1) ---
-// La función se ha modificado para cargar y establecer los permisos del usuario.
 export async function initState() {
     const defaultState = getDefaultState();
     const auth = getAuthInstance();
@@ -124,19 +113,24 @@ export async function initState() {
             await saveData(finalState);
         }
 
-        // Cargar y establecer los permisos del usuario actual.
         if (currentUser) {
-            const userProfile = await getUserProfile(currentUser.uid);
-            if (userProfile && userProfile.permisos) {
-                finalState.permissions = userProfile.permisos;
-            } else if (userProfile && finalState.settings.adminUids.includes(currentUser.uid)) {
-                // Compatibilidad hacia atrás: si el usuario es admin pero no tiene el objeto `permisos`, se le otorgan todos.
-                console.warn("Usuario administrador sin objeto de permisos. Se concederán todos los permisos para esta sesión.");
+            // --- INICIO DE LA CORRECCIÓN ---
+            // Primero, comprobamos si el usuario es un administrador definido en settings.
+            if (finalState.settings.adminUids.includes(currentUser.uid)) {
+                // Si es admin, le damos todos los permisos INCONDICIONALMENTE.
+                console.warn("Usuario administrador detectado. Concediendo todos los permisos.");
                 finalState.permissions = getAdminPermissions();
             } else {
-                // Si es un usuario normal sin objeto de permisos (no debería ocurrir con los nuevos registros).
-                finalState.permissions = {}; // Por seguridad, no tendrá acceso a nada.
+                // Si no es admin, cargamos sus permisos desde su perfil.
+                const userProfile = await getUserProfile(currentUser.uid);
+                if (userProfile && userProfile.permisos) {
+                    finalState.permissions = userProfile.permisos;
+                } else {
+                    // Si es un usuario normal sin permisos, no tendrá acceso a nada.
+                    finalState.permissions = {};
+                }
             }
+            // --- FIN DE LA CORRECCIÓN ---
         } else {
             finalState.permissions = {}; // Sin usuario, sin permisos.
         }
@@ -151,4 +145,12 @@ export async function initState() {
     
     notify();
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 3.1) ---
+```
+
+**Paso 2: Haz el Despliegue Final**
+
+Una vez que hayas reemplazado el contenido de `js/store.js`, ejecuta el comando de despliegue en tu terminal:
+
+```
+firebase deploy --only hosting
+
