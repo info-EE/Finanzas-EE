@@ -26,11 +26,41 @@ import {
     showRegisterView,
     clearAuthError,
     openSidebar,
-    closeSidebar
+    closeSidebar,
+    showPermissionsModal,
+    hidePermissionsModal
 } from './ui.js';
 import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
+
+// --- INICIO CÓDIGO AÑADIDO (Fase 2.4) ---
+// Centraliza las descripciones de los permisos para la UI.
+const PERMISSION_DESCRIPTIONS = {
+    view_dashboard: { label: "Ver Panel de Inicio", description: "Permite el acceso a la página principal con los KPIs y gráficos." },
+    view_accounts: { label: "Ver Cuentas y Saldos", description: "Permite ver la lista de cuentas y sus saldos." },
+    view_cashflow: { label: "Ver Flujo de Caja", description: "Permite ver el historial de transacciones." },
+    manage_cashflow: { label: "Gestionar Flujo de Caja", description: "Permite añadir, editar y eliminar ingresos y egresos." },
+    execute_transfers: { label: "Realizar Transferencias", description: "Permite mover fondos entre cuentas." },
+    view_documents: { label: "Ver Facturas y Proformas", description: "Permite visualizar los listados de facturas y proformas." },
+    manage_invoices: { label: "Gestionar Facturas", description: "Permite crear y eliminar facturas." },
+    manage_proformas: { label: "Gestionar Proformas", description: "Permite crear y eliminar proformas." },
+    change_document_status: { label: "Cambiar Estado de Documentos", description: "Permite marcar facturas/proformas como 'Cobradas' o 'Adeudadas'." },
+    view_clients: { label: "Ver Clientes", description: "Permite acceder al listado de clientes." },
+    manage_clients: { label: "Gestionar Clientes", description: "Permite añadir, editar y eliminar clientes." },
+    view_reports: { label: "Generar Reportes", description: "Permite acceder al centro de reportes y generar informes." },
+    view_iva_control: { label: "Ver Control de IVA", description: "Permite acceder y generar el reporte mensual de IVA." },
+    view_archives: { label: "Ver Archivos Anuales", description: "Permite consultar los datos de años cerrados." },
+    view_investments: { label: "Ver Inversiones", description: "Permite ver el panel y el historial de inversiones." },
+    manage_investments: { label: "Gestionar Inversiones", description: "Permite añadir y eliminar movimientos de inversión." },
+    manage_accounts: { label: "Gestionar Cuentas (Ajustes)", description: "Permite crear y eliminar cuentas bancarias." },
+    manage_categories: { label: "Gestionar Categorías (Ajustes)", description: "Permite añadir y eliminar categorías de ingresos/egresos." },
+    execute_balance_adjustment: { label: "Realizar Ajustes de Saldo", description: "Permite modificar manualmente el saldo de una cuenta." },
+    execute_year_close: { label: "Realizar Cierre Anual", description: "Permite archivar los datos de un año fiscal." },
+    manage_fiscal_settings: { label: "Gestionar Ajustes Fiscales", description: "Permite cambiar parámetros como el tipo impositivo." },
+    manage_users: { label: "Gestionar Usuarios y Permisos", description: "Permite activar usuarios y modificar sus permisos (SOLO ADMIN)." },
+};
+// --- FIN CÓDIGO AÑADIDO (Fase 2.4) ---
 
 // --- Helper for showing spinner during actions ---
 function withSpinner(action, delay = 300) {
@@ -77,6 +107,109 @@ function handleLogout() {
         resetState(); // Limpiamos el estado local al cerrar sesión
     })();
 }
+
+
+// --- INICIO CÓDIGO AÑADIDO Y MODIFICADO (Fase 2.4) ---
+
+/**
+ * Carga la información y los permisos de un usuario en el modal.
+ * @param {object} user - El objeto del usuario a mostrar.
+ */
+function populatePermissionsModal(user) {
+    elements.permissionsModalEmail.textContent = user.email;
+    elements.permissionsList.innerHTML = ''; // Limpiar contenido anterior
+
+    // Almacena el ID del usuario en el botón de guardar para usarlo después.
+    elements.permissionsModalSaveBtn.dataset.userId = user.id;
+
+    const userPermissions = user.permisos || {};
+
+    for (const key in PERMISSION_DESCRIPTIONS) {
+        const isChecked = userPermissions[key] === true;
+        const { label, description } = PERMISSION_DESCRIPTIONS[key];
+        
+        const permissionHTML = `
+            <div class="flex items-start justify-between bg-gray-800/50 p-3 rounded-lg">
+                <div>
+                    <label for="perm-${key}" class="font-semibold text-gray-200 cursor-pointer">${label}</label>
+                    <p class="text-xs text-gray-400">${description}</p>
+                </div>
+                <div class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="perm-${key}" class="sr-only peer" data-permission-key="${key}" ${isChecked ? 'checked' : ''}>
+                    <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </div>
+            </div>
+        `;
+        elements.permissionsList.insertAdjacentHTML('beforeend', permissionHTML);
+    }
+}
+
+
+/**
+ * Maneja el clic en el botón "Guardar Cambios" del modal de permisos.
+ */
+function handlePermissionsSave() {
+    const userId = elements.permissionsModalSaveBtn.dataset.userId;
+    if (!userId) {
+        showAlertModal('Error', 'No se ha podido identificar al usuario.');
+        return;
+    }
+
+    const newPermissions = {};
+    elements.permissionsList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        const key = checkbox.dataset.permissionKey;
+        newPermissions[key] = checkbox.checked;
+    });
+
+    withSpinner(async () => {
+        const success = await api.updateUserPermissions(userId, newPermissions);
+        if (success) {
+            showAlertModal('Éxito', 'Los permisos del usuario se han actualizado correctamente.');
+            hidePermissionsModal();
+        } else {
+            showAlertModal('Error', 'No se pudieron guardar los cambios. Inténtalo de nuevo.');
+        }
+    })();
+}
+
+/**
+ * Manejador principal para los clics en la lista de gestión de usuarios.
+ */
+function handleUserManagementClick(e) {
+    const toggleBtn = e.target.closest('.toggle-status-btn');
+    const manageBtn = e.target.closest('.manage-permissions-btn');
+
+    if (toggleBtn) {
+        const userId = toggleBtn.dataset.id;
+        const currentStatus = toggleBtn.dataset.status;
+        const actionText = currentStatus === 'activo' ? 'desactivar' : 'activar';
+        
+        showConfirmationModal(
+            `Confirmar Acción`,
+            `¿Estás seguro de que quieres ${actionText} a este usuario?`,
+            withSpinner(async () => {
+                const success = await actions.toggleUserStatusAction(userId, currentStatus);
+                if (!success) {
+                    showAlertModal('Error', 'No se pudo actualizar el estado del usuario.');
+                }
+            })
+        );
+    }
+
+    if (manageBtn) {
+        const userId = manageBtn.dataset.id;
+        const { allUsers } = getState();
+        const user = allUsers.find(u => u.id === userId);
+
+        if (user) {
+            populatePermissionsModal(user);
+            showPermissionsModal();
+        } else {
+            showAlertModal('Error', 'No se encontró al usuario seleccionado.');
+        }
+    }
+}
+// --- FIN CÓDIGO AÑADIDO Y MODIFICADO (Fase 2.4) ---
 
 
 // --- Funciones Manejadoras (Handlers) ---
@@ -742,27 +875,6 @@ function handleInvestmentsTableClick(e) {
     }
 }
 
-function handleUserManagementClick(e) {
-    const toggleBtn = e.target.closest('.toggle-status-btn');
-    if (toggleBtn) {
-        const userId = toggleBtn.dataset.id;
-        const currentStatus = toggleBtn.dataset.status;
-        const actionText = currentStatus === 'activo' ? 'desactivar' : 'activar';
-        
-        showConfirmationModal(
-            `Confirmar Acción`,
-            `¿Estás seguro de que quieres ${actionText} a este usuario?`,
-            withSpinner(async () => {
-                const success = await actions.toggleUserStatusAction(userId, currentStatus);
-                if (!success) {
-                    showAlertModal('Error', 'No se pudo actualizar el estado del usuario.');
-                }
-            })
-        );
-    }
-}
-
-
 // --- Vinculación de Eventos (Event Binding) ---
 
 export function bindEventListeners() {
@@ -921,9 +1033,17 @@ export function bindEventListeners() {
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
     
+    // --- INICIO CÓDIGO AÑADIDO (Fase 2.4) ---
     // User Management
     if (elements.usersList) {
         elements.usersList.addEventListener('click', handleUserManagementClick);
     }
+    // Modal de Permisos
+    if(elements.permissionsModalCancelBtn) {
+        elements.permissionsModalCancelBtn.addEventListener('click', hidePermissionsModal);
+    }
+    if(elements.permissionsModalSaveBtn) {
+        elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
+    }
+    // --- FIN CÓDIGO AÑADIDO (Fase 2.4) ---
 }
-

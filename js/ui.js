@@ -85,6 +85,15 @@ export const elements = {
     newAccountLogoSelect: document.getElementById('new-account-logo-select'),
     userManagementCard: document.getElementById('user-management-card'),
     usersList: document.getElementById('users-list'),
+
+    // --- INICIO CÓDIGO AÑADIDO (Fase 2.2) ---
+    permissionsModal: document.getElementById('permissions-modal'),
+    permissionsModalTitle: document.getElementById('permissions-modal-title'),
+    permissionsModalEmail: document.getElementById('permissions-modal-email'),
+    permissionsList: document.getElementById('permissions-list'),
+    permissionsModalCancelBtn: document.getElementById('permissions-modal-cancel-btn'),
+    permissionsModalSaveBtn: document.getElementById('permissions-modal-save-btn'),
+    // --- FIN CÓDIGO AÑADIDO (Fase 2.2) ---
 };
 
 const charts = {
@@ -772,12 +781,13 @@ function renderInvestmentAssetsList() {
     });
 }
 
+// --- INICIO CÓDIGO MODIFICADO (Fase 2.2) ---
+// Se ha modificado esta función para añadir el botón de gestionar permisos.
 function renderUserManagement() {
     const { allUsers, settings } = getState();
     const auth = getAuthInstance();
     const currentUser = auth.currentUser;
 
-    // Comprobación de seguridad robusta para evitar errores si settings o adminUids no existen.
     const isAdmin = currentUser && settings && Array.isArray(settings.adminUids) && settings.adminUids.includes(currentUser.uid);
 
     if (!isAdmin) {
@@ -799,9 +809,9 @@ function renderUserManagement() {
     listEl.innerHTML = otherUsers.map(user => {
             const isActivo = user.status === 'activo';
             const statusColor = isActivo ? 'text-green-400' : 'text-yellow-400';
-            const buttonColor = isActivo ? 'bg-red-600/20 hover:bg-red-600/40 text-red-300' : 'bg-green-600/20 hover:bg-green-600/40 text-green-300';
-            const buttonText = isActivo ? 'Desactivar' : 'Activar';
-            const icon = isActivo ? 'user-x' : 'user-check';
+            const statusButtonColor = isActivo ? 'bg-red-600/20 hover:bg-red-600/40 text-red-300' : 'bg-green-600/20 hover:bg-green-600/40 text-green-300';
+            const statusButtonText = isActivo ? 'Desactivar' : 'Activar';
+            const statusIcon = isActivo ? 'user-x' : 'user-check';
 
             return `
                 <div class="flex items-center justify-between bg-gray-800/50 p-3 rounded text-sm">
@@ -809,13 +819,19 @@ function renderUserManagement() {
                         <p class="font-semibold">${escapeHTML(user.email)}</p>
                         <p class="text-xs ${statusColor} capitalize">${escapeHTML(user.status)}</p>
                     </div>
-                    <button class="toggle-status-btn p-2 rounded-lg ${buttonColor} transition-colors" data-id="${user.id}" data-status="${user.status}" title="${buttonText}">
-                        <i data-lucide="${icon}" class="w-4 h-4"></i>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button class="toggle-status-btn p-2 rounded-lg ${statusButtonColor} transition-colors" data-id="${user.id}" data-status="${user.status}" title="${statusButtonText}">
+                            <i data-lucide="${statusIcon}" class="w-4 h-4"></i>
+                        </button>
+                        <button class="manage-permissions-btn p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 transition-colors" data-id="${user.id}" title="Gestionar Permisos">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('');
 }
+// --- FIN CÓDIGO MODIFICADO (Fase 2.2) ---
 
 
 function renderSettings() {
@@ -853,7 +869,7 @@ function renderSettings() {
     renderCategoryList(elements.taxIdTypesList, taxIdTypes, ESSENTIAL_TAX_ID_TYPES);
 
     renderInvestmentAssetsList();
-    renderUserManagement(); // Llamamos a la nueva función aquí
+    renderUserManagement(); 
 
     if (elements.aeatToggleContainer && settings) {
         const isActive = settings.aeatModuleActive;
@@ -1639,6 +1655,18 @@ export function updateConnectionStatus(status, message) {
     lucide.createIcons();
 }
 
+// --- INICIO CÓDIGO AÑADIDO (Fase 2.2) ---
+export function showPermissionsModal() {
+    elements.permissionsModal.classList.remove('hidden');
+    elements.permissionsModal.classList.add('flex');
+}
+
+export function hidePermissionsModal() {
+    elements.permissionsModal.classList.add('hidden');
+    elements.permissionsModal.classList.remove('flex');
+}
+// --- FIN CÓDIGO AÑADIDO (Fase 2.2) ---
+
 // --- Función Agregadora de Renderizado ---
 export function renderAll() {
     const state = getState();
@@ -1686,4 +1714,3 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
-

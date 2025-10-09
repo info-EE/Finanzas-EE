@@ -25,7 +25,6 @@ let dataDocRef = null;
 let unsubscribeFromData = null;
 let unsubscribeFromUsers = null; // Listener para la lista de usuarios
 
-// --- INICIO DE CÓDIGO AÑADIDO (Tarea 1.3) ---
 /**
  * Devuelve un objeto con todos los permisos del sistema establecidos en 'false'.
  * Esta es la configuración por defecto para cualquier usuario nuevo.
@@ -57,7 +56,6 @@ function getDefaultPermissions() {
         manage_users: false,
     };
 }
-// --- FIN DE CÓDIGO AÑADIDO (Tarea 1.3) ---
 
 
 // Esta función recibe las instancias desde main.js
@@ -120,8 +118,6 @@ export async function getUserProfile(uid) {
     }
 }
 
-// --- INICIO DE CÓDIGO MODIFICADO (Tarea 1.3) ---
-// Se ha modificado esta función para que incluya el objeto de permisos por defecto.
 export async function createUserProfile(uid, email, status) {
     try {
         const userDocRef = doc(db, 'usuarios', uid);
@@ -130,16 +126,14 @@ export async function createUserProfile(uid, email, status) {
         await setDoc(userDocRef, { 
             email, 
             status,
-            permisos: defaultPermissions  // Añadimos el nuevo campo de permisos
+            permisos: defaultPermissions
         }, { merge: true });
 
     } catch (error) {
         console.error("Error al crear el perfil del usuario:", error);
     }
 }
-// --- FIN DE CÓDIGO MODIFICADO (Tarea 1.3) ---
 
-// Esta función se mantiene para un solo uso si fuera necesario, pero no la usaremos para la vista principal
 export async function getAllUsers() {
     try {
         const usersCollection = collection(db, 'usuarios');
@@ -152,16 +146,14 @@ export async function getAllUsers() {
     }
 }
 
-// --- NUEVA FUNCIÓN ---
-// Escucha cambios en la colección de usuarios en tiempo real
 export function listenForAllUsersChanges(onUsersUpdate) {
     if (unsubscribeFromUsers) {
-        unsubscribeFromUsers(); // Detiene el listener anterior si existe
+        unsubscribeFromUsers();
     }
     const usersCollection = collection(db, 'usuarios');
     unsubscribeFromUsers = onSnapshot(usersCollection, (snapshot) => {
         const userList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        onUsersUpdate(userList); // Llama a la función callback con la lista actualizada
+        onUsersUpdate(userList);
     }, (error) => {
         console.error("Error escuchando cambios en usuarios:", error);
     });
@@ -181,12 +173,33 @@ export async function updateUserStatus(uid, newStatus) {
     }
 }
 
+// --- INICIO DE CÓDIGO AÑADIDO (Fase 2.3) ---
+/**
+ * Actualiza el objeto de permisos para un usuario específico en Firestore.
+ * @param {string} uid - El ID del usuario a actualizar.
+ * @param {Object} permissions - El nuevo objeto de permisos a guardar.
+ * @returns {boolean} - Devuelve true si la actualización fue exitosa, false en caso contrario.
+ */
+export async function updateUserPermissions(uid, permissions) {
+    if (!uid) return false;
+    try {
+        const userDocRef = doc(db, 'usuarios', uid);
+        await updateDoc(userDocRef, {
+            permisos: permissions
+        });
+        return true;
+    } catch (error) {
+        console.error("Error al actualizar los permisos del usuario:", error);
+        return false;
+    }
+}
+// --- FIN DE CÓDIGO AÑADIDO (Fase 2.3) ---
+
 
 export async function registerUser(email, password) {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        // Ahora, al llamar a createUserProfile, se crearán los permisos por defecto.
         await createUserProfile(user.uid, user.email, 'pendiente');
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
         await signOut(auth);
@@ -196,8 +209,6 @@ export async function registerUser(email, password) {
     }
 }
 
-// --- FUNCIÓN ACTUALIZADA ---
-// Ahora nos aseguramos de detener todos los listeners al cerrar sesión
 export async function logoutUser() {
     try {
         if (unsubscribeFromData) {
@@ -275,3 +286,4 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
+
