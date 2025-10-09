@@ -1193,27 +1193,24 @@
             </div>
         </div>
         
-        <!-- INICIO DE CÓDIGO AÑADIDO (Fase 2) -->
-        <div id="permissions-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
-            <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-            <div class="card rounded-xl p-8 z-10 w-full max-w-2xl max-h-[90vh] flex flex-col">
-                <h3 id="permissions-modal-title" class="text-xl font-bold text-white mb-2">Gestionar Permisos</h3>
-                <p id="permissions-modal-email" class="text-sm text-gray-400 mb-6">Cargando...</p>
-                
-                <div id="permissions-list" class="flex-grow overflow-y-auto pr-4 -mr-4 space-y-4">
-                    <!-- La lista de permisos se generará dinámicamente aquí -->
+        <!-- Modal de Permisos -->
+        <div id="permissions-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black/80">
+            <div class="card rounded-xl z-10 w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                    <div>
+                        <h3 class="text-xl font-bold text-white">Gestionar Permisos</h3>
+                        <p id="permissions-modal-email" class="text-sm text-blue-400"></p>
+                    </div>
+                    <button id="permissions-modal-cancel-btn" class="p-2 rounded-lg hover:bg-gray-700 text-gray-400"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
-                
-                <div class="flex justify-end gap-4 pt-6 border-t border-gray-700 mt-6">
-                    <button id="permissions-modal-cancel-btn" class="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold">Cancelar</button>
-                    <button id="permissions-modal-save-btn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-2">
-                        <i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios
-                    </button>
+                <div id="permissions-list" class="overflow-y-auto p-6 space-y-4">
+                    <!-- Los toggles de permisos se generarán aquí -->
+                </div>
+                <div class="flex justify-end gap-4 p-4 mt-auto border-t border-gray-700">
+                    <button id="permissions-modal-save-btn" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Guardar Cambios</button>
                 </div>
             </div>
         </div>
-        <!-- FIN DE CÓDIGO AÑADIDO (Fase 2) -->
-
         <!-- END MODALS -->
     </main>
 
@@ -1222,6 +1219,15 @@
         <div class="spinner" role="status"></div>
     </div>
     
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=1.1"></script>
 </body>
 </html>
+```
+
+**Paso 2: Vuelve a Desplegar (Deploy)**
+
+Ahora, con el `index.html` actualizado, ejecuta el siguiente comando en tu terminal de VS Code para asegurarte de que esta nueva versión llegue al servidor de Firebase:
+
+```
+firebase deploy --only hosting
+
