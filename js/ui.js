@@ -211,27 +211,42 @@ function createAccountCard(account) {
         </div>`;
 }
 
+// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function createDocumentRow(doc, type) {
+    const { permissions } = getState();
     const statusClass = doc.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
     
-    let actionsHtml = `
+    let actionsHtml = '';
+
+    // El botón de ver factura siempre es visible si se puede ver la sección.
+    if (type === 'Factura') {
+        actionsHtml += `
+        <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${doc.id}" title="Ver Factura">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+        </button>`;
+    }
+
+    // Botón de generar recibo (si está cobrada)
+    if (type === 'Factura' && doc.status === 'Cobrada') {
+        actionsHtml += `
+        <button class="generate-receipt-btn p-2 text-green-400 hover:text-green-300" data-id="${doc.id}" title="Generar Recibo">
+            <i data-lucide="receipt" class="w-4 h-4"></i>
+        </button>`;
+    }
+    
+    // Botón de eliminar, depende del permiso.
+    const canManage = (type === 'Factura' && permissions.manage_invoices) || (type === 'Proforma' && permissions.manage_proformas);
+    if (canManage) {
+        actionsHtml += `
         <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${doc.id}" title="Eliminar">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>`;
-
-    if (type === 'Factura') {
-        actionsHtml = `
-        <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${doc.id}" title="Ver Factura">
-            <i data-lucide="eye" class="w-4 h-4"></i>
-        </button>` + actionsHtml;
-        
-        if (doc.status === 'Cobrada') {
-            actionsHtml = `
-            <button class="generate-receipt-btn p-2 text-green-400 hover:text-green-300" data-id="${doc.id}" title="Generar Recibo">
-                <i data-lucide="receipt" class="w-4 h-4"></i>
-            </button>` + actionsHtml;
-        }
     }
+
+    // El estado es un botón o un span, dependiendo del permiso.
+    const statusElement = permissions.change_document_status
+        ? `<button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${doc.id}">${doc.status}</button>`
+        : `<span class="text-xs font-semibold px-2 py-1 rounded-full ${statusClass}">${doc.status}</span>`;
 
     return `
         <tr class="border-b border-gray-800 hover:bg-gray-800/50">
@@ -239,68 +254,67 @@ function createDocumentRow(doc, type) {
             <td class="py-2 px-3">${escapeHTML(doc.number)}</td>
             <td class="py-2 px-3">${escapeHTML(doc.client)}</td>
             <td class="py-2 px-3 text-right">${formatCurrency(doc.amount, doc.currency)}</td>
-            <td class="py-2 px-3 text-center">
-                <button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${doc.id}">${doc.status}</button>
-            </td>
+            <td class="py-2 px-3 text-center">${statusElement}</td>
             <td class="py-2 px-3">
                 <div class="flex items-center justify-center gap-2">${actionsHtml}</div>
             </td>
         </tr>`;
 }
+// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
+// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function createClientRow(client) {
+    const { permissions } = getState();
+
+    const actionsHtml = permissions.manage_clients ? `
+        <div class="flex items-center justify-center gap-2">
+            <button class="edit-client-btn p-2 text-blue-400 hover:text-blue-300" data-id="${client.id}" title="Editar">
+                <i data-lucide="edit" class="w-4 h-4"></i>
+            </button>
+            <button class="delete-client-btn p-2 text-red-400 hover:text-red-300" data-id="${client.id}" title="Eliminar">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>` : '';
+    
     return `
         <tr class="border-b border-gray-800 hover:bg-gray-800/50">
             <td class="py-3 px-3">${escapeHTML(client.name)}</td>
             <td class="py-3 px-3">${escapeHTML(client.taxIdType)} ${escapeHTML(client.taxId)}</td>
             <td class="py-3 px-3">${escapeHTML(client.email)}</td>
             <td class="py-3 px-3">${escapeHTML(client.phoneMobilePrefix)}${escapeHTML(client.phoneMobile)}</td>
-            <td class="py-3 px-3">
-                <div class="flex items-center justify-center gap-2">
-                    <button class="edit-client-btn p-2 text-blue-400 hover:text-blue-300" data-id="${client.id}" title="Editar">
-                        <i data-lucide="edit" class="w-4 h-4"></i>
-                    </button>
-                    <button class="delete-client-btn p-2 text-red-400 hover:text-red-300" data-id="${client.id}" title="Eliminar">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            </td>
+            <td class="py-3 px-3">${actionsHtml}</td>
         </tr>`;
 }
+// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
+// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function createInvestmentRow(t, allAssets) {
+    const { permissions } = getState();
     const asset = allAssets.find(a => a.id === t.investmentAssetId);
     const assetName = asset ? asset.name : 'Activo Desconocido';
+
+    const actionsHtml = permissions.manage_investments ? `
+        <button class="delete-investment-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar Inversión">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>` : '';
+
     return `
         <tr class="border-b border-gray-800 hover:bg-gray-800/50">
             <td class="py-3 px-3">${t.date}</td>
             <td class="py-2 px-3">${escapeHTML(assetName)}</td>
             <td class="py-2 px-3">${escapeHTML(t.account)}</td>
             <td class="py-2 px-3 text-right">${formatCurrency(t.amount, t.currency)}</td>
-            <td class="py-2 px-3 text-center">
-                <button class="delete-investment-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar Inversión">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
-            </td>
+            <td class="py-2 px-3 text-center">${actionsHtml}</td>
         </tr>`;
 }
+// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
 // --- Funciones de Renderizado Principales ---
 
 function renderTransactions() {
-    const { transactions, permissions } = getState();
+    const { transactions } = getState();
     const tbody = elements.transactionsTableBody;
     if (!tbody) return;
-
-    // --- INICIO CÓDIGO AÑADIDO (Fase 3.3) ---
-    // Oculta los formularios si el usuario no tiene permisos.
-    if (elements.transactionForm) {
-        elements.transactionForm.parentElement.classList.toggle('hidden', !permissions.manage_cashflow);
-    }
-    if (elements.transferForm) {
-        elements.transferForm.parentElement.classList.toggle('hidden', !permissions.execute_transfers);
-    }
-    // --- FIN CÓDIGO AÑADIDO (Fase 3.3) ---
 
     let filteredTransactions = transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
     const searchInput = document.getElementById('cashflow-search');
@@ -651,9 +665,25 @@ function renderPendingInvoices() {
 
 
 function renderDocuments(type, tableBody, searchInputId) {
-    const { documents } = getState();
+    const { documents, permissions } = getState();
     const searchInput = document.getElementById(searchInputId);
-    if (!tableBody || !searchInput) return;
+    if (!tableBody || !searchInput || !permissions) return;
+
+    // --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
+    if (type === 'Proforma' && elements.proformaForm && elements.proformaForm.parentElement) {
+        elements.proformaForm.parentElement.classList.toggle('hidden', !permissions.manage_proformas);
+    }
+    const createInvoiceTab = document.getElementById('facturacion-tab-crear');
+    if (type === 'Factura' && createInvoiceTab) {
+        createInvoiceTab.classList.toggle('hidden', !permissions.manage_invoices);
+        
+        // Si el usuario no puede crear facturas, y la pestaña activa era 'crear',
+        // lo movemos a la de 'listado' para que no vea una página en blanco.
+        if (!permissions.manage_invoices && createInvoiceTab.classList.contains('active')) {
+             document.getElementById('facturacion-tab-listado')?.click();
+        }
+    }
+    // --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
     const filteredDocs = documents.filter(d => d.type === type);
     const searchTerm = searchInput.value.toLowerCase();
@@ -678,11 +708,17 @@ function renderDocuments(type, tableBody, searchInputId) {
 }
 
 function renderClients() {
-    const { clients } = getState();
+    const { clients, permissions } = getState();
     const tbody = elements.clientsTableBody;
-    if (!tbody) return;
+    if (!tbody || !permissions) return;
+
+    // --- INICIO CÓDIGO AÑADIDO (Fase 3.3) ---
+    if (elements.addClientForm && elements.addClientForm.parentElement) {
+        elements.addClientForm.parentElement.parentElement.classList.toggle('hidden', !permissions.manage_clients);
+    }
+    // --- FIN CÓDIGO AÑADIDO (Fase 3.3) ---
+
     tbody.innerHTML = '';
-    
     if (clients.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay clientes registrados.</td></tr>`;
         return;
@@ -763,10 +799,17 @@ function renderClientsChart() {
 }
 
 function renderInvestments() {
-    const { transactions, investmentAssets } = getState();
-    const investmentsData = transactions.filter(t => t.category === 'Inversión');
+    const { transactions, investmentAssets, permissions } = getState();
     const tbody = elements.investmentsTableBody;
-    if (!tbody) return;
+    if (!tbody || !permissions) return;
+    
+    // --- INICIO CÓDIGO AÑADIDO (Fase 3.3) ---
+    if(elements.addInvestmentForm && elements.addInvestmentForm.parentElement) {
+        elements.addInvestmentForm.parentElement.classList.toggle('hidden', !permissions.manage_investments);
+    }
+    // --- FIN CÓDIGO AÑADIDO (Fase 3.3) ---
+
+    const investmentsData = transactions.filter(t => t.category === 'Inversión');
     
     const totalInvestedEUR = investmentsData.filter(t => t.currency === 'EUR').reduce((sum, t) => sum + t.amount, 0);
     const totalInvestedUSD = investmentsData.filter(t => t.currency === 'USD').reduce((sum, t) => sum + t.amount, 0);
@@ -811,8 +854,6 @@ function renderInvestmentAssetsList() {
     });
 }
 
-// --- INICIO CÓDIGO MODIFICADO (Fase 2.2 y 3.2) ---
-// La función ahora muestra dos botones y se basa en permisos.
 function renderUserManagement() {
     const { allUsers, permissions } = getState();
     const auth = getAuthInstance();
@@ -859,13 +900,39 @@ function renderUserManagement() {
             `;
         }).join('');
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 2.2 y 3.2) ---
 
 
+// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function renderSettings() {
-    const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes, settings } = getState();
+    const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes, settings, permissions } = getState();
+    if (!permissions) return;
+
+    // Mapeo de permisos a los elementos de las tarjetas de ajustes.
+    const settingsCards = {
+        manage_users: elements.userManagementCard,
+        manage_fiscal_settings: elements.aeatSettingsCard,
+        manage_fiscal_settings_2: elements.fiscalParamsForm?.parentElement?.parentElement,
+        manage_accounts: elements.addAccountForm?.parentElement,
+        manage_categories: elements.addIncomeCategoryForm?.parentElement?.parentElement?.parentElement,
+        manage_categories_2: elements.addOperationTypeForm?.parentElement,
+        manage_categories_3: elements.addTaxIdTypeForm?.parentElement,
+        execute_balance_adjustment: elements.updateBalanceForm?.parentElement,
+        manage_investments: elements.addInvestmentAssetForm?.parentElement,
+        execute_year_close: document.getElementById('close-year-btn')?.parentElement
+    };
+
+    // Recorre y oculta/muestra cada tarjeta.
+    for (const key in settingsCards) {
+        // Usa una clave de permiso real del mapa de permisos.
+        const permissionKey = key.replace(/_\d+$/, ''); // Elimina sufijos numéricos
+        const element = settingsCards[key];
+        if (element) {
+            element.classList.toggle('hidden', !permissions[permissionKey]);
+        }
+    }
     
-    if (elements.settingsAccountsList) {
+    // Si la tarjeta está visible, renderiza su contenido.
+    if (permissions.manage_accounts && elements.settingsAccountsList) {
         elements.settingsAccountsList.innerHTML = '';
         accounts.forEach(acc => {
             const div = document.createElement('div');
@@ -891,15 +958,23 @@ function renderSettings() {
             listEl.appendChild(div);
         });
     };
-    renderCategoryList(elements.incomeCategoriesList, incomeCategories, []);
-    renderCategoryList(elements.expenseCategoriesList, expenseCategories, []);
-    renderCategoryList(elements.operationTypesList, invoiceOperationTypes, []);
-    renderCategoryList(elements.taxIdTypesList, taxIdTypes, ESSENTIAL_TAX_ID_TYPES);
 
-    renderInvestmentAssetsList();
-    renderUserManagement();
+    if (permissions.manage_categories) {
+        renderCategoryList(elements.incomeCategoriesList, incomeCategories, []);
+        renderCategoryList(elements.expenseCategoriesList, expenseCategories, []);
+        renderCategoryList(elements.operationTypesList, invoiceOperationTypes, []);
+        renderCategoryList(elements.taxIdTypesList, taxIdTypes, ESSENTIAL_TAX_ID_TYPES);
+    }
 
-    if (elements.aeatToggleContainer && settings) {
+    if (permissions.manage_investments) {
+        renderInvestmentAssetsList();
+    }
+    
+    if (permissions.manage_users) {
+        renderUserManagement();
+    }
+    
+    if (permissions.manage_fiscal_settings && elements.aeatToggleContainer && settings) {
         const isActive = settings.aeatModuleActive;
         elements.aeatToggleContainer.innerHTML = isActive
             ? `<button class="aeat-toggle-btn bg-blue-600 text-white font-bold py-2 px-3 rounded-lg"><i data-lucide="check-circle" class="w-4 h-4"></i> Activado</button>`
@@ -907,10 +982,11 @@ function renderSettings() {
     }
     
     const taxRateInput = elements.fiscalParamsForm?.querySelector('#corporate-tax-rate');
-    if (taxRateInput && settings && settings.fiscalParameters) {
+    if (permissions.manage_fiscal_settings && taxRateInput && settings && settings.fiscalParameters) {
         taxRateInput.value = settings.fiscalParameters.corporateTaxRate;
     }
 }
+// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
 function renderReport() {
     const { activeReport } = getState();
@@ -1130,9 +1206,50 @@ function toggleIvaField() {
     }
 }
 
+// --- INICIO CÓDIGO MODIFICADO (Fase 3.4) ---
 export function switchPage(pageId, subpageId = null) {
+    const { permissions } = getState();
+    if (!permissions) return; // Salir si los permisos aún no se han cargado
+
+    // Mapeo de página a permiso de VISTA requerido.
+    const viewPermissionMap = {
+        'inicio': 'view_dashboard',
+        'cashflow': 'view_cashflow',
+        'iva': 'view_iva_control',
+        'cuentas': 'view_accounts',
+        'proformas': 'view_documents',
+        'reportes': 'view_reports',
+        'archivos': 'view_archives',
+        'facturacion': 'view_documents',
+        'inversiones': 'view_investments',
+        'clientes': 'view_clients',
+        'ajustes': ['manage_accounts', 'manage_categories', 'execute_balance_adjustment', 'execute_year_close', 'manage_fiscal_settings', 'manage_users'],
+    };
+
+    const requiredPermission = viewPermissionMap[pageId];
+    let hasPermission = false;
+
+    if (requiredPermission) {
+        if (Array.isArray(requiredPermission)) {
+            hasPermission = requiredPermission.some(p => permissions[p]);
+        } else {
+            hasPermission = permissions[requiredPermission];
+        }
+    }
+
+    // Si no tiene permiso, redirige a inicio y muestra un aviso.
+    if (!hasPermission) {
+        showAlertModal('Acceso Denegado', 'No tienes permiso para acceder a esta sección.');
+        pageId = 'inicio'; // Forzamos la redirección a la página de inicio.
+    }
+
     elements.pages.forEach(page => page.classList.toggle('hidden', page.id !== `page-${pageId}`));
-    elements.navLinks.forEach(link => link.classList.toggle('active', link.id === `nav-${pageId}`));
+    elements.navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.id === `nav-${pageId}`) {
+            link.classList.add('active');
+        }
+    });
     
     if (pageId === 'inicio') renderInicioDashboard();
     if (pageId === 'cuentas') renderBalanceLegendAndChart();
@@ -1158,6 +1275,7 @@ export function switchPage(pageId, subpageId = null) {
     renderAll();
     lucide.createIcons();
 }
+// --- FIN CÓDIGO MODIFICADO (Fase 3.4) ---
 
 function populateLogoSelect() {
     const { logoCatalog } = getState();
@@ -1727,15 +1845,42 @@ function updateNavLinksVisibility() {
 }
 // --- FIN CÓDIGO AÑADIDO (Fase 3.2) ---
 
+// --- INICIO CÓDIGO AÑADIDO (Fase 3.3) ---
+/**
+ * Muestra u oculta elementos de acción (formularios, botones) según los permisos.
+ */
+function updateActionElementsVisibility() {
+    const { permissions } = getState();
+    if (!permissions) return;
+
+    // --- Página de Cash Flow ---
+    if (elements.transactionForm && elements.transactionForm.parentElement) {
+        elements.transactionForm.parentElement.classList.toggle('hidden', !permissions.manage_cashflow);
+    }
+    if (elements.transferForm && elements.transferForm.parentElement) {
+        elements.transferForm.parentElement.classList.toggle('hidden', !permissions.execute_transfers);
+    }
+
+    // --- Página de Proformas ---
+    if (elements.proformaForm && elements.proformaForm.parentElement) {
+        elements.proformaForm.parentElement.classList.toggle('hidden', !permissions.manage_proformas);
+    }
+    
+    // --- Página de Facturación ---
+    const createInvoiceTab = document.getElementById('facturacion-tab-crear');
+    if (createInvoiceTab) {
+        createInvoiceTab.classList.toggle('hidden', !permissions.manage_invoices);
+    }
+}
+// --- FIN CÓDIGO AÑADIDO (Fase 3.3) ---
+
 // --- Función Agregadora de Renderizado ---
 export function renderAll() {
     const state = getState();
     if (!state || !state.accounts) return;
 
-    // --- INICIO CÓDIGO AÑADIDO (Fase 3.2) ---
-    // Actualiza la visibilidad de la navegación CADA VEZ que se renderiza la UI.
     updateNavLinksVisibility();
-    // --- FIN CÓDIGO AÑADIDO (Fase 3.2) ---
+    updateActionElementsVisibility(); // Se llama aquí para centralizar la lógica de visibilidad.
 
     const visiblePage = Array.from(elements.pages).find(p => !p.classList.contains('hidden'));
     if (visiblePage) {
