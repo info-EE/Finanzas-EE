@@ -23,6 +23,7 @@ let db;
 let currentUserId = null;
 let dataDocRef = null;
 let unsubscribeFromData = null;
+let unsubscribeFromUsers = null; // Listener para la lista de usuarios
 
 // Esta función recibe las instancias desde main.js
 export function initFirebaseServices(firebaseApp, firebaseAuth, firestoreDb) {
@@ -42,10 +43,15 @@ export function setCurrentUser(uid) {
         // La ruta principal para los datos de la aplicación del usuario.
         dataDocRef = doc(db, 'usuarios', uid, 'estado', 'mainState');
     } else {
+        // Limpiar todo al cerrar sesión o si no hay usuario
         dataDocRef = null;
         if (unsubscribeFromData) {
             unsubscribeFromData();
             unsubscribeFromData = null;
+        }
+        if (unsubscribeFromUsers) {
+            unsubscribeFromUsers();
+            unsubscribeFromUsers = null;
         }
     }
 }
@@ -88,6 +94,7 @@ export async function createUserProfile(uid, email, status) {
     }
 }
 
+// Esta función se mantiene para un solo uso si fuera necesario, pero no la usaremos para la vista principal
 export async function getAllUsers() {
     try {
         const usersCollection = collection(db, 'usuarios');
@@ -99,6 +106,22 @@ export async function getAllUsers() {
         return [];
     }
 }
+
+// --- NUEVA FUNCIÓN ---
+// Escucha cambios en la colección de usuarios en tiempo real
+export function listenForAllUsersChanges(onUsersUpdate) {
+    if (unsubscribeFromUsers) {
+        unsubscribeFromUsers(); // Detiene el listener anterior si existe
+    }
+    const usersCollection = collection(db, 'usuarios');
+    unsubscribeFromUsers = onSnapshot(usersCollection, (snapshot) => {
+        const userList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        onUsersUpdate(userList); // Llama a la función callback con la lista actualizada
+    }, (error) => {
+        console.error("Error escuchando cambios en usuarios:", error);
+    });
+}
+
 
 export async function updateUserStatus(uid, newStatus) {
     try {
@@ -136,8 +159,18 @@ export async function loginUser(email, password) {
     }
 }
 
+// --- FUNCIÓN ACTUALIZADA ---
+// Ahora nos aseguramos de detener todos los listeners al cerrar sesión
 export async function logoutUser() {
     try {
+        if (unsubscribeFromData) {
+            unsubscribeFromData();
+            unsubscribeFromData = null;
+        }
+        if (unsubscribeFromUsers) {
+            unsubscribeFromUsers();
+            unsubscribeFromUsers = null;
+        }
         await signOut(auth);
     } catch (error) {
         console.error("Error al cerrar sesión:", error);
@@ -205,4 +238,3 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
-

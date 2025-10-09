@@ -8,7 +8,6 @@ import { subscribe, initState, setState, getState } from './store.js';
 import { bindEventListeners } from './handlers.js';
 import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
-import * as actions from './actions.js';
 
 // --- Configuración de Firebase ---
 const firebaseConfig = {
@@ -57,9 +56,8 @@ function main() {
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile) {
-                // Si el perfil no existe, es un usuario antiguo (como el admin). Se lo creamos.
                 await api.createUserProfile(user.uid, user.email, 'activo');
-                userProfile = await api.getUserProfile(user.uid); // Volvemos a leerlo
+                userProfile = await api.getUserProfile(user.uid);
             }
 
             if (userProfile && userProfile.status === 'activo') {
@@ -67,29 +65,22 @@ function main() {
                 showApp();
                 await initState();
 
-                const { settings } = getState();
-                // Comprobación de seguridad robusta para adminUids
-                const isAdmin = settings && Array.isArray(settings.adminUids) && settings.adminUids.includes(user.uid);
+                const state = getState();
+                const isAdmin = state.settings && Array.isArray(state.settings.adminUids) && state.settings.adminUids.includes(user.uid);
+
                 if (isAdmin) {
-                    await actions.loadAndSetAllUsers();
+                    // Si es administrador, inicia el listener para ver usuarios en tiempo real.
+                    api.listenForAllUsersChanges((allUsers) => {
+                        setState({ allUsers });
+                    });
                 }
 
                 api.listenForDataChanges((newData) => {
-                    // Al recibir datos de Firebase, nos aseguramos de que el estado local
-                    // no pierda propiedades esenciales (como 'settings') si no vienen en la actualización.
-                    const currentState = getState();
-                    const remoteData = newData || {};
-
-                    // Creamos el nuevo estado, asegurando que settings no sea sobreescrito por null o undefined
-                    const finalState = { ...currentState, ...remoteData };
-                    finalState.settings = { 
-                        ...(currentState.settings || {}), 
-                        ...(remoteData.settings && typeof remoteData.settings === 'object' ? remoteData.settings : {}) 
-                    };
-                    
-                    setState(finalState);
+                    setState(newData);
                 });
+                
                 switchPage('inicio');
+
             } else {
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
                 await api.logoutUser();
