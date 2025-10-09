@@ -83,17 +83,15 @@ export const elements = {
     statusIcon: document.getElementById('status-icon'),
     statusText: document.getElementById('status-text'),
     newAccountLogoSelect: document.getElementById('new-account-logo-select'),
+    
+    // Elementos de gestión de usuarios y permisos (Modal)
     userManagementCard: document.getElementById('user-management-card'),
     usersList: document.getElementById('users-list'),
-
-    // --- INICIO CÓDIGO AÑADIDO (Fase 2.2) ---
     permissionsModal: document.getElementById('permissions-modal'),
-    permissionsModalTitle: document.getElementById('permissions-modal-title'),
     permissionsModalEmail: document.getElementById('permissions-modal-email'),
     permissionsList: document.getElementById('permissions-list'),
-    permissionsModalCancelBtn: document.getElementById('permissions-modal-cancel-btn'),
     permissionsModalSaveBtn: document.getElementById('permissions-modal-save-btn'),
-    // --- FIN CÓDIGO AÑADIDO (Fase 2.2) ---
+    permissionsModalCancelBtn: document.getElementById('permissions-modal-cancel-btn'),
 };
 
 const charts = {
@@ -149,12 +147,42 @@ export function hideApp() {
     }
 }
 
+// --- INICIO CÓDIGO AÑADIDO (Fase 2.1) ---
+// Funciones para mostrar/ocultar el modal de permisos
+export function showPermissionsModal() {
+    if (elements.permissionsModal) {
+        elements.permissionsModal.classList.remove('hidden');
+        elements.permissionsModal.classList.add('flex');
+    }
+}
+
+export function hidePermissionsModal() {
+    if (elements.permissionsModal) {
+        elements.permissionsModal.classList.add('hidden');
+        elements.permissionsModal.classList.remove('flex');
+    }
+}
+// --- FIN CÓDIGO AÑADIDO (Fase 2.1) ---
 
 // --- Funciones Creadoras de Elementos ---
 
+// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function createTransactionRow(t) {
+    const { permissions } = getState();
     const amountColor = t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400';
     const sign = t.type === 'Ingreso' ? '+' : '-';
+
+    // Decide si mostrar los botones de acción basado en el permiso 'manage_cashflow'.
+    const actionsHtml = permissions.manage_cashflow ? `
+        <div class="flex items-center justify-center gap-2">
+            <button class="edit-btn p-2 text-blue-400 hover:text-blue-300" data-id="${t.id}" title="Editar">
+                <i data-lucide="edit" class="w-4 h-4"></i>
+            </button>
+            <button class="delete-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>` : '';
+
     return `
         <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
             <td class="py-3 px-3">${t.date}</td>
@@ -164,18 +192,10 @@ function createTransactionRow(t) {
             <td class="py-3 px-3">${escapeHTML(t.part)}</td>
             <td class="py-3 px-3 text-right text-gray-400">${t.iva > 0 ? formatCurrency(t.iva, t.currency) : '-'}</td>
             <td class="py-3 px-3 text-right font-medium ${amountColor}">${sign} ${formatCurrency(t.amount, t.currency)}</td>
-            <td class="py-3 px-3">
-                <div class="flex items-center justify-center gap-2">
-                    <button class="edit-btn p-2 text-blue-400 hover:text-blue-300" data-id="${t.id}" title="Editar">
-                        <i data-lucide="edit" class="w-4 h-4"></i>
-                    </button>
-                    <button class="delete-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            </td>
+            <td class="py-3 px-3">${actionsHtml}</td>
         </tr>`;
 }
+// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
 function createAccountCard(account) {
     return `
@@ -268,9 +288,19 @@ function createInvestmentRow(t, allAssets) {
 // --- Funciones de Renderizado Principales ---
 
 function renderTransactions() {
-    const { transactions } = getState();
+    const { transactions, permissions } = getState();
     const tbody = elements.transactionsTableBody;
     if (!tbody) return;
+
+    // --- INICIO CÓDIGO AÑADIDO (Fase 3.3) ---
+    // Oculta los formularios si el usuario no tiene permisos.
+    if (elements.transactionForm) {
+        elements.transactionForm.parentElement.classList.toggle('hidden', !permissions.manage_cashflow);
+    }
+    if (elements.transferForm) {
+        elements.transferForm.parentElement.classList.toggle('hidden', !permissions.execute_transfers);
+    }
+    // --- FIN CÓDIGO AÑADIDO (Fase 3.3) ---
 
     let filteredTransactions = transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
     const searchInput = document.getElementById('cashflow-search');
@@ -781,16 +811,14 @@ function renderInvestmentAssetsList() {
     });
 }
 
-// --- INICIO CÓDIGO MODIFICADO (Fase 2.2) ---
-// Se ha modificado esta función para añadir el botón de gestionar permisos.
+// --- INICIO CÓDIGO MODIFICADO (Fase 2.2 y 3.2) ---
+// La función ahora muestra dos botones y se basa en permisos.
 function renderUserManagement() {
-    const { allUsers, settings } = getState();
+    const { allUsers, permissions } = getState();
     const auth = getAuthInstance();
     const currentUser = auth.currentUser;
 
-    const isAdmin = currentUser && settings && Array.isArray(settings.adminUids) && settings.adminUids.includes(currentUser.uid);
-
-    if (!isAdmin) {
+    if (!permissions.manage_users) {
         elements.userManagementCard.classList.add('hidden');
         return;
     }
@@ -809,7 +837,7 @@ function renderUserManagement() {
     listEl.innerHTML = otherUsers.map(user => {
             const isActivo = user.status === 'activo';
             const statusColor = isActivo ? 'text-green-400' : 'text-yellow-400';
-            const statusButtonColor = isActivo ? 'bg-red-600/20 hover:bg-red-600/40 text-red-300' : 'bg-green-600/20 hover:bg-green-600/40 text-green-300';
+            const statusButtonColor = isActivo ? 'bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300' : 'bg-green-600/20 hover:bg-green-600/40 text-green-300';
             const statusButtonText = isActivo ? 'Desactivar' : 'Activar';
             const statusIcon = isActivo ? 'user-x' : 'user-check';
 
@@ -820,18 +848,18 @@ function renderUserManagement() {
                         <p class="text-xs ${statusColor} capitalize">${escapeHTML(user.status)}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button class="toggle-status-btn p-2 rounded-lg ${statusButtonColor} transition-colors" data-id="${user.id}" data-status="${user.status}" title="${statusButtonText}">
-                            <i data-lucide="${statusIcon}" class="w-4 h-4"></i>
-                        </button>
                         <button class="manage-permissions-btn p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 transition-colors" data-id="${user.id}" title="Gestionar Permisos">
                             <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        </button>
+                        <button class="toggle-status-btn p-2 rounded-lg ${statusButtonColor} transition-colors" data-id="${user.id}" data-status="${user.status}" title="${statusButtonText}">
+                            <i data-lucide="${statusIcon}" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
             `;
         }).join('');
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 2.2) ---
+// --- FIN CÓDIGO MODIFICADO (Fase 2.2 y 3.2) ---
 
 
 function renderSettings() {
@@ -869,7 +897,7 @@ function renderSettings() {
     renderCategoryList(elements.taxIdTypesList, taxIdTypes, ESSENTIAL_TAX_ID_TYPES);
 
     renderInvestmentAssetsList();
-    renderUserManagement(); 
+    renderUserManagement();
 
     if (elements.aeatToggleContainer && settings) {
         const isActive = settings.aeatModuleActive;
@@ -1364,7 +1392,7 @@ export function showInvoiceViewer(invoiceId) {
         <header class="flex justify-between items-start mb-12 pb-8 border-b">
             <div class="w-1/2">
                 <div class="flex items-center gap-3 mb-4">
-                    <svg class="h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
                     </svg>
                     <span class="text-2xl font-bold text-gray-800">Europa Envíos</span>
@@ -1449,7 +1477,7 @@ export function showReceiptViewer(invoice) {
         <header class="flex justify-between items-start mb-12 pb-8 border-b">
             <div class="w-1/2">
                 <div class="flex items-center gap-3 mb-4">
-                    <svg class="h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
                     </svg>
                     <span class="text-2xl font-bold text-gray-800">Europa Envíos</span>
@@ -1655,22 +1683,59 @@ export function updateConnectionStatus(status, message) {
     lucide.createIcons();
 }
 
-// --- INICIO CÓDIGO AÑADIDO (Fase 2.2) ---
-export function showPermissionsModal() {
-    elements.permissionsModal.classList.remove('hidden');
-    elements.permissionsModal.classList.add('flex');
-}
+// --- INICIO CÓDIGO AÑADIDO (Fase 3.2) ---
+/**
+ * Muestra u oculta los enlaces de navegación según los permisos del usuario.
+ */
+function updateNavLinksVisibility() {
+    const { permissions } = getState();
+    if (!permissions) return;
 
-export function hidePermissionsModal() {
-    elements.permissionsModal.classList.add('hidden');
-    elements.permissionsModal.classList.remove('flex');
+    // Mapeo de ID de enlace de navegación al permiso requerido.
+    const navPermissionMap = {
+        'nav-inicio': 'view_dashboard',
+        'nav-cashflow': 'view_cashflow',
+        'nav-iva': 'view_iva_control',
+        'nav-cuentas': 'view_accounts',
+        'nav-proformas': 'view_documents',
+        'nav-reportes': 'view_reports',
+        'nav-archivos': 'view_archives',
+        'nav-facturacion': 'view_documents',
+        'nav-inversiones': 'view_investments',
+        'nav-clientes': 'view_clients',
+        // El acceso a Ajustes se concede si el usuario puede gestionar CUALQUIER cosa.
+        'nav-ajustes': ['manage_accounts', 'manage_categories', 'execute_balance_adjustment', 'execute_year_close', 'manage_fiscal_settings', 'manage_users'],
+    };
+
+    elements.navLinks.forEach(link => {
+        const requiredPermission = navPermissionMap[link.id];
+        if (!requiredPermission) return;
+
+        let hasPermission = false;
+        // Si el permiso es un array, el usuario necesita tener al menos UNO de ellos.
+        if (Array.isArray(requiredPermission)) {
+            hasPermission = requiredPermission.some(p => permissions[p]);
+        } else {
+            hasPermission = permissions[requiredPermission];
+        }
+
+        // El botón de logout no es un enlace de navegación de página, así que lo ignoramos aquí.
+        if (link.id !== 'logout-btn') {
+            link.classList.toggle('hidden', !hasPermission);
+        }
+    });
 }
-// --- FIN CÓDIGO AÑADIDO (Fase 2.2) ---
+// --- FIN CÓDIGO AÑADIDO (Fase 3.2) ---
 
 // --- Función Agregadora de Renderizado ---
 export function renderAll() {
     const state = getState();
     if (!state || !state.accounts) return;
+
+    // --- INICIO CÓDIGO AÑADIDO (Fase 3.2) ---
+    // Actualiza la visibilidad de la navegación CADA VEZ que se renderiza la UI.
+    updateNavLinksVisibility();
+    // --- FIN CÓDIGO AÑADIDO (Fase 3.2) ---
 
     const visiblePage = Array.from(elements.pages).find(p => !p.classList.contains('hidden'));
     if (visiblePage) {
@@ -1714,3 +1779,4 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
+

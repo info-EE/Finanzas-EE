@@ -1,4 +1,4 @@
-import { loadData, saveData } from './api.js';
+import { loadData, saveData, getAuthInstance, getUserProfile } from './api.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 
 // --- Catálogo de Logos ---
@@ -11,6 +11,24 @@ const LOGO_CATALOG = {
     paraguay_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMSA2Ij48cGF0aCBmaWxsPSIjRDUyQjFFIiBkPSJNMCAwaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjRkZGIiBkPSJNMCAyaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjMDAzOEE4IiBkPSJNMCA0aDExdjJIMHoiLz48L3N2Zz4=" alt="Bandera de Paraguay" class="w-6 h-6 rounded-sm border border-gray-600">`,
     default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
 };
+
+// --- INICIO CÓDIGO AÑADIDO (Fase 3.1) ---
+/**
+ * Devuelve un objeto con todos los permisos establecidos en 'true'.
+ * Se utiliza para la compatibilidad con administradores existentes.
+ * @returns {Object} El objeto de permisos de administrador.
+ */
+function getAdminPermissions() {
+    return {
+        view_dashboard: true, view_accounts: true, view_cashflow: true, manage_cashflow: true,
+        execute_transfers: true, view_documents: true, manage_invoices: true, manage_proformas: true,
+        change_document_status: true, view_clients: true, manage_clients: true, view_reports: true,
+        view_iva_control: true, view_archives: true, view_investments: true, manage_investments: true,
+        manage_accounts: true, manage_categories: true, execute_balance_adjustment: true,
+        execute_year_close: true, manage_fiscal_settings: true, manage_users: true,
+    };
+}
+// --- FIN CÓDIGO AÑADIDO (Fase 3.1) ---
 
 // --- Estado Inicial por Defecto ---
 function getDefaultState() {
@@ -32,7 +50,6 @@ function getDefaultState() {
         activeReport: { type: null, data: [], title: '', columns: [] },
         activeIvaReport: null,
         settings: {
-            // IMPORTANTE: Añade aquí los IDs de los usuarios que serán administradores.
             adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'], 
             aeatModuleActive: false,
             aeatConfig: {
@@ -45,7 +62,8 @@ function getDefaultState() {
                 corporateTaxRate: 17
             }
         },
-        allUsers: [] // Se inicializa vacío, se llenará para los administradores.
+        allUsers: [],
+        permissions: {} // --- CAMPO AÑADIDO (Fase 3.1) ---
     };
 }
 
@@ -78,45 +96,59 @@ export function resetState() {
     notify();
 }
 
+// --- INICIO CÓDIGO MODIFICADO (Fase 3.1) ---
+// La función se ha modificado para cargar y establecer los permisos del usuario.
 export async function initState() {
     const defaultState = getDefaultState();
+    const auth = getAuthInstance();
+    const currentUser = auth.currentUser;
+
     try {
         const loadedStateResult = await loadData();
+        let finalState;
 
         if (loadedStateResult.exists) {
             const remoteData = loadedStateResult.data || {};
-            
-            // Construimos el estado final de forma segura, empezando por los valores por defecto
-            let finalState = { ...defaultState, ...remoteData };
-            
-            // Fusión profunda y segura para el objeto 'settings', garantizando que nunca sea nulo o indefinido
-            // y que siempre contenga las claves por defecto (como adminUids).
+            finalState = { ...defaultState, ...remoteData };
             finalState.settings = { 
                 ...defaultState.settings, 
                 ...(remoteData.settings && typeof remoteData.settings === 'object' ? remoteData.settings : {}) 
             };
-            
-            // Nos aseguramos de que las categorías esenciales siempre estén presentes
             finalState.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(remoteData.incomeCategories || [])])];
             finalState.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(remoteData.expenseCategories || [])])];
             finalState.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(remoteData.invoiceOperationTypes || [])])];
             finalState.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(remoteData.taxIdTypes || [])])];
-            
-            state = finalState;
-
         } else {
-            // Si no existen datos, es un usuario nuevo. Creamos y guardamos el estado inicial.
             console.log("No se encontró estado remoto, inicializando con estado por defecto.");
-            state = defaultState;
-            await saveData(state);
+            finalState = defaultState;
+            await saveData(finalState);
         }
+
+        // Cargar y establecer los permisos del usuario actual.
+        if (currentUser) {
+            const userProfile = await getUserProfile(currentUser.uid);
+            if (userProfile && userProfile.permisos) {
+                finalState.permissions = userProfile.permisos;
+            } else if (userProfile && finalState.settings.adminUids.includes(currentUser.uid)) {
+                // Compatibilidad hacia atrás: si el usuario es admin pero no tiene el objeto `permisos`, se le otorgan todos.
+                console.warn("Usuario administrador sin objeto de permisos. Se concederán todos los permisos para esta sesión.");
+                finalState.permissions = getAdminPermissions();
+            } else {
+                // Si es un usuario normal sin objeto de permisos (no debería ocurrir con los nuevos registros).
+                finalState.permissions = {}; // Por seguridad, no tendrá acceso a nada.
+            }
+        } else {
+            finalState.permissions = {}; // Sin usuario, sin permisos.
+        }
+        
+        state = finalState;
+
     } catch (error) {
-        // Si ocurre un error al cargar, NO guardamos nada para evitar sobrescribir.
-        // Usamos el estado por defecto localmente para que la app no se rompa.
         console.error("Falló la inicialización del estado por un error de carga:", error);
         state = defaultState;
+        state.permissions = {}; // Asegurarse de que permissions esté vacío en caso de error.
     }
     
     notify();
 }
-
+// --- FIN CÓDIGO MODIFICADO (Fase 3.1) ---
