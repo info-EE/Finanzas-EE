@@ -173,19 +173,30 @@ export async function updateUserStatus(uid, newStatus) {
     }
 }
 
-export async function updateUserPermissions(uid, permissions) {
+// --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
+/**
+ * Actualiza tanto los permisos como el estado de un usuario.
+ * @param {string} uid - El ID del usuario.
+ * @param {object} permissions - El nuevo objeto de permisos.
+ * @param {string} status - El nuevo estado ('activo' o 'pendiente').
+ * @returns {boolean} - True si la operación fue exitosa, false en caso contrario.
+ */
+export async function updateUserPermissions(uid, permissions, status) {
     if (!uid) return false;
     try {
         const userDocRef = doc(db, 'usuarios', uid);
+        // Actualiza AMBOS campos en la base de datos.
         await updateDoc(userDocRef, {
-            permisos: permissions
+            permisos: permissions,
+            status: status 
         });
         return true;
     } catch (error) {
-        console.error("Error al actualizar los permisos del usuario:", error);
+        console.error("Error al actualizar los permisos y el estado del usuario:", error);
         return false;
     }
 }
+// --- FIN DE LA SOLUCIÓN DEFINITIVA ---
 
 
 export async function registerUser(email, password) {
@@ -194,7 +205,6 @@ export async function registerUser(email, password) {
         const user = userCredential.user;
         await createUserProfile(user.uid, user.email, 'pendiente');
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
-        // await signOut(auth); // <--- ESTA LÍNEA ES LA CAUSA DEL PROBLEMA Y HA SIDO ELIMINADA.
     } catch (error) {
         console.error("Error en el registro:", error.code);
         showAuthError(translateAuthError(error.code));
