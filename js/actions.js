@@ -138,7 +138,6 @@ export async function updateUserAccessAction(userId, level) {
         const copySuccess = await copyMainStateToUser(adminId, userId);
         if (!copySuccess) {
             console.error("Falló la copia de datos al nuevo usuario.");
-            // Opcional: podrías revertir el cambio de permisos si la copia falla.
             return false;
         }
     }
