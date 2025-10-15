@@ -57,24 +57,23 @@ function main() {
                 showApp();
                 await initState();
 
-                // --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
-                // Si el usuario es un administrador, cargamos la lista inicial de usuarios
-                // y LUEGO activamos un listener para ver los cambios en tiempo real.
+                // --- INICIO DE LA SOLUCIÓN DEFINITIVA Y SIMPLIFICADA ---
+                // Si el usuario es administrador, simplemente activamos el listener en tiempo real.
+                // Este listener se encarga tanto de la carga inicial como de las actualizaciones.
                 if (getState().settings.adminUids.includes(user.uid)) {
-                    await actions.loadAndSetAllUsers(); // Carga la lista inicial
-                    
-                    // Activa la "transmisión de video en vivo" para la lista de usuarios
                     api.listenForAllUsersChanges((allUsers) => {
-                        console.log("Actualización de usuarios en tiempo real recibida.");
-                        setState({ allUsers }); // Actualiza el estado con la nueva lista
+                        console.log("Actualización de la lista de usuarios recibida.");
+                        setState({ allUsers }); // Actualiza el estado con la nueva lista, disparando el renderizado.
                     });
                 }
-                // --- FIN DE LA SOLUCIÓN DEFINITIVA ---
+                // --- FIN DE LA SOLUCIÓN DEFINITIVA Y SIMPLIFICADA ---
 
                 api.listenForDataChanges((newData) => {
                     setState(newData);
                 });
+                
                 switchPage('inicio');
+
             } else {
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
             }
