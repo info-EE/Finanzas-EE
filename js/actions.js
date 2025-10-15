@@ -1,5 +1,6 @@
 import { getState, setState } from './store.js';
-import { saveData, getAllUsers, updateUserStatus, updateUserPermissions } from './api.js';
+import { saveData, getAllUsers, updateUserStatus, updateUserPermissions, copyMainStateToUser } from './api.js';
+import { getAuthInstance } from './api.js';
 
 // --- Lógica Interna de Actualización Incremental de Balances ---
 
@@ -113,7 +114,7 @@ const getPermissionsForLevel = (level) => {
 };
 
 /**
- * Actualiza el estado y los permisos de un usuario.
+ * Actualiza el estado y los permisos de un usuario, y copia los datos si es necesario.
  * @param {string} userId - El ID del usuario a modificar.
  * @param {string} level - El nuevo nivel de acceso ('basico', 'completo', o 'pendiente').
  */
@@ -123,12 +124,28 @@ export async function updateUserAccessAction(userId, level) {
         permisos: getPermissionsForLevel(level)
     };
 
-    const success = await updateUserPermissions(userId, updates);
-    
-    if (success) {
-        await loadAndSetAllUsers();
+    // Primero, actualizamos los permisos y el estado
+    const permissionsSuccess = await updateUserPermissions(userId, updates);
+    if (!permissionsSuccess) {
+        console.error("Falló la actualización de permisos.");
+        return false;
     }
-    return success;
+
+    // Si estamos activando un usuario (de pendiente a activo), copiamos el estado principal.
+    if (updates.status === 'activo') {
+        const auth = getAuthInstance();
+        const adminId = auth.currentUser.uid;
+        const copySuccess = await copyMainStateToUser(adminId, userId);
+        if (!copySuccess) {
+            console.error("Falló la copia de datos al nuevo usuario.");
+            // Opcional: podrías revertir el cambio de permisos si la copia falla.
+            return false;
+        }
+    }
+
+    // Finalmente, refrescamos la lista de usuarios en la UI.
+    await loadAndSetAllUsers();
+    return true;
 }
 // --- FIN DE LA SOLUCIÓN DEFINITIVA ---
 
