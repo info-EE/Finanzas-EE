@@ -8,7 +8,7 @@ import { subscribe, initState, setState, getState } from './store.js';
 import { bindEventListeners } from './handlers.js';
 import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
-import * as actions from './actions.js'; // Importamos actions
+import * as actions from './actions.js';
 
 // --- Configuración de Firebase ---
 const firebaseConfig = {
@@ -25,49 +25,31 @@ const firebaseConfig = {
 function main() {
     let db;
     try {
-        // 1. Inicializa Firebase y obtén las instancias de los servicios
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         db = getFirestore(app);
-        
-        // 2. Pasa estas instancias a tu módulo de API para que las use
         api.initFirebaseServices(app, auth, db);
         updateConnectionStatus('success', 'Conectado');
-
     } catch (error) {
         console.error("Error CRÍTICO al inicializar Firebase:", error);
         updateConnectionStatus('error', 'Error de Conexión');
-        document.body.innerHTML = `<div style="color: white; text-align: center; padding: 50px; font-family: sans-serif;">
-            <h1 style="font-size: 24px; margin-bottom: 20px;">Error Crítico de Conexión</h1>
-            <p>No se pudo conectar con los servicios de la base de datos. Por favor, intente refrescar la página.</p>
-        </div>`;
+        document.body.innerHTML = `<div style="color: white; text-align: center; padding: 50px; font-family: sans-serif;"><h1>Error Crítico de Conexión</h1><p>No se pudo conectar con los servicios de la base de datos. Por favor, intente refrescar la página.</p></div>`;
         return;
     }
 
-    // 3. Configuración de la App
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#e0e0e0';
-    
     bindEventListeners();
     subscribe(renderAll);
 
-    // 4. Manejador de Autenticación
+    // Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
         if (user) {
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile) {
-                console.warn(`El usuario ${user.email} no tenía perfil en Firestore. Creando uno como 'pendiente'.`);
                 await api.createUserProfile(user.uid, user.email, 'pendiente');
                 userProfile = await api.getUserProfile(user.uid);
-                
-                // --- INICIO DE LA SOLUCIÓN FINAL ---
-                // Si el usuario actual es un administrador, le decimos que actualice la lista de usuarios AHORA.
-                // Esto asegura que el nuevo usuario aparezca inmediatamente en "Gestión de Usuarios".
-                if (getState().settings.adminUids.includes(auth.currentUser.uid)) {
-                    await actions.loadAndSetAllUsers();
-                }
-                // --- FIN DE LA SOLUCIÓN FINAL ---
             }
 
             if (userProfile && userProfile.status === 'activo') {
@@ -75,9 +57,19 @@ function main() {
                 showApp();
                 await initState();
 
+                // --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
+                // Si el usuario es un administrador, cargamos la lista inicial de usuarios
+                // y LUEGO activamos un listener para ver los cambios en tiempo real.
                 if (getState().settings.adminUids.includes(user.uid)) {
-                    await actions.loadAndSetAllUsers();
+                    await actions.loadAndSetAllUsers(); // Carga la lista inicial
+                    
+                    // Activa la "transmisión de video en vivo" para la lista de usuarios
+                    api.listenForAllUsersChanges((allUsers) => {
+                        console.log("Actualización de usuarios en tiempo real recibida.");
+                        setState({ allUsers }); // Actualiza el estado con la nueva lista
+                    });
                 }
+                // --- FIN DE LA SOLUCIÓN DEFINITIVA ---
 
                 api.listenForDataChanges((newData) => {
                     setState(newData);
@@ -92,7 +84,7 @@ function main() {
         }
     });
 
-    // 5. Valores por defecto para fechas
+    // Valores por defecto para fechas
     const today = new Date().toISOString().slice(0, 10);
     ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date', 'investment-date'].forEach(id => {
         const el = document.getElementById(id);
@@ -107,3 +99,4 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
+
