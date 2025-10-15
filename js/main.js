@@ -56,11 +56,16 @@ function main() {
         if (user) {
             let userProfile = await api.getUserProfile(user.uid);
 
+            // --- INICIO CÓDIGO MODIFICADO Y MEJORADO ---
+            // Si el perfil no existe, puede ser un registro fallido o un usuario muy antiguo.
             if (!userProfile) {
-                // Si el perfil no existe, es un usuario antiguo (como el admin). Se lo creamos.
-                await api.createUserProfile(user.uid, user.email, 'activo');
+                // Lo creamos siempre como 'pendiente' para forzar la aprobación del admin.
+                // Esto soluciona el problema de "usuarios fantasma".
+                console.warn(`El usuario ${user.email} no tenía perfil en Firestore. Creando uno como 'pendiente'.`);
+                await api.createUserProfile(user.uid, user.email, 'pendiente');
                 userProfile = await api.getUserProfile(user.uid); // Volvemos a leerlo
             }
+            // --- FIN CÓDIGO MODIFICADO Y MEJORADO ---
 
             if (userProfile && userProfile.status === 'activo') {
                 api.setCurrentUser(user.uid);
@@ -101,3 +106,4 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
+
