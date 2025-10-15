@@ -56,25 +56,27 @@ function main() {
         if (user) {
             let userProfile = await api.getUserProfile(user.uid);
 
-            // --- INICIO CÓDIGO MODIFICADO Y MEJORADO ---
-            // Si el perfil no existe, puede ser un registro fallido o un usuario muy antiguo.
             if (!userProfile) {
-                // Lo creamos siempre como 'pendiente' para forzar la aprobación del admin.
-                // Esto soluciona el problema de "usuarios fantasma".
                 console.warn(`El usuario ${user.email} no tenía perfil en Firestore. Creando uno como 'pendiente'.`);
                 await api.createUserProfile(user.uid, user.email, 'pendiente');
-                userProfile = await api.getUserProfile(user.uid); // Volvemos a leerlo
+                userProfile = await api.getUserProfile(user.uid);
+                
+                // --- INICIO DE LA SOLUCIÓN FINAL ---
+                // Si el usuario actual es un administrador, le decimos que actualice la lista de usuarios AHORA.
+                // Esto asegura que el nuevo usuario aparezca inmediatamente en "Gestión de Usuarios".
+                if (getState().settings.adminUids.includes(auth.currentUser.uid)) {
+                    await actions.loadAndSetAllUsers();
+                }
+                // --- FIN DE LA SOLUCIÓN FINAL ---
             }
-            // --- FIN CÓDIGO MODIFICADO Y MEJORADO ---
 
             if (userProfile && userProfile.status === 'activo') {
                 api.setCurrentUser(user.uid);
                 showApp();
                 await initState();
 
-                // Si es administrador, carga la lista de todos los usuarios
                 if (getState().settings.adminUids.includes(user.uid)) {
-                    await actions.loadAndSetAllUsers(); // <-- ESTA LÍNEA ES LA QUE RESTAURAMOS
+                    await actions.loadAndSetAllUsers();
                 }
 
                 api.listenForDataChanges((newData) => {
@@ -83,7 +85,6 @@ function main() {
                 switchPage('inicio');
             } else {
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
-                await api.logoutUser();
             }
         } else {
             api.setCurrentUser(null);
@@ -106,4 +107,3 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
-
