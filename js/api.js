@@ -194,7 +194,7 @@ export async function registerUser(email, password) {
         const user = userCredential.user;
         await createUserProfile(user.uid, user.email, 'pendiente');
         showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
-        await signOut(auth);
+        // await signOut(auth); // <--- ESTA LÍNEA ES LA CAUSA DEL PROBLEMA Y HA SIDO ELIMINADA.
     } catch (error) {
         console.error("Error en el registro:", error.code);
         showAuthError(translateAuthError(error.code));
