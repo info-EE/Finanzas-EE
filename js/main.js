@@ -57,16 +57,12 @@ function main() {
                 showApp();
                 await initState();
 
-                // --- INICIO DE LA SOLUCIÓN DEFINITIVA Y SIMPLIFICADA ---
-                // Si el usuario es administrador, simplemente activamos el listener en tiempo real.
-                // Este listener se encarga tanto de la carga inicial como de las actualizaciones.
+                // --- INICIO DE LA SOLUCIÓN FINAL Y ROBUSTA ---
+                // Si el usuario es administrador, cargamos la lista de usuarios UNA SOLA VEZ al iniciar sesión.
                 if (getState().settings.adminUids.includes(user.uid)) {
-                    api.listenForAllUsersChanges((allUsers) => {
-                        console.log("Actualización de la lista de usuarios recibida.");
-                        setState({ allUsers }); // Actualiza el estado con la nueva lista, disparando el renderizado.
-                    });
+                    await actions.loadAndSetAllUsers();
                 }
-                // --- FIN DE LA SOLUCIÓN DEFINITIVA Y SIMPLIFICADA ---
+                // --- FIN DE LA SOLUCIÓN FINAL Y ROBUSTA ---
 
                 api.listenForDataChanges((newData) => {
                     setState(newData);
