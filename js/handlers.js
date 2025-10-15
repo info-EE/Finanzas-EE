@@ -34,7 +34,6 @@ import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
 
-// --- INICIO CÓDIGO AÑADIDO (Fase 2.4) ---
 // Centraliza las descripciones de los permisos para la UI.
 const PERMISSION_DESCRIPTIONS = {
     view_dashboard: { label: "Ver Panel de Inicio", description: "Permite el acceso a la página principal con los KPIs y gráficos." },
@@ -60,7 +59,6 @@ const PERMISSION_DESCRIPTIONS = {
     manage_fiscal_settings: { label: "Gestionar Ajustes Fiscales", description: "Permite cambiar parámetros como el tipo impositivo." },
     manage_users: { label: "Gestionar Usuarios y Permisos", description: "Permite activar usuarios y modificar sus permisos (SOLO ADMIN)." },
 };
-// --- FIN CÓDIGO AÑADIDO (Fase 2.4) ---
 
 // --- Helper for showing spinner during actions ---
 function withSpinner(action, delay = 300) {
@@ -80,19 +78,15 @@ function withSpinner(action, delay = 300) {
 
 
 // --- Auth Handlers ---
-
-// --- INICIO CÓDIGO CORREGIDO ---
 function handleLoginSubmit(e) {
     e.preventDefault();
     clearAuthError();
     const email = elements.loginForm.querySelector('#login-email').value;
     const password = elements.loginForm.querySelector('#login-password').value;
     withSpinner(async () => {
-        // CORRECCIÓN: Se cambió api.logister por api.loginUser
         await api.loginUser(email, password);
     })();
 }
-// --- FIN CÓDIGO CORREGIDO ---
 
 function handleRegisterSubmit(e) {
     e.preventDefault();
@@ -111,10 +105,6 @@ function handleLogout() {
     })();
 }
 
-
-
-// --- INICIO CÓDIGO AÑADIDO Y MODIFICADO (Fase 2.4) ---
-
 /**
  * Carga la información y los permisos de un usuario en el modal.
  * @param {object} user - El objeto del usuario a mostrar.
@@ -123,7 +113,6 @@ function populatePermissionsModal(user) {
     elements.permissionsModalEmail.textContent = user.email;
     elements.permissionsList.innerHTML = ''; // Limpiar contenido anterior
 
-    // Almacena el ID del usuario en el botón de guardar para usarlo después.
     elements.permissionsModalSaveBtn.dataset.userId = user.id;
 
     const userPermissions = user.permisos || {};
@@ -162,7 +151,9 @@ function handlePermissionsSave() {
     const newPermissions = {};
     elements.permissionsList.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
         const key = checkbox.dataset.permissionKey;
-        newPermissions[key] = checkbox.checked;
+        if (key) {
+            newPermissions[key] = checkbox.checked;
+        }
     });
 
     withSpinner(async () => {
@@ -180,24 +171,24 @@ function handlePermissionsSave() {
  * Manejador principal para los clics en la lista de gestión de usuarios.
  */
 function handleUserManagementClick(e) {
-    const toggleBtn = e.target.closest('.toggle-status-btn');
+    const activateBasicBtn = e.target.closest('.activate-basic-btn');
+    const activateFullBtn = e.target.closest('.activate-full-btn');
+    const deactivateBtn = e.target.closest('.deactivate-btn');
     const manageBtn = e.target.closest('.manage-permissions-btn');
 
-    if (toggleBtn) {
-        const userId = toggleBtn.dataset.id;
-        const currentStatus = toggleBtn.dataset.status;
-        const actionText = currentStatus === 'activo' ? 'desactivar' : 'activar';
-        
-        showConfirmationModal(
-            `Confirmar Acción`,
-            `¿Estás seguro de que quieres ${actionText} a este usuario?`,
-            withSpinner(async () => {
-                const success = await actions.toggleUserStatusAction(userId, currentStatus);
-                if (!success) {
-                    showAlertModal('Error', 'No se pudo actualizar el estado del usuario.');
-                }
-            })
-        );
+    if (activateBasicBtn) {
+        const userId = activateBasicBtn.dataset.id;
+        showConfirmationModal('Activar Acceso Básico', '¿Dar acceso de solo lectura al usuario?', withSpinner(() => actions.updateUserAccessAction(userId, 'basico')));
+    }
+
+    if (activateFullBtn) {
+        const userId = activateFullBtn.dataset.id;
+        showConfirmationModal('Activar Acceso Completo', '¿Dar acceso total de gestión al usuario?', withSpinner(() => actions.updateUserAccessAction(userId, 'completo')));
+    }
+
+    if (deactivateBtn) {
+        const userId = deactivateBtn.dataset.id;
+        showConfirmationModal('Desactivar Usuario', '¿Quitar el acceso a este usuario?', withSpinner(() => actions.updateUserAccessAction(userId, 'pendiente')));
     }
 
     if (manageBtn) {
@@ -213,7 +204,6 @@ function handleUserManagementClick(e) {
         }
     }
 }
-// --- FIN CÓDIGO AÑADIDO Y MODIFICADO (Fase 2.4) ---
 
 
 // --- Funciones Manejadoras (Handlers) ---
@@ -1037,8 +1027,15 @@ export function bindEventListeners() {
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
     
-    // --- INICIO CÓDIGO AÑADIDO (Fase 2.4) ---
+    // --- INICIO DE LA SOLUCIÓN FINAL ---
     // User Management
+    if (elements.userManagementCard) {
+        elements.userManagementCard.addEventListener('click', (e) => {
+            if (e.target.closest('#refresh-users-btn')) {
+                withSpinner(actions.loadAndSetAllUsers, 500)();
+            }
+        });
+    }
     if (elements.usersList) {
         elements.usersList.addEventListener('click', handleUserManagementClick);
     }
@@ -1049,6 +1046,6 @@ export function bindEventListeners() {
     if(elements.permissionsModalSaveBtn) {
         elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
     }
-    // --- FIN CÓDIGO AÑADIDO (Fase 2.4) ---
+    // --- FIN DE LA SOLUCIÓN FINAL ---
 }
 

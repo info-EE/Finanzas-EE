@@ -854,6 +854,7 @@ function renderInvestmentAssetsList() {
     });
 }
 
+// --- INICIO DE LA SOLUCIÓN FINAL ---
 function renderUserManagement() {
     const { allUsers, permissions } = getState();
     const auth = getAuthInstance();
@@ -865,6 +866,19 @@ function renderUserManagement() {
     }
 
     elements.userManagementCard.classList.remove('hidden');
+    
+    // Añadir el botón de refresco
+    const header = elements.userManagementCard.querySelector('h3');
+    if (header && !header.querySelector('#refresh-users-btn')) {
+        header.classList.add('flex', 'justify-between', 'items-center');
+        header.innerHTML = `
+            <span>Gestión de Usuarios</span>
+            <button id="refresh-users-btn" class="p-2 text-blue-400 hover:bg-gray-700 rounded-full" title="Actualizar Lista">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+        `;
+    }
+    
     const listEl = elements.usersList;
     if (!listEl) return;
 
@@ -876,30 +890,47 @@ function renderUserManagement() {
     }
 
     listEl.innerHTML = otherUsers.map(user => {
-            const isActivo = user.status === 'activo';
-            const statusColor = isActivo ? 'text-green-400' : 'text-yellow-400';
-            const statusButtonColor = isActivo ? 'bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300' : 'bg-green-600/20 hover:bg-green-600/40 text-green-300';
-            const statusButtonText = isActivo ? 'Desactivar' : 'Activar';
-            const statusIcon = isActivo ? 'user-x' : 'user-check';
+        const status = user.status || 'pendiente';
+        let statusColor, statusText, actionsHtml;
 
-            return `
-                <div class="flex items-center justify-between bg-gray-800/50 p-3 rounded text-sm">
-                    <div>
-                        <p class="font-semibold">${escapeHTML(user.email)}</p>
-                        <p class="text-xs ${statusColor} capitalize">${escapeHTML(user.status)}</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button class="manage-permissions-btn p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 transition-colors" data-id="${user.id}" title="Gestionar Permisos">
-                            <i data-lucide="shield-check" class="w-4 h-4"></i>
-                        </button>
-                        <button class="toggle-status-btn p-2 rounded-lg ${statusButtonColor} transition-colors" data-id="${user.id}" data-status="${user.status}" title="${statusButtonText}">
-                            <i data-lucide="${statusIcon}" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>
+        if (status === 'activo') {
+            statusColor = 'text-green-400';
+            statusText = 'Activo';
+            actionsHtml = `
+                <button class="manage-permissions-btn p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300" data-id="${user.id}" title="Gestionar Permisos">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                </button>
+                <button class="deactivate-btn p-2 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300" data-id="${user.id}" title="Desactivar">
+                    <i data-lucide="user-x" class="w-4 h-4"></i>
+                </button>
             `;
-        }).join('');
+        } else { // pendiente
+            statusColor = 'text-yellow-400';
+            statusText = 'Pendiente';
+            actionsHtml = `
+                <button class="activate-basic-btn p-2 rounded-lg bg-green-600/20 hover:bg-green-600/40 text-green-300 text-xs flex items-center gap-1" data-id="${user.id}" title="Activar Acceso Básico">
+                    <i data-lucide="user-check" class="w-3 h-3"></i> Básico
+                </button>
+                <button class="activate-full-btn p-2 rounded-lg bg-green-600/20 hover:bg-green-600/40 text-green-300 text-xs flex items-center gap-1" data-id="${user.id}" title="Activar Acceso Completo">
+                    <i data-lucide="user-check" class="w-3 h-3"></i> Completo
+                </button>
+            `;
+        }
+
+        return `
+            <div class="flex items-center justify-between bg-gray-800/50 p-3 rounded text-sm">
+                <div>
+                    <p class="font-semibold">${escapeHTML(user.email)}</p>
+                    <p class="text-xs ${statusColor} capitalize">${escapeHTML(statusText)}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    ${actionsHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
+// --- FIN DE LA SOLUCIÓN FINAL ---
 
 
 // --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
@@ -1923,3 +1954,4 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
+
