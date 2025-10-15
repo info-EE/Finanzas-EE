@@ -191,39 +191,6 @@ export async function updateUserPermissions(uid, updates) {
         return false;
     }
 }
-
-/**
- * Copia el documento 'mainState' de un usuario (admin) a otro (nuevo usuario).
- * @param {string} fromUserId - El ID del usuario desde donde se copia (el admin).
- * @param {string} toUserId - El ID del usuario a quien se le copia.
- * @returns {boolean} - True si la copia fue exitosa.
- */
-export async function copyMainStateToUser(fromUserId, toUserId) {
-    if (!fromUserId || !toUserId) return false;
-    try {
-        // 1. Obtener los datos del administrador
-        const fromDocRef = doc(db, 'usuarios', fromUserId, 'estado', 'mainState');
-        const docSnap = await getDoc(fromDocRef);
-
-        if (!docSnap.exists()) {
-            console.error("No se encontró el estado principal del administrador para copiar.");
-            return false;
-        }
-
-        const mainStateData = docSnap.data();
-
-        // 2. Escribir esos datos en el nuevo usuario
-        const toDocRef = doc(db, 'usuarios', toUserId, 'estado', 'mainState');
-        await setDoc(toDocRef, mainStateData);
-        
-        console.log(`Datos copiados exitosamente a ${toUserId}`);
-        return true;
-
-    } catch (error) {
-        console.error("Error al copiar el estado principal al nuevo usuario:", error);
-        return false;
-    }
-}
 // --- FIN DE LA SOLUCIÓN DEFINITIVA ---
 
 
