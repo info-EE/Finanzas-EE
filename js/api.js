@@ -175,24 +175,19 @@ export async function updateUserStatus(uid, newStatus) {
 
 // --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
 /**
- * Actualiza tanto los permisos como el estado de un usuario.
+ * Actualiza los campos de un usuario en la base de datos.
  * @param {string} uid - El ID del usuario.
- * @param {object} permissions - El nuevo objeto de permisos.
- * @param {string} status - El nuevo estado ('activo' o 'pendiente').
+ * @param {object} updates - Un objeto con los campos a actualizar (ej: { permisos: {...}, status: 'activo' }).
  * @returns {boolean} - True si la operación fue exitosa, false en caso contrario.
  */
-export async function updateUserPermissions(uid, permissions, status) {
+export async function updateUserPermissions(uid, updates) {
     if (!uid) return false;
     try {
         const userDocRef = doc(db, 'usuarios', uid);
-        // Actualiza AMBOS campos en la base de datos.
-        await updateDoc(userDocRef, {
-            permisos: permissions,
-            status: status 
-        });
+        await updateDoc(userDocRef, updates);
         return true;
     } catch (error) {
-        console.error("Error al actualizar los permisos y el estado del usuario:", error);
+        console.error("Error al actualizar el perfil del usuario:", error);
         return false;
     }
 }

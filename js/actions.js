@@ -118,14 +118,14 @@ const getPermissionsForLevel = (level) => {
  * @param {string} level - El nuevo nivel de acceso ('basico', 'completo', o 'pendiente').
  */
 export async function updateUserAccessAction(userId, level) {
-    const newStatus = (level === 'basico' || level === 'completo') ? 'activo' : 'pendiente';
-    const newPermissions = getPermissionsForLevel(level);
+    const updates = {
+        status: (level === 'basico' || level === 'completo') ? 'activo' : 'pendiente',
+        permisos: getPermissionsForLevel(level)
+    };
 
-    // Llamada corregida a la función de la API, pasando los tres parámetros necesarios.
-    const success = await updateUserPermissions(userId, newPermissions, newStatus);
+    const success = await updateUserPermissions(userId, updates);
     
     if (success) {
-        // Si la actualización en Firebase fue exitosa, forzamos la recarga de la lista de usuarios en el estado local.
         await loadAndSetAllUsers();
     }
     return success;
