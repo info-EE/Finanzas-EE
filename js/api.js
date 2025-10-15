@@ -25,6 +25,13 @@ let dataDocRef = null;
 let unsubscribeFromData = null;
 let unsubscribeFromUsers = null; // Listener para la lista de usuarios
 
+// --- INICIO DE LA MODIFICACIÓN ---
+// Se define el UID del usuario "propietario" de los datos.
+// Todos los usuarios autorizados leerán y escribirán sobre los datos de este usuario
+// para crear un entorno de datos compartido y colaborativo.
+const DATA_OWNER_UID = 'gjsYFFm1QmfpdGodTBXFExrQiRz1';
+// --- FIN DE LA MODIFICACIÓN ---
+
 /**
  * Devuelve un objeto con todos los permisos del sistema establecidos en 'false'.
  * Esta es la configuración por defecto para cualquier usuario nuevo.
@@ -73,8 +80,11 @@ export function getAuthInstance() {
 export function setCurrentUser(uid) {
     currentUserId = uid;
     if (uid) {
-        // La ruta principal para los datos de la aplicación del usuario.
-        dataDocRef = doc(db, 'usuarios', uid, 'estado', 'mainState');
+        // --- MODIFICACIÓN ---
+        // La ruta de los datos ahora apunta siempre al estado del propietario de los datos,
+        // en lugar del estado del usuario que ha iniciado sesión. Esto unifica los datos.
+        dataDocRef = doc(db, 'usuarios', DATA_OWNER_UID, 'estado', 'mainState');
+        // --- FIN DE LA MODIFICACIÓN ---
     } else {
         // Limpiar todo al cerrar sesión o si no hay usuario
         dataDocRef = null;
@@ -292,4 +302,3 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
-

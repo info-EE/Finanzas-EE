@@ -9,7 +9,7 @@ const LOGO_CATALOG = {
     eu_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjMDAzMzk5IiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48ZyBmaWxsPSIjRkZDQzAwIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0NTAgMzAwKSI+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDYwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDkwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDEyMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMTUwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDE4MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjEwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDI0MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjcwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMzMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjwvZz48L3N2Zz4=" alt="Bandera de la Unión Europea" class="w-6 h-6 rounded-sm border border-gray-600">`,
     argentina_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5IDYiPjxyZWN0IGZpbGw9IiM3NEFDREYiIHdpZHRoPSI5IiBoZWlnaHQ9IjMiLz48cmVjdCB5PSIzIiBmaWxsPSIjNzRBQ0RGIiB3aWR0aD0iOSIgaGVpZHRoPSIzIi8+PHJlY3QgeT0iMiIgZmlsbD0iI0ZGRiIgd2lkdGg9IjkiIGhlaWdodD0iMiIvPjwvc3ZnPg==" alt="Bandera de Argentina" class="w-6 h-6 rounded-sm border border-gray-600">`,
     paraguay_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMSA2Ij48cGF0aCBmaWxsPSIjRDUyQjFFIiBkPSJNMCAwaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjRkZGIiBkPSJNMCAyaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjMDAzOEE4IiBkPSJNMCA0aDExdjJIMHoiLz48L3N2Zz4=" alt="Bandera de Paraguay" class="w-6 h-6 rounded-sm border border-gray-600">`,
-    default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
+    default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
 };
 
 function getAdminPermissions() {
@@ -114,23 +114,49 @@ export async function initState() {
         }
 
         if (currentUser) {
-            // --- INICIO DE LA CORRECCIÓN ---
-            // Primero, comprobamos si el usuario es un administrador definido en settings.
+            // --- INICIO DE LA MODIFICACIÓN ---
+            // Primero, se comprueba si el usuario es un administrador.
             if (finalState.settings.adminUids.includes(currentUser.uid)) {
-                // Si es admin, le damos todos los permisos INCONDICIONALMENTE.
                 console.warn("Usuario administrador detectado. Concediendo todos los permisos.");
                 finalState.permissions = getAdminPermissions();
             } else {
-                // Si no es admin, cargamos sus permisos desde su perfil.
+                // Si no es admin, se cargan sus permisos desde su perfil.
                 const userProfile = await getUserProfile(currentUser.uid);
-                if (userProfile && userProfile.permisos) {
+                
+                // Si el usuario está activo pero no tiene permisos definidos (p. ej., activado manualmente),
+                // se le asigna un conjunto de permisos básicos de solo lectura para garantizar la funcionalidad.
+                if (userProfile && userProfile.permisos && Object.keys(userProfile.permisos).length > 0) {
                     finalState.permissions = userProfile.permisos;
                 } else {
-                    // Si es un usuario normal sin permisos, no tendrá acceso a nada.
-                    finalState.permissions = {};
+                    console.warn(`El usuario ${currentUser.email} está activo pero no tiene permisos definidos. Asignando permisos básicos por defecto.`);
+                    finalState.permissions = {
+                        view_dashboard: true,
+                        view_accounts: true,
+                        view_cashflow: true,
+                        manage_cashflow: false,
+                        execute_transfers: false,
+                        view_documents: true,
+                        manage_invoices: false,
+                        manage_proformas: false,
+                        change_document_status: false,
+                        view_clients: true,
+                        manage_clients: false,
+                        view_reports: true,
+                        view_iva_control: true,
+                        view_archives: true,
+                        view_investments: true,
+                        manage_investments: false,
+                        manage_accounts: false,
+        
+                        manage_categories: false,
+                        execute_balance_adjustment: false,
+                        execute_year_close: false,
+                        manage_fiscal_settings: false,
+                        manage_users: false,
+                    };
                 }
             }
-            // --- FIN DE LA CORRECCIÓN ---
+            // --- FIN DE LA MODIFICACIÓN ---
         } else {
             finalState.permissions = {}; // Sin usuario, sin permisos.
         }
@@ -145,4 +171,3 @@ export async function initState() {
     
     notify();
 }
-
