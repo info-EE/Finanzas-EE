@@ -66,7 +66,7 @@ function revertTransactionFromBalances(accounts, transaction) {
 
 // --- Acciones Públicas (modifican el estado y lo guardan) ---
 
-// --- INICIO DE LA SOLUCIÓN FINAL ---
+// --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
 /**
  * Define los conjuntos de permisos para los diferentes niveles de acceso.
  */
@@ -121,6 +121,7 @@ export async function updateUserAccessAction(userId, level) {
     const newStatus = (level === 'basico' || level === 'completo') ? 'activo' : 'pendiente';
     const newPermissions = getPermissionsForLevel(level);
 
+    // Llamada corregida a la función de la API, pasando los tres parámetros necesarios.
     const success = await updateUserPermissions(userId, newPermissions, newStatus);
     
     if (success) {
@@ -129,7 +130,7 @@ export async function updateUserAccessAction(userId, level) {
     }
     return success;
 }
-// --- FIN DE LA SOLUCIÓN FINAL ---
+// --- FIN DE LA SOLUCIÓN DEFINITIVA ---
 
 
 export async function loadAndSetAllUsers() {
