@@ -1,5 +1,5 @@
 import { getState, setState } from './store.js';
-import { saveData, getAllUsers, updateUserStatus } from './api.js';
+import { saveData, getAllUsers, updateUserStatus, updateUserPermissions } from './api.js';
 
 // --- Lógica Interna de Actualización Incremental de Balances ---
 
@@ -65,6 +65,72 @@ function revertTransactionFromBalances(accounts, transaction) {
 
 
 // --- Acciones Públicas (modifican el estado y lo guardan) ---
+
+// --- INICIO DE LA SOLUCIÓN FINAL ---
+/**
+ * Define los conjuntos de permisos para los diferentes niveles de acceso.
+ */
+const getPermissionsForLevel = (level) => {
+    const allFalse = {
+        view_dashboard: false, view_accounts: false, view_cashflow: false, manage_cashflow: false,
+        execute_transfers: false, view_documents: false, manage_invoices: false, manage_proformas: false,
+        change_document_status: false, view_clients: false, manage_clients: false, view_reports: false,
+        view_iva_control: false, view_archives: false, view_investments: false, manage_investments: false,
+        manage_accounts: false, manage_categories: false, execute_balance_adjustment: false,
+        execute_year_close: false, manage_fiscal_settings: false, manage_users: false,
+    };
+
+    if (level === 'basico') {
+        return {
+            ...allFalse,
+            view_dashboard: true,
+            view_accounts: true,
+            view_cashflow: true,
+            view_documents: true,
+            view_clients: true,
+            view_reports: true,
+            view_iva_control: true,
+            view_archives: true,
+            view_investments: true,
+        };
+    }
+
+    if (level === 'completo') {
+        // Acceso completo, excepto la gestión de otros usuarios.
+        return {
+            ...allFalse,
+            view_dashboard: true, view_accounts: true, view_cashflow: true, manage_cashflow: true,
+            execute_transfers: true, view_documents: true, manage_invoices: true, manage_proformas: true,
+            change_document_status: true, view_clients: true, manage_clients: true, view_reports: true,
+            view_iva_control: true, view_archives: true, view_investments: true, manage_investments: true,
+            manage_accounts: true, manage_categories: true, execute_balance_adjustment: true,
+            execute_year_close: true, manage_fiscal_settings: true,
+        };
+    }
+    
+    // Por defecto (para 'pendiente' o cualquier otro caso)
+    return allFalse; 
+};
+
+/**
+ * Actualiza el estado y los permisos de un usuario.
+ * @param {string} userId - El ID del usuario a modificar.
+ * @param {string} level - El nuevo nivel de acceso ('basico', 'completo', o 'pendiente').
+ */
+export async function updateUserAccessAction(userId, level) {
+    const newStatus = (level === 'basico' || level === 'completo') ? 'activo' : 'pendiente';
+    const newPermissions = getPermissionsForLevel(level);
+
+    const success = await updateUserPermissions(userId, newPermissions, newStatus);
+    
+    if (success) {
+        // Si la actualización en Firebase fue exitosa, forzamos la recarga de la lista de usuarios en el estado local.
+        await loadAndSetAllUsers();
+    }
+    return success;
+}
+// --- FIN DE LA SOLUCIÓN FINAL ---
+
 
 export async function loadAndSetAllUsers() {
     const users = await getAllUsers();
