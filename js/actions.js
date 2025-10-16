@@ -1,5 +1,5 @@
 import { getState, setState } from './store.js';
-import { saveData, getAllUsers, updateUserStatus, updateUserPermissions } from './api.js';
+import { saveData, getAllUsers, updateUserStatus, updateUserPermissions, deleteUserProfile } from './api.js';
 
 // --- Lógica Interna de Actualización Incremental de Balances ---
 
@@ -66,7 +66,6 @@ function revertTransactionFromBalances(accounts, transaction) {
 
 // --- Acciones Públicas (modifican el estado y lo guardan) ---
 
-// --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
 /**
  * Define los conjuntos de permisos para los diferentes niveles de acceso.
  */
@@ -130,8 +129,25 @@ export async function updateUserAccessAction(userId, level) {
     }
     return success;
 }
-// --- FIN DE LA SOLUCIÓN DEFINITIVA ---
 
+/**
+ * Elimina el perfil de un usuario de la base de datos.
+ * @param {string} userId - El ID del usuario a eliminar.
+ * @returns {object} - Un objeto indicando si la operación fue exitosa y un mensaje de error si aplica.
+ */
+export async function deleteUserAction(userId) {
+    const { settings } = getState();
+    if (settings.adminUids.includes(userId)) {
+        console.error("No se puede eliminar a un usuario administrador.");
+        return { success: false, message: 'No se puede eliminar a un usuario administrador.' };
+    }
+
+    const success = await deleteUserProfile(userId);
+    if (success) {
+        await loadAndSetAllUsers(); // Refresca la lista de usuarios en el estado.
+    }
+    return { success };
+}
 
 export async function loadAndSetAllUsers() {
     const users = await getAllUsers();

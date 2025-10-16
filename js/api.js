@@ -11,7 +11,8 @@ import {
     onSnapshot,
     collection,
     getDocs,
-    updateDoc
+    updateDoc,
+    deleteDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 import { updateConnectionStatus, showAuthError } from './ui.js';
@@ -25,12 +26,10 @@ let dataDocRef = null;
 let unsubscribeFromData = null;
 let unsubscribeFromUsers = null; // Listener para la lista de usuarios
 
-// --- INICIO DE LA MODIFICACIÓN ---
 // Se define el UID del usuario "propietario" de los datos.
 // Todos los usuarios autorizados leerán y escribirán sobre los datos de este usuario
 // para crear un entorno de datos compartido y colaborativo.
 const DATA_OWNER_UID = 'gjsYFFm1QmfpdGodTBXFExrQiRz1';
-// --- FIN DE LA MODIFICACIÓN ---
 
 /**
  * Devuelve un objeto con todos los permisos del sistema establecidos en 'false'.
@@ -80,11 +79,9 @@ export function getAuthInstance() {
 export function setCurrentUser(uid) {
     currentUserId = uid;
     if (uid) {
-        // --- MODIFICACIÓN ---
         // La ruta de los datos ahora apunta siempre al estado del propietario de los datos,
         // en lugar del estado del usuario que ha iniciado sesión. Esto unifica los datos.
         dataDocRef = doc(db, 'usuarios', DATA_OWNER_UID, 'estado', 'mainState');
-        // --- FIN DE LA MODIFICACIÓN ---
     } else {
         // Limpiar todo al cerrar sesión o si no hay usuario
         dataDocRef = null;
@@ -156,6 +153,24 @@ export async function getAllUsers() {
     }
 }
 
+/**
+ * Elimina el documento de perfil de un usuario de Firestore.
+ * Esto no elimina al usuario del sistema de autenticación, pero lo elimina de la lista de gestión.
+ * @param {string} uid - El ID del usuario cuyo perfil se va a eliminar.
+ * @returns {boolean} - True si la operación fue exitosa, false en caso contrario.
+ */
+export async function deleteUserProfile(uid) {
+    if (!uid) return false;
+    try {
+        const userDocRef = doc(db, 'usuarios', uid);
+        await deleteDoc(userDocRef);
+        return true;
+    } catch (error) {
+        console.error("Error eliminando el perfil del usuario:", error);
+        return false;
+    }
+}
+
 export function listenForAllUsersChanges(onUsersUpdate) {
     if (unsubscribeFromUsers) {
         unsubscribeFromUsers();
@@ -183,7 +198,6 @@ export async function updateUserStatus(uid, newStatus) {
     }
 }
 
-// --- INICIO DE LA SOLUCIÓN DEFINITIVA ---
 /**
  * Actualiza los campos de un usuario en la base de datos.
  * @param {string} uid - El ID del usuario.
@@ -201,8 +215,6 @@ export async function updateUserPermissions(uid, updates) {
         return false;
     }
 }
-// --- FIN DE LA SOLUCIÓN DEFINITIVA ---
-
 
 export async function registerUser(email, password) {
     try {
@@ -302,3 +314,4 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
+

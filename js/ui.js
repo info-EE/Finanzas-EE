@@ -147,7 +147,6 @@ export function hideApp() {
     }
 }
 
-// --- INICIO CÓDIGO AÑADIDO (Fase 2.1) ---
 // Funciones para mostrar/ocultar el modal de permisos
 export function showPermissionsModal() {
     if (elements.permissionsModal) {
@@ -162,11 +161,9 @@ export function hidePermissionsModal() {
         elements.permissionsModal.classList.remove('flex');
     }
 }
-// --- FIN CÓDIGO AÑADIDO (Fase 2.1) ---
 
 // --- Funciones Creadoras de Elementos ---
 
-// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function createTransactionRow(t) {
     const { permissions } = getState();
     const amountColor = t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400';
@@ -195,7 +192,6 @@ function createTransactionRow(t) {
             <td class="py-3 px-3">${actionsHtml}</td>
         </tr>`;
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
 function createAccountCard(account) {
     return `
@@ -211,7 +207,6 @@ function createAccountCard(account) {
         </div>`;
 }
 
-// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function createDocumentRow(doc, type) {
     const { permissions } = getState();
     const statusClass = doc.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
@@ -260,9 +255,7 @@ function createDocumentRow(doc, type) {
             </td>
         </tr>`;
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
-// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function createClientRow(client) {
     const { permissions } = getState();
 
@@ -285,9 +278,7 @@ function createClientRow(client) {
             <td class="py-3 px-3">${actionsHtml}</td>
         </tr>`;
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
-// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function createInvestmentRow(t, allAssets) {
     const { permissions } = getState();
     const asset = allAssets.find(a => a.id === t.investmentAssetId);
@@ -307,7 +298,6 @@ function createInvestmentRow(t, allAssets) {
             <td class="py-2 px-3 text-center">${actionsHtml}</td>
         </tr>`;
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
 // --- Funciones de Renderizado Principales ---
 
@@ -669,7 +659,6 @@ function renderDocuments(type, tableBody, searchInputId) {
     const searchInput = document.getElementById(searchInputId);
     if (!tableBody || !searchInput || !permissions) return;
 
-    // --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
     if (type === 'Proforma' && elements.proformaForm && elements.proformaForm.parentElement) {
         elements.proformaForm.parentElement.classList.toggle('hidden', !permissions.manage_proformas);
     }
@@ -677,13 +666,10 @@ function renderDocuments(type, tableBody, searchInputId) {
     if (type === 'Factura' && createInvoiceTab) {
         createInvoiceTab.classList.toggle('hidden', !permissions.manage_invoices);
         
-        // Si el usuario no puede crear facturas, y la pestaña activa era 'crear',
-        // lo movemos a la de 'listado' para que no vea una página en blanco.
         if (!permissions.manage_invoices && createInvoiceTab.classList.contains('active')) {
              document.getElementById('facturacion-tab-listado')?.click();
         }
     }
-    // --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
     const filteredDocs = documents.filter(d => d.type === type);
     const searchTerm = searchInput.value.toLowerCase();
@@ -712,11 +698,9 @@ function renderClients() {
     const tbody = elements.clientsTableBody;
     if (!tbody || !permissions) return;
 
-    // --- INICIO CÓDIGO AÑADIDO (Fase 3.3) ---
     if (elements.addClientForm && elements.addClientForm.parentElement) {
         elements.addClientForm.parentElement.parentElement.classList.toggle('hidden', !permissions.manage_clients);
     }
-    // --- FIN CÓDIGO AÑADIDO (Fase 3.3) ---
 
     tbody.innerHTML = '';
     if (clients.length === 0) {
@@ -803,11 +787,9 @@ function renderInvestments() {
     const tbody = elements.investmentsTableBody;
     if (!tbody || !permissions) return;
     
-    // --- INICIO CÓDIGO AÑADIDO (Fase 3.3) ---
     if(elements.addInvestmentForm && elements.addInvestmentForm.parentElement) {
         elements.addInvestmentForm.parentElement.classList.toggle('hidden', !permissions.manage_investments);
     }
-    // --- FIN CÓDIGO AÑADIDO (Fase 3.3) ---
 
     const investmentsData = transactions.filter(t => t.category === 'Inversión');
     
@@ -854,7 +836,6 @@ function renderInvestmentAssetsList() {
     });
 }
 
-// --- INICIO DE LA SOLUCIÓN FINAL ---
 function renderUserManagement() {
     const { allUsers, permissions } = getState();
     const auth = getAuthInstance();
@@ -867,7 +848,6 @@ function renderUserManagement() {
 
     elements.userManagementCard.classList.remove('hidden');
     
-    // Añadir el botón de refresco
     const header = elements.userManagementCard.querySelector('h3');
     if (header && !header.querySelector('#refresh-users-btn')) {
         header.classList.add('flex', 'justify-between', 'items-center');
@@ -892,6 +872,11 @@ function renderUserManagement() {
     listEl.innerHTML = otherUsers.map(user => {
         const status = user.status || 'pendiente';
         let statusColor, statusText, actionsHtml;
+        let baseActions = `
+            <button class="delete-user-btn p-2 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300" data-id="${user.id}" title="Eliminar Usuario">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        `;
 
         if (status === 'activo') {
             statusColor = 'text-green-400';
@@ -903,6 +888,7 @@ function renderUserManagement() {
                 <button class="deactivate-btn p-2 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300" data-id="${user.id}" title="Desactivar">
                     <i data-lucide="user-x" class="w-4 h-4"></i>
                 </button>
+                ${baseActions}
             `;
         } else { // pendiente
             statusColor = 'text-yellow-400';
@@ -914,6 +900,7 @@ function renderUserManagement() {
                 <button class="activate-full-btn p-2 rounded-lg bg-green-600/20 hover:bg-green-600/40 text-green-300 text-xs flex items-center gap-1" data-id="${user.id}" title="Activar Acceso Completo">
                     <i data-lucide="user-check" class="w-3 h-3"></i> Completo
                 </button>
+                ${baseActions}
             `;
         }
 
@@ -930,10 +917,7 @@ function renderUserManagement() {
         `;
     }).join('');
 }
-// --- FIN DE LA SOLUCIÓN FINAL ---
 
-
-// --- INICIO CÓDIGO MODIFICADO (Fase 3.3) ---
 function renderSettings() {
     const { accounts, incomeCategories, expenseCategories, invoiceOperationTypes, taxIdTypes, settings, permissions } = getState();
     if (!permissions) return;
@@ -1017,7 +1001,6 @@ function renderSettings() {
         taxRateInput.value = settings.fiscalParameters.corporateTaxRate;
     }
 }
-// --- FIN CÓDIGO MODIFICADO (Fase 3.3) ---
 
 function renderReport() {
     const { activeReport } = getState();
@@ -1237,7 +1220,6 @@ function toggleIvaField() {
     }
 }
 
-// --- INICIO CÓDIGO CORREGIDO Y SIMPLIFICADO ---
 export function switchPage(pageId, subpageId = null) {
     const { permissions } = getState();
     if (!permissions) return; // Salir si los permisos aún no se han cargado
@@ -1305,7 +1287,6 @@ export function switchPage(pageId, subpageId = null) {
     // Esto asegura que solo se renderice el contenido de la página visible.
     renderAll();
 }
-// --- FIN CÓDIGO CORREGIDO Y SIMPLIFICADO ---
 
 function populateLogoSelect() {
     const { logoCatalog } = getState();
@@ -1831,7 +1812,6 @@ export function updateConnectionStatus(status, message) {
     lucide.createIcons();
 }
 
-// --- INICIO CÓDIGO AÑADIDO (Fase 3.2) ---
 /**
  * Muestra u oculta los enlaces de navegación según los permisos del usuario.
  */
@@ -1873,9 +1853,6 @@ function updateNavLinksVisibility() {
         }
     });
 }
-// --- FIN CÓDIGO AÑADIDO (Fase 3.2) ---
-
-// --- INICIO CÓDIGO AÑADIDO (Fase 3.3) ---
 /**
  * Muestra u oculta elementos de acción (formularios, botones) según los permisos.
  */
@@ -1902,7 +1879,6 @@ function updateActionElementsVisibility() {
         createInvoiceTab.classList.toggle('hidden', !permissions.manage_invoices);
     }
 }
-// --- FIN CÓDIGO AÑADIDO (Fase 3.3) ---
 
 // --- Función Agregadora de Renderizado ---
 export function renderAll() {
