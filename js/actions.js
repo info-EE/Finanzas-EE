@@ -66,9 +66,6 @@ function revertTransactionFromBalances(accounts, transaction) {
 
 // --- Acciones Públicas (modifican el estado y lo guardan) ---
 
-// **NOTA**: La función getPermissionsForLevel se mantiene por si se necesita en el futuro,
-// pero ya no se usa para la activación de usuarios.
-
 /**
  * Define los conjuntos de permisos para los diferentes niveles de acceso.
  */
@@ -115,20 +112,19 @@ const getPermissionsForLevel = (level) => {
 };
 
 /**
- * Actualiza el ESTADO de un usuario a 'activo' o 'pendiente'. No modifica permisos.
+ * Actualiza el estado y los permisos de un usuario usando una plantilla de nivel.
  * @param {string} userId - El ID del usuario a modificar.
- * @param {string} level - El nuevo estado ('activo' o 'pendiente').
+ * @param {string} level - El nivel de acceso de la plantilla ('basico', 'completo', o 'pendiente').
  */
 export async function updateUserAccessAction(userId, level) {
     const newStatus = (level === 'basico' || level === 'completo') ? 'activo' : 'pendiente';
     
-    // Si se desactiva un usuario, se le quitan todos los permisos por seguridad.
+    // CORRECCIÓN: Se restaura la lógica para que los botones "Básico" y "Completo"
+    // siempre apliquen la plantilla de permisos correspondiente.
     const updates = {
-        status: newStatus
+        status: newStatus,
+        permisos: getPermissionsForLevel(level)
     };
-    if (newStatus === 'pendiente') {
-        updates.permisos = getPermissionsForLevel('pendiente');
-    }
 
     const success = await updateUserPermissions(userId, updates);
     
