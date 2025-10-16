@@ -43,6 +43,7 @@ function getDefaultState() {
         activeIvaReport: null,
         settings: {
             adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'], 
+            blockedUserIds: [], // <-- AÑADIDO: Lista para usuarios bloqueados/ocultos
             aeatModuleActive: false,
             aeatConfig: {
                 certPath: '',
@@ -114,49 +115,26 @@ export async function initState() {
         }
 
         if (currentUser) {
-            // --- INICIO DE LA MODIFICACIÓN ---
-            // Primero, se comprueba si el usuario es un administrador.
             if (finalState.settings.adminUids.includes(currentUser.uid)) {
                 console.warn("Usuario administrador detectado. Concediendo todos los permisos.");
                 finalState.permissions = getAdminPermissions();
             } else {
-                // Si no es admin, se cargan sus permisos desde su perfil.
                 const userProfile = await getUserProfile(currentUser.uid);
-                
-                // Si el usuario está activo pero no tiene permisos definidos (p. ej., activado manualmente),
-                // se le asigna un conjunto de permisos básicos de solo lectura para garantizar la funcionalidad.
-                if (userProfile && userProfile.permisos && Object.keys(userProfile.permisos).length > 0) {
+                if (userProfile && userProfile.permisos) {
                     finalState.permissions = userProfile.permisos;
-                } else {
-                    console.warn(`El usuario ${currentUser.email} está activo pero no tiene permisos definidos. Asignando permisos básicos por defecto.`);
+                } else if (userProfile && userProfile.status === 'activo') {
+                    // SOLUCIÓN: Asignar permisos básicos si el usuario está activo pero no tiene permisos definidos.
+                    console.log("Usuario activo sin permisos definidos. Asignando permisos básicos de solo lectura.");
                     finalState.permissions = {
-                        view_dashboard: true,
-                        view_accounts: true,
-                        view_cashflow: true,
-                        manage_cashflow: false,
-                        execute_transfers: false,
-                        view_documents: true,
-                        manage_invoices: false,
-                        manage_proformas: false,
-                        change_document_status: false,
-                        view_clients: true,
-                        manage_clients: false,
-                        view_reports: true,
-                        view_iva_control: true,
-                        view_archives: true,
-                        view_investments: true,
-                        manage_investments: false,
-                        manage_accounts: false,
-        
-                        manage_categories: false,
-                        execute_balance_adjustment: false,
-                        execute_year_close: false,
-                        manage_fiscal_settings: false,
-                        manage_users: false,
+                        ...getDefaultPermissions(),
+                        view_dashboard: true, view_accounts: true, view_cashflow: true,
+                        view_documents: true, view_clients: true, view_reports: true,
+                        view_iva_control: true, view_archives: true, view_investments: true,
                     };
+                } else {
+                    finalState.permissions = {};
                 }
             }
-            // --- FIN DE LA MODIFICACIÓN ---
         } else {
             finalState.permissions = {}; // Sin usuario, sin permisos.
         }
@@ -171,3 +149,4 @@ export async function initState() {
     
     notify();
 }
+

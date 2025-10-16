@@ -214,11 +214,11 @@ function handleUserManagementClick(e) {
         const userEmail = userEmailElement.textContent;
         showConfirmationModal(
             'Eliminar Usuario', 
-            `¿Estás seguro de que quieres eliminar el perfil de "${escapeHTML(userEmail)}"? Esta acción no se puede deshacer.`, 
+            `¿Estás seguro de que quieres ocultar el perfil de "${escapeHTML(userEmail)}"? El usuario desaparecerá de esta lista.`, 
             async () => {
-                const result = await withSpinner(async () => await actions.deleteUserAction(userId))();
+                const result = await withSpinner(async () => await actions.blockUserAction(userId))();
                 if (result && !result.success) {
-                    showAlertModal('Error', result.message || 'No se pudo eliminar el usuario.');
+                    showAlertModal('Error', result.message || 'No se pudo ocultar el usuario.');
                 }
             }
         );
@@ -1066,4 +1066,5 @@ export function bindEventListeners() {
         elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
     }
 }
+
 

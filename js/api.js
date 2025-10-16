@@ -11,8 +11,7 @@ import {
     onSnapshot,
     collection,
     getDocs,
-    updateDoc,
-    deleteDoc
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 import { updateConnectionStatus, showAuthError } from './ui.js';
@@ -149,10 +148,7 @@ export async function getAllUsers() {
     try {
         const usersCollection = collection(db, 'usuarios');
         const userSnapshot = await getDocs(usersCollection);
-        // Filtramos los perfiles que no tienen email, que son los "borrados" lógicamente
-        const userList = userSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() }))
-            .filter(user => user.email);
+        const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return userList;
     } catch (error) {
         console.error("Error obteniendo todos los usuarios:", error);
@@ -204,22 +200,6 @@ export async function updateUserPermissions(uid, updates) {
         return false;
     }
 }
-
-export async function deleteUserProfile(uid) {
-    if (!uid) return false;
-    try {
-        const userDocRef = doc(db, 'usuarios', uid);
-        // SOLUCIÓN FINAL: Sobreescribimos el documento con un objeto vacío.
-        // Esto es un "borrado lógico" que las reglas de seguridad sí permiten.
-        await setDoc(userDocRef, {});
-        console.log(`Perfil de usuario ${uid} reseteado (borrado lógico).`);
-        return true;
-    } catch (error) {
-        console.error("Error reseteando el perfil del usuario:", error);
-        return false;
-    }
-}
-
 
 export async function registerUser(email, password) {
     try {
@@ -292,8 +272,11 @@ export async function saveData(state) {
     }
     updateConnectionStatus('loading', 'Guardando...');
     try {
-        const stateToSave = { ...state, activeReport: { type: null, data: [] }, activeIvaReport: null, allUsers: [] };
-        await setDoc(dataDocRef, stateToSave, { merge: true });
+        // Excluimos `allUsers` del guardado para evitar redundancia y posibles conflictos.
+        const { allUsers, ...stateToSave } = state;
+        const finalState = { ...stateToSave, activeReport: { type: null, data: [] }, activeIvaReport: null };
+
+        await setDoc(dataDocRef, finalState, { merge: true });
         console.log("Datos guardados en Firebase.");
         setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000);
     } catch (error) {

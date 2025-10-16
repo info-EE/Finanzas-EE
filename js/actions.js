@@ -1,5 +1,5 @@
 import { getState, setState } from './store.js';
-import { saveData, getAllUsers, updateUserStatus, updateUserPermissions, deleteUserProfile } from './api.js';
+import { saveData, getAllUsers, updateUserStatus, updateUserPermissions } from './api.js';
 
 // --- Lógica Interna de Actualización Incremental de Balances ---
 
@@ -131,32 +131,45 @@ export async function updateUserAccessAction(userId, level) {
 }
 
 export async function loadAndSetAllUsers() {
-    const users = await getAllUsers();
-    setState({ allUsers: users });
+    const rawUsers = await getAllUsers();
+    const { settings } = getState();
+    const blockedUserIds = (settings && settings.blockedUserIds) || [];
+    
+    // Filtramos los usuarios bloqueados y los que no tienen email (perfiles vacíos/reseteados)
+    const filteredUsers = rawUsers.filter(user => user.email && !blockedUserIds.includes(user.id));
+
+    setState({ allUsers: filteredUsers });
 }
 
 export async function toggleUserStatusAction(userId, currentStatus) {
     const newStatus = currentStatus === 'activo' ? 'pendiente' : 'activo';
     const success = await updateUserStatus(userId, newStatus);
     if (success) {
-        // Si la actualización fue exitosa, volvemos a cargar la lista de usuarios para reflejar el cambio.
         await loadAndSetAllUsers();
     }
     return success;
 }
 
-export async function deleteUserAction(userId) {
+export async function blockUserAction(userId) {
     const { settings } = getState();
-    // CORRECCIÓN: Comprobar que 'settings' y 'adminUids' existan antes de usarlos.
-    if (settings && settings.adminUids && Array.isArray(settings.adminUids) && settings.adminUids.includes(userId)) {
+    const adminUids = (settings && settings.adminUids) || [];
+    
+    if (adminUids.includes(userId)) {
         return { success: false, message: 'No se puede eliminar a un administrador.' };
     }
-    const success = await deleteUserProfile(userId);
-    if (success) {
-        await loadAndSetAllUsers();
+
+    const blockedUserIds = (settings && settings.blockedUserIds) || [];
+    if (!blockedUserIds.includes(userId)) {
+        const newSettings = {
+            ...settings,
+            blockedUserIds: [...blockedUserIds, userId]
+        };
+        setState({ settings: newSettings });
+        await saveData(getState()); // Guardamos el estado actualizado con la lista de bloqueo
+        await loadAndSetAllUsers(); // Refrescamos la lista de usuarios en la UI
         return { success: true };
     }
-    return { success: false, message: "Error al eliminar el perfil del usuario." };
+    return { success: true, message: 'El usuario ya estaba bloqueado.' };
 }
 
 export function saveTransaction(transactionData, transactionId) {
