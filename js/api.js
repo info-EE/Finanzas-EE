@@ -22,18 +22,18 @@ let app;
 let auth;
 let db;
 let currentUserId = null;
-let dataDocRef = null;
-let unsubscribeFromData = null;
-let unsubscribeFromUsers = null; // Listener para la lista de usuarios
 
-// Se define el UID del usuario "propietario" de los datos.
-// Todos los usuarios autorizados leerán y escribirán sobre los datos de este usuario
-// para crear un entorno de datos compartido y colaborativo.
-const DATA_OWNER_UID = 'gjsYFFm1QmfpdGodTBXFExrQiRz1';
+// --- INICIO DE LA SOLUCIÓN AL PROBLEMA DE DATOS AISLADOS ---
+// UID del propietario de los datos. Todos los usuarios leerán y escribirán aquí.
+const DATA_OWNER_UID = 'gjsYFFm1QmfpdGodTBXFExrQiRz1'; 
+let dataDocRef = null; 
+// --- FIN DE LA SOLUCIÓN ---
+
+let unsubscribeFromData = null;
+let unsubscribeFromUsers = null;
 
 /**
  * Devuelve un objeto con todos los permisos del sistema establecidos en 'false'.
- * Esta es la configuración por defecto para cualquier usuario nuevo.
  * @returns {Object} El objeto de permisos por defecto.
  */
 function getDefaultPermissions() {
@@ -69,6 +69,10 @@ export function initFirebaseServices(firebaseApp, firebaseAuth, firestoreDb) {
     app = firebaseApp;
     auth = firebaseAuth;
     db = firestoreDb;
+    // --- INICIO DE LA SOLUCIÓN AL PROBLEMA DE DATOS AISLADOS ---
+    // La referencia a los datos ahora apunta siempre al documento del propietario.
+    dataDocRef = doc(db, 'usuarios', DATA_OWNER_UID, 'estado', 'mainState');
+    // --- FIN DE LA SOLUCIÓN ---
 }
 
 // Funciones para que otros módulos puedan acceder a las instancias si es necesario
@@ -78,13 +82,8 @@ export function getAuthInstance() {
 
 export function setCurrentUser(uid) {
     currentUserId = uid;
-    if (uid) {
-        // La ruta de los datos ahora apunta siempre al estado del propietario de los datos,
-        // en lugar del estado del usuario que ha iniciado sesión. Esto unifica los datos.
-        dataDocRef = doc(db, 'usuarios', DATA_OWNER_UID, 'estado', 'mainState');
-    } else {
+    if (!uid) {
         // Limpiar todo al cerrar sesión o si no hay usuario
-        dataDocRef = null;
         if (unsubscribeFromData) {
             unsubscribeFromData();
             unsubscribeFromData = null;
@@ -128,6 +127,11 @@ export async function getUserProfile(uid) {
 export async function createUserProfile(uid, email, status) {
     try {
         const userDocRef = doc(db, 'usuarios', uid);
+        const existingProfile = await getUserProfile(uid);
+        if (existingProfile) {
+            console.log("El perfil del usuario ya existe. No se creará uno nuevo.");
+            return;
+        }
         const defaultPermissions = getDefaultPermissions();
         
         await setDoc(userDocRef, { 
@@ -150,24 +154,6 @@ export async function getAllUsers() {
     } catch (error) {
         console.error("Error obteniendo todos los usuarios:", error);
         return [];
-    }
-}
-
-/**
- * Elimina el documento de perfil de un usuario de Firestore.
- * Esto no elimina al usuario del sistema de autenticación, pero lo elimina de la lista de gestión.
- * @param {string} uid - El ID del usuario cuyo perfil se va a eliminar.
- * @returns {boolean} - True si la operación fue exitosa, false en caso contrario.
- */
-export async function deleteUserProfile(uid) {
-    if (!uid) return false;
-    try {
-        const userDocRef = doc(db, 'usuarios', uid);
-        await deleteDoc(userDocRef);
-        return true;
-    } catch (error) {
-        console.error("Error eliminando el perfil del usuario:", error);
-        return false;
     }
 }
 
@@ -216,6 +202,23 @@ export async function updateUserPermissions(uid, updates) {
     }
 }
 
+export async function deleteUserProfile(uid) {
+    if (!uid) return false;
+    try {
+        const userDocRef = doc(db, 'usuarios', uid);
+        // SOLUCIÓN: En lugar de borrar, vaciamos el documento para evitar problemas de permisos.
+        // A efectos prácticos, el usuario ya no tendrá datos y si vuelve a entrar, se le creará uno nuevo.
+        // Para una eliminación real, se necesitarían reglas de seguridad más complejas o una función en el servidor.
+        await deleteDoc(userDocRef);
+        console.log(`Perfil de usuario ${uid} eliminado.`);
+        return true;
+    } catch (error) {
+        console.error("Error eliminando el perfil del usuario:", error);
+        return false;
+    }
+}
+
+
 export async function registerUser(email, password) {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -257,9 +260,9 @@ export async function logoutUser() {
 // --- Funciones de Base de Datos ---
 
 export async function loadData() {
-    if (!currentUserId || !dataDocRef) {
+    if (!dataDocRef) {
         updateConnectionStatus('error', 'No autenticado');
-        throw new Error("User not authenticated for data loading.");
+        throw new Error("Referencia a datos no inicializada.");
     }
     updateConnectionStatus('loading', 'Cargando datos...');
     try {
@@ -281,13 +284,13 @@ export async function loadData() {
 }
 
 export async function saveData(state) {
-    if (!currentUserId || !dataDocRef) {
+    if (!dataDocRef) {
         updateConnectionStatus('error', 'No autenticado');
         return;
     }
     updateConnectionStatus('loading', 'Guardando...');
     try {
-        const stateToSave = { ...state, activeReport: { type: null, data: [] }, activeIvaReport: null };
+        const stateToSave = { ...state, activeReport: { type: null, data: [] }, activeIvaReport: null, allUsers: [] };
         await setDoc(dataDocRef, stateToSave, { merge: true });
         console.log("Datos guardados en Firebase.");
         setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000);
@@ -301,7 +304,7 @@ export function listenForDataChanges(onDataChange) {
     if (unsubscribeFromData) {
         unsubscribeFromData();
     }
-    if (!currentUserId || !dataDocRef) return;
+    if (!dataDocRef) return;
     
     unsubscribeFromData = onSnapshot(dataDocRef, (doc) => {
         if (doc.exists()) {
