@@ -1064,5 +1064,4 @@ export function bindEventListeners() {
         elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
     }
 }
-"
 
