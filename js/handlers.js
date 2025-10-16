@@ -209,7 +209,9 @@ function handleUserManagementClick(e) {
 
     if (deleteBtn) {
         const userId = deleteBtn.dataset.id;
-        const userEmail = deleteBtn.closest('.flex').querySelector('p.font-semibold').textContent;
+        const userEmailElement = deleteBtn.closest('.flex.items-center.justify-between').querySelector('p.font-semibold');
+        if (!userEmailElement) return;
+        const userEmail = userEmailElement.textContent;
         showConfirmationModal(
             'Eliminar Usuario', 
             `¿Estás seguro de que quieres eliminar el perfil de "${escapeHTML(userEmail)}"? Esta acción no se puede deshacer.`, 
