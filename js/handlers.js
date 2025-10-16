@@ -65,8 +65,9 @@ function withSpinner(action, delay = 300) {
     return async (...args) => {
         showSpinner();
         try {
+            // Agregamos una pequeña demora para que el spinner sea visible y dé feedback.
             await new Promise(resolve => setTimeout(resolve, delay));
-            await action(...args);
+            return await action(...args); // Devolvemos el resultado de la acción
         } catch (e) {
             console.error("Error during action:", e);
             showAlertModal('Error', 'Ocurrió un error inesperado durante la operación.');
@@ -157,8 +158,9 @@ function handlePermissionsSave() {
     });
 
     withSpinner(async () => {
-        const success = await api.updateUserPermissions(userId, newPermissions);
+        const success = await api.updateUserPermissions(userId, { permisos: newPermissions });
         if (success) {
+            await actions.loadAndSetAllUsers();
             showAlertModal('Éxito', 'Los permisos del usuario se han actualizado correctamente.');
             hidePermissionsModal();
         } else {
@@ -175,6 +177,7 @@ function handleUserManagementClick(e) {
     const activateFullBtn = e.target.closest('.activate-full-btn');
     const deactivateBtn = e.target.closest('.deactivate-btn');
     const manageBtn = e.target.closest('.manage-permissions-btn');
+    const deleteBtn = e.target.closest('.delete-user-btn');
 
     if (activateBasicBtn) {
         const userId = activateBasicBtn.dataset.id;
@@ -202,6 +205,21 @@ function handleUserManagementClick(e) {
         } else {
             showAlertModal('Error', 'No se encontró al usuario seleccionado.');
         }
+    }
+
+    if (deleteBtn) {
+        const userId = deleteBtn.dataset.id;
+        const userEmail = deleteBtn.closest('.flex').querySelector('p.font-semibold').textContent;
+        showConfirmationModal(
+            'Eliminar Usuario', 
+            `¿Estás seguro de que quieres eliminar el perfil de "${escapeHTML(userEmail)}"? Esta acción no se puede deshacer.`, 
+            async () => {
+                const result = await withSpinner(async () => await actions.deleteUserAction(userId))();
+                if (result && !result.success) {
+                    showAlertModal('Error', result.message || 'No se pudo eliminar el usuario.');
+                }
+            }
+        );
     }
 }
 
@@ -1027,7 +1045,6 @@ export function bindEventListeners() {
     elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
     elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
     
-    // --- INICIO DE LA SOLUCIÓN FINAL ---
     // User Management
     if (elements.userManagementCard) {
         elements.userManagementCard.addEventListener('click', (e) => {
@@ -1046,6 +1063,6 @@ export function bindEventListeners() {
     if(elements.permissionsModalSaveBtn) {
         elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
     }
-    // --- FIN DE LA SOLUCIÓN FINAL ---
 }
+"
 
