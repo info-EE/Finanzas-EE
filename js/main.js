@@ -42,53 +42,44 @@ function main() {
     bindEventListeners();
     subscribe(renderAll);
 
-    // --- INICIO DE LA MODIFICACIÓN ---
     // Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
         if (user) {
             let userProfile = await api.getUserProfile(user.uid);
 
-            // Si el perfil no existe, créalo. Esto previene la creación de duplicados
-            // en la UI si el usuario se autentica pero su documento en Firestore aún no existe.
-            if (!userProfile) {
+            if (!userProfile || !userProfile.email) {
                 await api.createUserProfile(user.uid, user.email, 'pendiente');
-                userProfile = await api.getUserProfile(user.uid); // Vuelve a cargar el perfil recién creado
+                userProfile = await api.getUserProfile(user.uid);
             }
 
-            // Comprueba si el usuario está activo para permitir el acceso.
             if (userProfile && userProfile.status === 'activo') {
                 api.setCurrentUser(user.uid);
                 showApp();
                 await initState();
 
-                // Si el usuario es administrador, carga la lista completa de usuarios
-                // para la gestión de permisos.
-                if (getState().permissions.manage_users) {
+                if (getState().settings.adminUids.includes(user.uid)) {
                     await actions.loadAndSetAllUsers();
                 }
 
-                // Escucha cambios en los datos en tiempo real.
                 api.listenForDataChanges((newData) => {
-                    setState(newData);
+                    const currentState = getState();
+                    const updatedState = { ...currentState, ...newData };
+                    // Mantenemos la lista de usuarios cargada localmente para no sobreescribirla
+                    updatedState.allUsers = currentState.allUsers; 
+                    setState(updatedState);
                 });
                 
-                // Muestra la página de inicio.
                 switchPage('inicio');
 
             } else {
-                // Si el usuario no está activo, muestra un mensaje y cierra la sesión
-                // para evitar que quede en un estado "atascado".
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
-                await api.logoutUser();
-                hideApp();
+                api.logoutUser();
             }
         } else {
-            // Si no hay usuario, limpia el estado y muestra la vista de login.
             api.setCurrentUser(null);
             hideApp();
         }
     });
-    // --- FIN DE LA MODIFICACIÓN ---
 
     // Valores por defecto para fechas
     const today = new Date().toISOString().slice(0, 10);
@@ -105,3 +96,4 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
+
