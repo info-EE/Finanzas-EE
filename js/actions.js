@@ -66,9 +66,7 @@ function revertTransactionFromBalances(accounts, transaction) {
 
 // --- Acciones Públicas (modifican el estado y lo guardan) ---
 
-/**
- * Define los conjuntos de permisos para los diferentes niveles de acceso.
- */
+// Esta función se mantiene por si se necesita en el futuro, pero no se usará para la activación.
 const getPermissionsForLevel = (level) => {
     const allFalse = {
         view_dashboard: false, view_accounts: false, view_cashflow: false, manage_cashflow: false,
@@ -78,53 +76,26 @@ const getPermissionsForLevel = (level) => {
         manage_accounts: false, manage_categories: false, execute_balance_adjustment: false,
         execute_year_close: false, manage_fiscal_settings: false, manage_users: false,
     };
-
-    if (level === 'basico') {
-        return {
-            ...allFalse,
-            view_dashboard: true,
-            view_accounts: true,
-            view_cashflow: true,
-            view_documents: true,
-            view_clients: true,
-            view_reports: true,
-            view_iva_control: true,
-            view_archives: true,
-            view_investments: true,
-        };
-    }
-
-    if (level === 'completo') {
-        // Acceso completo, excepto la gestión de otros usuarios.
-        return {
-            ...allFalse,
-            view_dashboard: true, view_accounts: true, view_cashflow: true, manage_cashflow: true,
-            execute_transfers: true, view_documents: true, manage_invoices: true, manage_proformas: true,
-            change_document_status: true, view_clients: true, manage_clients: true, view_reports: true,
-            view_iva_control: true, view_archives: true, view_investments: true, manage_investments: true,
-            manage_accounts: true, manage_categories: true, execute_balance_adjustment: true,
-            execute_year_close: true, manage_fiscal_settings: true,
-        };
-    }
-    
-    // Por defecto (para 'pendiente' o cualquier otro caso)
     return allFalse; 
 };
 
 /**
- * Actualiza el estado y los permisos de un usuario usando una plantilla de nivel.
+ * Actualiza el ESTADO de un usuario a 'activo' o 'pendiente'.
+ * Ya no aplica plantillas de permisos para dar control granular al admin.
  * @param {string} userId - El ID del usuario a modificar.
- * @param {string} level - El nivel de acceso de la plantilla ('basico', 'completo', o 'pendiente').
+ * @param {string} level - Define si el estado será 'activo' o 'pendiente'.
  */
 export async function updateUserAccessAction(userId, level) {
     const newStatus = (level === 'basico' || level === 'completo') ? 'activo' : 'pendiente';
     
-    // CORRECCIÓN: Se restaura la lógica para que los botones "Básico" y "Completo"
-    // siempre apliquen la plantilla de permisos correspondiente.
     const updates = {
-        status: newStatus,
-        permisos: getPermissionsForLevel(level)
+        status: newStatus
     };
+
+    // Si se desactiva un usuario ('pendiente'), se le quitan todos los permisos por seguridad.
+    if (newStatus === 'pendiente') {
+        updates.permisos = getPermissionsForLevel('pendiente');
+    }
 
     const success = await updateUserPermissions(userId, updates);
     
