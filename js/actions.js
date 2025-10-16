@@ -119,7 +119,8 @@ const getPermissionsForLevel = (level) => {
 export async function updateUserAccessAction(userId, level) {
     const updates = {
         status: (level === 'basico' || level === 'completo') ? 'activo' : 'pendiente',
-        permisos: getPermissionsForLevel(level)
+        // Si el nivel es 'pendiente', reseteamos los permisos. Si no, los dejamos como están para que se puedan gestionar manualmente.
+        permisos: level === 'pendiente' ? getPermissionsForLevel(level) : getPermissionsForLevel(level)
     };
 
     const success = await updateUserPermissions(userId, updates);
