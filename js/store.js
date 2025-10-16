@@ -9,7 +9,7 @@ const LOGO_CATALOG = {
     eu_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjMDAzMzk5IiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48ZyBmaWxsPSIjRkZDQzAwIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0NTAgMzAwKSI+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDYwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDkwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDEyMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMTUwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDE4MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjEwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDI0MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjcwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMzMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjwvZz48L3N2Zz4=" alt="Bandera de la Unión Europea" class="w-6 h-6 rounded-sm border border-gray-600">`,
     argentina_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5IDYiPjxyZWN0IGZpbGw9IiM3NEFDREYiIHdpZHRoPSI5IiBoZWlnaHQ9IjMiLz48cmVjdCB5PSIzIiBmaWxsPSIjNzRBQ0RGIiB3aWR0aD0iOSIgaGVpZHRoPSIzIi8+PHJlY3QgeT0iMiIgZmlsbD0iI0ZGRiIgd2lkdGg9IjkiIGhlaWdodD0iMiIvPjwvc3ZnPg==" alt="Bandera de Argentina" class="w-6 h-6 rounded-sm border border-gray-600">`,
     paraguay_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMSA2Ij48cGF0aCBmaWxsPSIjRDUyQjFFIiBkPSJNMCAwaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjRkZGIiBkPSJNMCAyaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjMDAzOEE4IiBkPSJNMCA0aDExdjJIMHoiLz48L3N2Zz4=" alt="Bandera de Paraguay" class="w-6 h-6 rounded-sm border border-gray-600">`,
-    default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
+    default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
 };
 
 function getAdminPermissions() {
@@ -20,6 +20,17 @@ function getAdminPermissions() {
         view_iva_control: true, view_archives: true, view_investments: true, manage_investments: true,
         manage_accounts: true, manage_categories: true, execute_balance_adjustment: true,
         execute_year_close: true, manage_fiscal_settings: true, manage_users: true,
+    };
+}
+
+function getReadOnlyPermissions() {
+    return {
+        view_dashboard: true, view_accounts: true, view_cashflow: true, manage_cashflow: false,
+        execute_transfers: false, view_documents: true, manage_invoices: false, manage_proformas: false,
+        change_document_status: false, view_clients: true, manage_clients: false, view_reports: true,
+        view_iva_control: true, view_archives: true, view_investments: true, manage_investments: false,
+        manage_accounts: false, manage_categories: false, execute_balance_adjustment: false,
+        execute_year_close: false, manage_fiscal_settings: false, manage_users: false,
     };
 }
 
@@ -43,7 +54,7 @@ function getDefaultState() {
         activeIvaReport: null,
         settings: {
             adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'], 
-            blockedUserIds: [], // <-- AÑADIDO: Lista para usuarios bloqueados/ocultos
+            blockedUserIds: [], // <-- Nueva lista de bloqueo
             aeatModuleActive: false,
             aeatConfig: {
                 certPath: '',
@@ -120,23 +131,22 @@ export async function initState() {
                 finalState.permissions = getAdminPermissions();
             } else {
                 const userProfile = await getUserProfile(currentUser.uid);
-                if (userProfile && userProfile.permisos) {
-                    finalState.permissions = userProfile.permisos;
-                } else if (userProfile && userProfile.status === 'activo') {
-                    // SOLUCIÓN: Asignar permisos básicos si el usuario está activo pero no tiene permisos definidos.
-                    console.log("Usuario activo sin permisos definidos. Asignando permisos básicos de solo lectura.");
-                    finalState.permissions = {
-                        ...getDefaultPermissions(),
-                        view_dashboard: true, view_accounts: true, view_cashflow: true,
-                        view_documents: true, view_clients: true, view_reports: true,
-                        view_iva_control: true, view_archives: true, view_investments: true,
-                    };
+                // CORRECCIÓN FINAL: Si el usuario está activo pero no tiene permisos definidos,
+                // se le asignan permisos de solo lectura por defecto.
+                if (userProfile && userProfile.status === 'activo') {
+                    const hasDefinedPermissions = userProfile.permisos && Object.values(userProfile.permisos).some(p => p === true);
+                    if (hasDefinedPermissions) {
+                        finalState.permissions = userProfile.permisos;
+                    } else {
+                        console.log(`Usuario ${userProfile.email} activado sin permisos. Asignando permisos de solo lectura.`);
+                        finalState.permissions = getReadOnlyPermissions();
+                    }
                 } else {
                     finalState.permissions = {};
                 }
             }
         } else {
-            finalState.permissions = {}; // Sin usuario, sin permisos.
+            finalState.permissions = {};
         }
         
         state = finalState;
@@ -144,7 +154,7 @@ export async function initState() {
     } catch (error) {
         console.error("Falló la inicialización del estado por un error de carga:", error);
         state = defaultState;
-        state.permissions = {}; // Asegurarse de que permissions esté vacío en caso de error.
+        state.permissions = {}; 
     }
     
     notify();
