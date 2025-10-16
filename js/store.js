@@ -9,7 +9,7 @@ const LOGO_CATALOG = {
     eu_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIj48cGF0aCBmaWxsPSIjMDAzMzk5IiBkPSJNMCAwaDkwMHY2MDBIMHoiLz48ZyBmaWxsPSIjRkZDQzAwIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0NTAgMzAwKSI+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDYwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDkwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDEyMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMTUwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDE4MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjEwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDI0MCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMjcwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjxjaXJjbGUgcj0iMzAiIHRyYW5zZm9ybT0icm90YXRlKDMwMCkgdHJhbnNsYXRlKDAsIC0yMDApIi8+PGNpcmNsZSByPSIzMCIgdHJhbnNmb3JtPSJyb3RhdGUoMzMwKSB0cmFuc2xhdGUoMCAtMjAwKSIvPjwvZz48L3N2Zz4=" alt="Bandera de la Unión Europea" class="w-6 h-6 rounded-sm border border-gray-600">`,
     argentina_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5IDYiPjxyZWN0IGZpbGw9IiM3NEFDREYiIHdpZHRoPSI5IiBoZWlnaHQ9IjMiLz48cmVjdCB5PSIzIiBmaWxsPSIjNzRBQ0RGIiB3aWR0aD0iOSIgaGVpZHRoPSIzIi8+PHJlY3QgeT0iMiIgZmlsbD0iI0ZGRiIgd2lkdGg9IjkiIGhlaWdodD0iMiIvPjwvc3ZnPg==" alt="Bandera de Argentina" class="w-6 h-6 rounded-sm border border-gray-600">`,
     paraguay_flag: `<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMSA2Ij48cGF0aCBmaWxsPSIjRDUyQjFFIiBkPSJNMCAwaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjRkZGIiBkPSJNMCAyaDExdjJIMHoiLz48cGF0aCBmaWxsPSIjMDAzOEE4IiBkPSJNMCA0aDExdjJIMHoiLz48L3N2Zz4=" alt="Bandera de Paraguay" class="w-6 h-6 rounded-sm border border-gray-600">`,
-    default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
+    default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
 };
 
 function getAdminPermissions() {
@@ -104,49 +104,50 @@ export async function initState() {
     const auth = getAuthInstance();
     const currentUser = auth.currentUser;
 
+    let finalState = defaultState;
+    finalState.permissions = {};
+
     try {
-        const loadedStateResult = await loadData();
-        let finalState;
-
-        if (loadedStateResult.exists) {
-            const remoteData = loadedStateResult.data || {};
-            finalState = { ...defaultState, ...remoteData };
-            finalState.settings = { 
-                ...defaultState.settings, 
-                ...(remoteData.settings && typeof remoteData.settings === 'object' ? remoteData.settings : {}) 
-            };
-            finalState.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(remoteData.incomeCategories || [])])];
-            finalState.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(remoteData.expenseCategories || [])])];
-            finalState.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(remoteData.invoiceOperationTypes || [])])];
-            finalState.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(remoteData.taxIdTypes || [])])];
-        } else {
-            console.log("No se encontró estado remoto, inicializando con estado por defecto.");
-            finalState = defaultState;
-            await saveData(finalState);
-        }
-
         if (currentUser) {
-            if (finalState.settings.adminUids.includes(currentUser.uid)) {
+            // PASO 1: Cargar el perfil del usuario ANTES que nada.
+            const userProfile = await getUserProfile(currentUser.uid);
+
+            // PASO 2: Determinar los permisos basados en el perfil.
+            if (defaultState.settings.adminUids.includes(currentUser.uid)) {
                 console.warn("Usuario administrador detectado. Concediendo todos los permisos.");
                 finalState.permissions = getAdminPermissions();
-            } else {
-                const userProfile = await getUserProfile(currentUser.uid);
-                // CORRECCIÓN FINAL: Si el usuario está activo pero no tiene permisos definidos,
-                // se le asignan permisos de solo lectura por defecto.
-                if (userProfile && userProfile.status === 'activo') {
-                    const hasDefinedPermissions = userProfile.permisos && Object.values(userProfile.permisos).some(p => p === true);
-                    if (hasDefinedPermissions) {
-                        finalState.permissions = userProfile.permisos;
-                    } else {
-                        console.log(`Usuario ${userProfile.email} activado sin permisos. Asignando permisos de solo lectura.`);
-                        finalState.permissions = getReadOnlyPermissions();
-                    }
+            } else if (userProfile && userProfile.status === 'activo') {
+                const hasDefinedPermissions = userProfile.permisos && Object.values(userProfile.permisos).some(p => p === true);
+                if (hasDefinedPermissions) {
+                    finalState.permissions = userProfile.permisos;
                 } else {
-                    finalState.permissions = {};
+                    console.log(`Asignando permisos de solo lectura por defecto.`);
+                    finalState.permissions = getReadOnlyPermissions();
                 }
             }
-        } else {
-            finalState.permissions = {};
+            
+            // PASO 3: Si el usuario tiene algún permiso (es decir, está activo), cargar los datos compartidos.
+            const canReadData = Object.values(finalState.permissions).some(p => p === true);
+
+            if (canReadData) {
+                const loadedStateResult = await loadData();
+                if (loadedStateResult.exists) {
+                    const remoteData = loadedStateResult.data || {};
+                    const permissionsBackup = finalState.permissions; // Guardar permisos calculados
+                    
+                    finalState = { ...defaultState, ...remoteData };
+                    finalState.permissions = permissionsBackup; // Restaurar permisos
+                    
+                    finalState.settings = { ...defaultState.settings, ...(remoteData.settings || {}) };
+                    finalState.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(remoteData.incomeCategories || [])])];
+                    finalState.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(remoteData.expenseCategories || [])])];
+                    finalState.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(remoteData.invoiceOperationTypes || [])])];
+                    finalState.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(remoteData.taxIdTypes || [])])];
+                } else {
+                    console.log("No se encontró estado remoto, se usará el estado por defecto.");
+                    await saveData(finalState);
+                }
+            }
         }
         
         state = finalState;
