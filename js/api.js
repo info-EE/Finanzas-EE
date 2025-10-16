@@ -128,8 +128,8 @@ export async function createUserProfile(uid, email, status) {
     try {
         const userDocRef = doc(db, 'usuarios', uid);
         const existingProfile = await getUserProfile(uid);
-        if (existingProfile) {
-            console.log("El perfil del usuario ya existe. No se creará uno nuevo.");
+        if (existingProfile && existingProfile.email) { // Check if profile is not empty
+            console.log("El perfil del usuario ya existe y no está vacío. No se creará uno nuevo.");
             return;
         }
         const defaultPermissions = getDefaultPermissions();
@@ -149,7 +149,10 @@ export async function getAllUsers() {
     try {
         const usersCollection = collection(db, 'usuarios');
         const userSnapshot = await getDocs(usersCollection);
-        const userList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Filtramos los perfiles que no tienen email, que son los "borrados" lógicamente
+        const userList = userSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(user => user.email);
         return userList;
     } catch (error) {
         console.error("Error obteniendo todos los usuarios:", error);
@@ -206,14 +209,13 @@ export async function deleteUserProfile(uid) {
     if (!uid) return false;
     try {
         const userDocRef = doc(db, 'usuarios', uid);
-        // SOLUCIÓN: En lugar de borrar, vaciamos el documento para evitar problemas de permisos.
-        // A efectos prácticos, el usuario ya no tendrá datos y si vuelve a entrar, se le creará uno nuevo.
-        // Para una eliminación real, se necesitarían reglas de seguridad más complejas o una función en el servidor.
-        await deleteDoc(userDocRef);
-        console.log(`Perfil de usuario ${uid} eliminado.`);
+        // SOLUCIÓN FINAL: Sobreescribimos el documento con un objeto vacío.
+        // Esto es un "borrado lógico" que las reglas de seguridad sí permiten.
+        await setDoc(userDocRef, {});
+        console.log(`Perfil de usuario ${uid} reseteado (borrado lógico).`);
         return true;
     } catch (error) {
-        console.error("Error eliminando el perfil del usuario:", error);
+        console.error("Error reseteando el perfil del usuario:", error);
         return false;
     }
 }
