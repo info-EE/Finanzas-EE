@@ -130,25 +130,6 @@ export async function updateUserAccessAction(userId, level) {
     return success;
 }
 
-/**
- * Elimina el perfil de un usuario de la base de datos.
- * @param {string} userId - El ID del usuario a eliminar.
- * @returns {object} - Un objeto indicando si la operación fue exitosa y un mensaje de error si aplica.
- */
-export async function deleteUserAction(userId) {
-    const { settings } = getState();
-    if (settings.adminUids.includes(userId)) {
-        console.error("No se puede eliminar a un usuario administrador.");
-        return { success: false, message: 'No se puede eliminar a un usuario administrador.' };
-    }
-
-    const success = await deleteUserProfile(userId);
-    if (success) {
-        await loadAndSetAllUsers(); // Refresca la lista de usuarios en el estado.
-    }
-    return { success };
-}
-
 export async function loadAndSetAllUsers() {
     const users = await getAllUsers();
     setState({ allUsers: users });
@@ -162,6 +143,20 @@ export async function toggleUserStatusAction(userId, currentStatus) {
         await loadAndSetAllUsers();
     }
     return success;
+}
+
+export async function deleteUserAction(userId) {
+    const { settings } = getState();
+    // CORRECCIÓN: Comprobar que 'settings' y 'adminUids' existan antes de usarlos.
+    if (settings && settings.adminUids && Array.isArray(settings.adminUids) && settings.adminUids.includes(userId)) {
+        return { success: false, message: 'No se puede eliminar a un administrador.' };
+    }
+    const success = await deleteUserProfile(userId);
+    if (success) {
+        await loadAndSetAllUsers();
+        return { success: true };
+    }
+    return { success: false, message: "Error al eliminar el perfil del usuario." };
 }
 
 export function saveTransaction(transactionData, transactionId) {
