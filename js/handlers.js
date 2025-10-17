@@ -109,19 +109,18 @@ function handleLogout() {
 /**
  * Muestra u oculta la contraseña en un campo de texto y cambia el ícono correspondiente.
  * @param {string} inputId El ID del input de la contraseña.
- * @param {HTMLElement} iconContainer El elemento (botón) que contiene el ícono.
+ * @param {HTMLElement} buttonEl El elemento (botón) que contiene el ícono.
  */
-function handleTogglePassword(inputId, iconContainer) {
+function handleTogglePassword(inputId, buttonEl) {
     const passwordInput = document.getElementById(inputId);
-    const icon = iconContainer.querySelector('i');
-    if (!passwordInput || !icon) return;
+    if (!passwordInput || !buttonEl) return;
 
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        icon.setAttribute('data-lucide', 'eye-off');
+        buttonEl.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
     } else {
         passwordInput.type = 'password';
-        icon.setAttribute('data-lucide', 'eye');
+        buttonEl.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
     }
     lucide.createIcons();
 }
