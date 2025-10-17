@@ -1014,7 +1014,10 @@ export function bindEventListeners() {
         document.getElementById('client-form-cancel-btn').classList.add('hidden');
     });
 
-    document.getElementById('facturacion-tab-crear').addEventListener('click', () => switchPage('facturacion', 'crear'));
+    document.getElementById('facturacion-tab-crear').addEventListener('click', () => {
+        switchPage('facturacion', 'crear');
+        populateNextInvoiceNumber();
+    });
     document.getElementById('facturacion-tab-listado').addEventListener('click', () => switchPage('facturacion', 'listado'));
     document.getElementById('facturacion-tab-config').addEventListener('click', () => switchPage('facturacion', 'config'));
     elements.facturaAddItemBtn.addEventListener('click', () => {
@@ -1086,4 +1089,3 @@ export function bindEventListeners() {
         elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
     }
 }
-
