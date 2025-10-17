@@ -29,7 +29,12 @@
                     </div>
                     <div>
                         <label for="login-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
-                        <input type="password" id="login-password" class="form-input" required autocomplete="current-password">
+                        <div class="relative">
+                            <input type="password" id="login-password" class="form-input pr-10" required autocomplete="current-password">
+                            <button type="button" id="toggle-login-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                                <i data-lucide="eye" class="w-5 h-5"></i>
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
                         Ingresar
@@ -50,7 +55,12 @@
                     </div>
                     <div>
                         <label for="register-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
-                        <input type="password" id="register-password" class="form-input" required autocomplete="new-password">
+                        <div class="relative">
+                            <input type="password" id="register-password" class="form-input pr-10" required autocomplete="new-password">
+                            <button type="button" id="toggle-register-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                                <i data-lucide="eye" class="w-5 h-5"></i>
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
                         Registrarse
@@ -1222,3 +1232,4 @@
     <script type="module" src="js/main.js?v=1.2"></script>
 </body>
 </html>
+

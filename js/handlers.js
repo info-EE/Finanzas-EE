@@ -107,6 +107,26 @@ function handleLogout() {
 }
 
 /**
+ * Muestra u oculta la contraseña en un campo de texto y cambia el ícono correspondiente.
+ * @param {string} inputId El ID del input de la contraseña.
+ * @param {HTMLElement} iconContainer El elemento (botón) que contiene el ícono.
+ */
+function handleTogglePassword(inputId, iconContainer) {
+    const passwordInput = document.getElementById(inputId);
+    const icon = iconContainer.querySelector('i');
+    if (!passwordInput || !icon) return;
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+    } else {
+        passwordInput.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+    }
+    lucide.createIcons();
+}
+
+/**
  * Carga la información y los permisos de un usuario en el modal.
  * @param {object} user - El objeto del usuario a mostrar.
  */
@@ -904,6 +924,16 @@ export function bindEventListeners() {
         e.preventDefault();
         showLoginView();
     });
+
+    // Listeners para mostrar/ocultar contraseña
+    const toggleLoginPassword = document.getElementById('toggle-login-password');
+    if (toggleLoginPassword) {
+        toggleLoginPassword.addEventListener('click', () => handleTogglePassword('login-password', toggleLoginPassword));
+    }
+    const toggleRegisterPassword = document.getElementById('toggle-register-password');
+    if (toggleRegisterPassword) {
+        toggleRegisterPassword.addEventListener('click', () => handleTogglePassword('register-password', toggleRegisterPassword));
+    }
     
     // Mobile navigation
     elements.sidebarOpenBtn.addEventListener('click', openSidebar);
@@ -1066,5 +1096,4 @@ export function bindEventListeners() {
         elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
     }
 }
-
 
