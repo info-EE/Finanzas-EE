@@ -67,10 +67,27 @@ function main() {
                     await actions.loadAndSetAllUsers();
                 }
 
+                // Listener de datos con lógica de merge mejorada para proteger el estado.
                 api.listenForDataChanges((newData) => {
                     const currentState = getState();
+                    
                     const updatedState = { ...currentState, ...newData };
-                    updatedState.allUsers = currentState.allUsers; 
+
+                    // MUY IMPORTANTE: Realizar un merge profundo para settings para evitar que
+                    // una actualización parcial desde Firebase borre la configuración existente.
+                    if (newData.settings) {
+                        // Si vienen nuevos settings, los fusionamos con los existentes.
+                        updatedState.settings = { ...currentState.settings, ...newData.settings };
+                    } else {
+                        // Si no vienen settings en la actualización, conservamos los que ya teníamos.
+                        updatedState.settings = currentState.settings;
+                    }
+
+                    // `allUsers` y `permissions` se gestionan localmente en la sesión del usuario,
+                    // por lo que no deben ser sobrescritos por el listener de datos compartidos.
+                    updatedState.allUsers = currentState.allUsers;
+                    updatedState.permissions = currentState.permissions;
+
                     setState(updatedState);
                 });
                 
@@ -103,4 +120,3 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
-

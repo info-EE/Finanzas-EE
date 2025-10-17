@@ -1203,34 +1203,47 @@ export function closeSidebar() {
 
 /**
  * Rellena el campo de número de factura con el siguiente número correlativo.
+ * Esta función es ahora más robusta para prevenir que el campo quede vacío.
  */
 export function populateNextInvoiceNumber() {
     const state = getState();
-    if (!state.settings || !state.settings.invoiceCounter) {
-        // Esta advertencia es clave, si aparece, sabemos que los datos no están listos.
-        console.warn("Intentando generar número de factura antes de que la configuración esté cargada.");
-        return; 
+    const numberInput = document.getElementById('factura-numero');
+    if (!numberInput) return; // Salir si el campo no existe en la página actual
+
+    // Proporcionar valores por defecto si el contador no está listo en el estado.
+    let nextNumber = 1;
+    let lastInvoiceYear = new Date().getFullYear();
+
+    if (state.settings && state.settings.invoiceCounter) {
+        nextNumber = state.settings.invoiceCounter.nextInvoiceNumber;
+        lastInvoiceYear = state.settings.invoiceCounter.lastInvoiceYear;
+    } else {
+        console.warn("El contador de facturas (invoiceCounter) no está disponible en el estado. Usando valores por defecto.");
     }
 
-    const { nextInvoiceNumber, lastInvoiceYear } = state.settings.invoiceCounter;
     const dateInput = document.getElementById('factura-fecha');
     const currentYear = dateInput.value ? new Date(dateInput.value).getFullYear() : new Date().getFullYear();
 
     let number;
     if (currentYear > lastInvoiceYear) {
+        // Si el año de la factura es mayor, se reinicia el contador.
         number = 1;
+    } else if (currentYear < lastInvoiceYear) {
+        // Si se elige un año anterior, es complejo saber el correlativo correcto.
+        // Por seguridad, se sugiere el 1 y el usuario puede ajustarlo manualmente si es necesario.
+        number = 1;
+        console.log(`Fecha anterior al último año registrado. Se sugiere el número 1 para el año ${currentYear}.`);
     } else {
-        number = nextInvoiceNumber;
+        // Si es el mismo año, se usa el siguiente número disponible.
+        number = nextNumber;
     }
 
     const formattedNumber = String(number).padStart(4, '0');
     const invoiceNumber = `${currentYear}-${formattedNumber}`;
 
-    const numberInput = document.getElementById('factura-numero');
-    if (numberInput) {
-        numberInput.value = invoiceNumber;
-    }
+    numberInput.value = invoiceNumber;
 }
+
 
 function renderInicioDashboard() {
     updateInicioKPIs();
@@ -1969,4 +1982,3 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
-
