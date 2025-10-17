@@ -1293,7 +1293,11 @@ export function switchPage(pageId, subpageId = null) {
     });
     
     // Manejo de sub-páginas (como en facturación)
-    if (pageId === 'facturacion' && subpageId) {
+    if (pageId === 'facturacion' && !subpageId) {
+        subpageId = 'crear'; // Valor por defecto si no se especifica
+    }
+
+    if (pageId === 'facturacion') {
         document.querySelectorAll('.tab-button-inner').forEach(btn => btn.classList.remove('active'));
         const tabButton = document.getElementById(`facturacion-tab-${subpageId}`);
         if(tabButton) tabButton.classList.add('active');
@@ -1960,3 +1964,4 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
+
