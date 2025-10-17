@@ -1207,6 +1207,7 @@ export function closeSidebar() {
 export function populateNextInvoiceNumber() {
     const state = getState();
     if (!state.settings || !state.settings.invoiceCounter) {
+        // Esta advertencia es clave, si aparece, sabemos que los datos no están listos.
         console.warn("Intentando generar número de factura antes de que la configuración esté cargada.");
         return; 
     }
@@ -1941,7 +1942,6 @@ export function renderAll() {
                 break;
             case 'facturacion':
                 renderDocuments('Factura', elements.facturasTableBody, 'facturas-search');
-                // Llamar a la función para popular el número de factura si la pestaña de creación está visible
                 const createInvoiceTab = document.getElementById('facturacion-content-crear');
                 if (createInvoiceTab && !createInvoiceTab.classList.contains('hidden')) {
                     populateNextInvoiceNumber();

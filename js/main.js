@@ -24,6 +24,8 @@ const firebaseConfig = {
 // Función principal que se ejecuta al cargar la página
 function main() {
     let db;
+    let isAppInitialized = false; // Guardián de inicialización
+
     try {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -40,14 +42,13 @@ function main() {
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#e0e0e0';
     
-    // NO vinculamos los eventos aquí todavía.
-    // bindEventListeners(); 
-    
     subscribe(renderAll);
 
     // Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
         if (user) {
+            if (isAppInitialized) return; // Si ya está inicializado, no hacer nada más.
+
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile || !userProfile.email) {
@@ -57,11 +58,10 @@ function main() {
 
             if (userProfile && userProfile.status === 'activo') {
                 api.setCurrentUser(user.uid);
+                await initState(); // Espera a que los datos iniciales se carguen.
+                
                 showApp();
-                await initState();
-
-                // Una vez que el estado está completamente inicializado, AHORA SÍ vinculamos los eventos.
-                bindEventListeners();
+                bindEventListeners(); // Vincula los eventos DESPUÉS de cargar los datos.
 
                 if (getState().settings.adminUids.includes(user.uid)) {
                     await actions.loadAndSetAllUsers();
@@ -70,12 +70,12 @@ function main() {
                 api.listenForDataChanges((newData) => {
                     const currentState = getState();
                     const updatedState = { ...currentState, ...newData };
-                    // Mantenemos la lista de usuarios cargada localmente para no sobreescribirla
                     updatedState.allUsers = currentState.allUsers; 
                     setState(updatedState);
                 });
                 
                 switchPage('inicio');
+                isAppInitialized = true; // Marca la app como inicializada.
 
             } else {
                 showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
@@ -84,6 +84,7 @@ function main() {
         } else {
             api.setCurrentUser(null);
             hideApp();
+            isAppInitialized = false; // Resetea el guardián al cerrar sesión.
         }
     });
 
@@ -102,3 +103,4 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
+
