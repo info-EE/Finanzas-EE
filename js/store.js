@@ -54,7 +54,11 @@ function getDefaultState() {
         activeIvaReport: null,
         settings: {
             adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'], 
-            blockedUserIds: [], // <-- Nueva lista de bloqueo
+            blockedUserIds: [],
+            invoiceCounter: {
+                nextInvoiceNumber: 93,
+                lastInvoiceYear: new Date().getFullYear()
+            },
             aeatModuleActive: false,
             aeatConfig: {
                 certPath: '',

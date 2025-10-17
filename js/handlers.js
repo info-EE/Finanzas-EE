@@ -28,7 +28,8 @@ import {
     openSidebar,
     closeSidebar,
     showPermissionsModal,
-    hidePermissionsModal
+    hidePermissionsModal,
+    populateNextInvoiceNumber
 } from './ui.js';
 import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
@@ -104,25 +105,6 @@ function handleLogout() {
         await api.logoutUser();
         resetState(); // Limpiamos el estado local al cerrar sesión
     })();
-}
-
-/**
- * Muestra u oculta la contraseña en un campo de texto y cambia el ícono correspondiente.
- * @param {string} inputId El ID del input de la contraseña.
- * @param {HTMLElement} buttonEl El elemento (botón) que contiene el ícono.
- */
-function handleTogglePassword(inputId, buttonEl) {
-    const passwordInput = document.getElementById(inputId);
-    if (!passwordInput || !buttonEl) return;
-
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        buttonEl.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
-    } else {
-        passwordInput.type = 'password';
-        buttonEl.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
-    }
-    lucide.createIcons();
 }
 
 /**
@@ -246,6 +228,21 @@ function handleUserManagementClick(e) {
 
 
 // --- Funciones Manejadoras (Handlers) ---
+
+function handleTogglePassword(e) {
+    const button = e.currentTarget;
+    const input = button.previousElementSibling;
+    const icon = button.querySelector('svg');
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.outerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+    } else {
+        input.type = 'password';
+        icon.outerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
+    }
+    lucide.createIcons();
+}
 
 function handleTransactionFormSubmit(e) {
     e.preventDefault();
@@ -924,15 +921,8 @@ export function bindEventListeners() {
         showLoginView();
     });
 
-    // Listeners para mostrar/ocultar contraseña
-    const toggleLoginPassword = document.getElementById('toggle-login-password');
-    if (toggleLoginPassword) {
-        toggleLoginPassword.addEventListener('click', () => handleTogglePassword('login-password', toggleLoginPassword));
-    }
-    const toggleRegisterPassword = document.getElementById('toggle-register-password');
-    if (toggleRegisterPassword) {
-        toggleRegisterPassword.addEventListener('click', () => handleTogglePassword('register-password', toggleRegisterPassword));
-    }
+    document.getElementById('toggle-login-password').addEventListener('click', handleTogglePassword);
+    document.getElementById('toggle-register-password').addEventListener('click', handleTogglePassword);
     
     // Mobile navigation
     elements.sidebarOpenBtn.addEventListener('click', openSidebar);
@@ -1045,6 +1035,7 @@ export function bindEventListeners() {
     });
     elements.facturaSelectCliente.addEventListener('change', handleClientSelectionForInvoice);
     elements.nuevaFacturaForm.addEventListener('submit', handleGenerateInvoice);
+    document.getElementById('factura-fecha').addEventListener('change', populateNextInvoiceNumber);
     elements.facturasTableBody.addEventListener('click', handleDocumentsTableClick);
     document.getElementById('facturas-search').addEventListener('input', () => switchPage('facturacion', 'listado'));
     elements.aeatConfigForm.addEventListener('submit', handleAeatConfigSave);

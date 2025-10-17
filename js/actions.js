@@ -397,10 +397,40 @@ export function deleteClient(clientId) {
 }
 
 export function addDocument(docData) {
-    const { documents } = getState();
+    const { documents, settings } = getState();
     const newDocument = { ...docData, id: crypto.randomUUID() };
-    setState({ documents: [...documents, newDocument] });
-    saveData(getState()); // Guardar el nuevo estado
+
+    let updatedSettings = settings;
+
+    // Si es una factura, actualizamos el contador.
+    if (docData.type === 'Factura') {
+        const currentCounter = settings.invoiceCounter;
+        const currentYear = new Date(docData.date).getFullYear();
+        let nextNumber;
+        let nextYear;
+
+        if (currentYear > currentCounter.lastInvoiceYear) {
+            nextNumber = 2; // El 1 se acaba de usar para esta factura
+            nextYear = currentYear;
+        } else {
+            nextNumber = currentCounter.nextInvoiceNumber + 1;
+            nextYear = currentCounter.lastInvoiceYear;
+        }
+
+        updatedSettings = {
+            ...settings,
+            invoiceCounter: {
+                nextInvoiceNumber: nextNumber,
+                lastInvoiceYear: nextYear
+            }
+        };
+    }
+
+    setState({
+        documents: [...documents, newDocument],
+        settings: updatedSettings
+    });
+    saveData(getState());
 }
 
 export function toggleDocumentStatus(docId) {
@@ -698,4 +728,3 @@ export function addInvestment(investmentData) {
 
     saveTransaction(transactionData);
 }
-

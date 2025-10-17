@@ -1201,6 +1201,32 @@ export function closeSidebar() {
     }
 }
 
+/**
+ * Rellena el campo de número de factura con el siguiente número correlativo.
+ */
+export function populateNextInvoiceNumber() {
+    const { settings } = getState();
+    if (!settings || !settings.invoiceCounter) return;
+
+    const { nextInvoiceNumber, lastInvoiceYear } = settings.invoiceCounter;
+    const dateInput = document.getElementById('factura-fecha');
+    const currentYear = dateInput.value ? new Date(dateInput.value).getFullYear() : new Date().getFullYear();
+
+    let number;
+    if (currentYear > lastInvoiceYear) {
+        number = 1;
+    } else {
+        number = nextInvoiceNumber;
+    }
+
+    const formattedNumber = String(number).padStart(4, '0');
+    const invoiceNumber = `${currentYear}-${formattedNumber}`;
+
+    const numberInput = document.getElementById('factura-numero');
+    if (numberInput) {
+        numberInput.value = invoiceNumber;
+    }
+}
 
 function renderInicioDashboard() {
     updateInicioKPIs();
@@ -1276,6 +1302,10 @@ export function switchPage(pageId, subpageId = null) {
             const content = document.getElementById(`facturacion-content-${id}`);
             if (content) content.classList.toggle('hidden', id !== subpageId);
         });
+
+        if (subpageId === 'crear') {
+            populateNextInvoiceNumber();
+        }
     }
 
     // Cierra el menú lateral en móvil
@@ -1930,4 +1960,3 @@ export function renderAll() {
     populateSelects();
     lucide.createIcons();
 }
-
