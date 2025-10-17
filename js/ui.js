@@ -1205,10 +1205,13 @@ export function closeSidebar() {
  * Rellena el campo de número de factura con el siguiente número correlativo.
  */
 export function populateNextInvoiceNumber() {
-    const { settings } = getState();
-    if (!settings || !settings.invoiceCounter) return;
+    const state = getState();
+    if (!state.settings || !state.settings.invoiceCounter) {
+        console.warn("Intentando generar número de factura antes de que la configuración esté cargada.");
+        return; 
+    }
 
-    const { nextInvoiceNumber, lastInvoiceYear } = settings.invoiceCounter;
+    const { nextInvoiceNumber, lastInvoiceYear } = state.settings.invoiceCounter;
     const dateInput = document.getElementById('factura-fecha');
     const currentYear = dateInput.value ? new Date(dateInput.value).getFullYear() : new Date().getFullYear();
 
