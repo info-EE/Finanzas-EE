@@ -1296,11 +1296,12 @@ export function switchPage(pageId, subpageId = null) {
     });
     
     // Manejo de sub-páginas (como en facturación)
-    if (pageId === 'facturacion' && !subpageId) {
-        subpageId = 'crear'; // Valor por defecto si no se especifica
-    }
-
     if (pageId === 'facturacion') {
+        if (!subpageId) {
+            const activeTab = document.querySelector('.tab-button-inner.active');
+            subpageId = activeTab ? activeTab.id.replace('facturacion-tab-', '') : 'crear';
+        }
+        
         document.querySelectorAll('.tab-button-inner').forEach(btn => btn.classList.remove('active'));
         const tabButton = document.getElementById(`facturacion-tab-${subpageId}`);
         if(tabButton) tabButton.classList.add('active');
@@ -1309,10 +1310,6 @@ export function switchPage(pageId, subpageId = null) {
             const content = document.getElementById(`facturacion-content-${id}`);
             if (content) content.classList.toggle('hidden', id !== subpageId);
         });
-
-        if (subpageId === 'crear') {
-            populateNextInvoiceNumber();
-        }
     }
 
     // Cierra el menú lateral en móvil
@@ -1944,6 +1941,11 @@ export function renderAll() {
                 break;
             case 'facturacion':
                 renderDocuments('Factura', elements.facturasTableBody, 'facturas-search');
+                // Llamar a la función para popular el número de factura si la pestaña de creación está visible
+                const createInvoiceTab = document.getElementById('facturacion-content-crear');
+                if (createInvoiceTab && !createInvoiceTab.classList.contains('hidden')) {
+                    populateNextInvoiceNumber();
+                }
                 break;
             case 'clientes':
                 renderClients();
