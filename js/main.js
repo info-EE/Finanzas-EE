@@ -39,7 +39,10 @@ function main() {
 
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#e0e0e0';
-    bindEventListeners();
+    
+    // NO vinculamos los eventos aquí todavía.
+    // bindEventListeners(); 
+    
     subscribe(renderAll);
 
     // Manejador de Autenticación
@@ -56,6 +59,9 @@ function main() {
                 api.setCurrentUser(user.uid);
                 showApp();
                 await initState();
+
+                // Una vez que el estado está completamente inicializado, AHORA SÍ vinculamos los eventos.
+                bindEventListeners();
 
                 if (getState().settings.adminUids.includes(user.uid)) {
                     await actions.loadAndSetAllUsers();
@@ -96,4 +102,3 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
-
