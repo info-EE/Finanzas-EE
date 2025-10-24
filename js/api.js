@@ -14,6 +14,7 @@ import {
     updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
+// Restauramos la importación de ui.js para recuperar los avisos
 import { updateConnectionStatus, showAuthError } from './ui.js';
 
 // Variables para almacenar las instancias de los servicios de Firebase
@@ -22,7 +23,7 @@ let auth;
 let db;
 let currentUserId = null;
 
-// --- INICIO DE LA CORRECCIÓN ---
+// --- INICIO DE LA CORRECCIÓN (Mantenemos el UID dinámico) ---
 // Se elimina la constante DATA_OWNER_UID.
 // dataDocRef se establecerá dinámicamente basado en el usuario que inicie sesión.
 let dataDocRef = null; 
@@ -68,10 +69,7 @@ export function initFirebaseServices(firebaseApp, firebaseAuth, firestoreDb) {
     app = firebaseApp;
     auth = firebaseAuth;
     db = firestoreDb;
-    // --- INICIO DE LA CORRECCIÓN ---
-    // La referencia a dataDocRef ya no se establece aquí.
-    // Se establecerá en setCurrentUser.
-    // --- FIN DE LA CORRECCIÓN ---
+    // La referencia a dataDocRef se establecerá en setCurrentUser.
 }
 
 // Funciones para que otros módulos puedan acceder a las instancias si es necesario
@@ -91,15 +89,10 @@ export function setCurrentUser(uid) {
             unsubscribeFromUsers();
             unsubscribeFromUsers = null;
         }
-        // --- INICIO DE LA CORRECCIÓN ---
         dataDocRef = null; // Limpiar la referencia al cerrar sesión
-        // --- FIN DE LA CORRECCIÓN ---
     } else {
-        // --- INICIO DE LA CORRECCIÓN ---
         // Establece la referencia de datos al ID del usuario que acaba de iniciar sesión.
-        // Esto hace que la app cargue los datos del usuario correcto.
         dataDocRef = doc(db, 'usuarios', currentUserId, 'estado', 'mainState');
-        // --- FIN DE LA CORRECCIÓN ---
     }
 }
 
@@ -115,6 +108,8 @@ function translateAuthError(errorCode) {
         case 'auth/wrong-password':
         case 'auth/invalid-credential':
             return 'El correo o la contraseña son incorrectos.';
+        case 'auth/registration-pending': // Error customizado
+             return 'Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.';
         default:
             return 'Ha ocurrido un error. Inténtalo de nuevo más tarde.';
     }
@@ -215,7 +210,10 @@ export async function registerUser(email, password) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         await createUserProfile(user.uid, user.email, 'pendiente');
-        showAuthError('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
+        // Lanzamos un error especial que el handler (manejador) puede interpretar si es necesario.
+        const e = new Error('Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.');
+        e.code = 'auth/registration-pending';
+        throw e;
     } catch (error) {
         console.error("Error en el registro:", error.code);
         showAuthError(translateAuthError(error.code));
@@ -311,3 +309,4 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
+
