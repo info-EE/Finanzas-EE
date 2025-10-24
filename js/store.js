@@ -34,7 +34,10 @@ function getReadOnlyPermissions() {
     };
 }
 
-function getDefaultState() {
+// --- INICIO DE LA CORRECCIÓN ---
+// Añadimos 'export' aquí para que main.js pueda importar esta función.
+export function getDefaultState() {
+// --- FIN DE LA CORRECCIÓN ---
     return {
         logoCatalog: LOGO_CATALOG,
         accounts: [],
@@ -164,4 +167,3 @@ export async function initState() {
     
     notify();
 }
-
