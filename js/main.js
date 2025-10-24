@@ -4,7 +4,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-import { subscribe, initState, setState, getState } from './store.js';
+// --- INICIO DE LA CORRECCIÓN ---
+// Importamos 'getDefaultState' para acceder a la lista de admins por defecto.
+import { subscribe, initState, setState, getState, getDefaultState } from './store.js';
+// --- FIN DE LA CORRECCIÓN ---
 import { bindEventListeners } from './handlers.js';
 import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
@@ -49,6 +52,12 @@ function main() {
         if (user) {
             if (isAppInitialized) return; // Si ya está inicializado, no hacer nada más.
 
+            // --- INICIO DE LA CORRECCIÓN DE LÓGICA DE ACCESO ---
+            // Obtenemos la lista de administradores por defecto para la comprobación inicial.
+            const defaultAdmins = getDefaultState().settings.adminUids || [];
+            const isAdmin = defaultAdmins.includes(user.uid);
+            // --- FIN DE LA CORRECCIÓN ---
+
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile || !userProfile.email) {
@@ -56,13 +65,24 @@ function main() {
                 userProfile = await api.getUserProfile(user.uid);
             }
 
-            if (userProfile && userProfile.status === 'activo') {
+            // --- CORRECCIÓN DE LÓGICA DE ACCESO ---
+            // Se permite el acceso si el perfil está 'activo' O si el usuario es un admin.
+            if (userProfile && (userProfile.status === 'activo' || isAdmin)) {
+                
+                // Si el admin entra y su status no es 'activo', lo actualizamos.
+                if (isAdmin && userProfile.status !== 'activo') {
+                    console.warn("Detectado admin con estado no activo. Actualizando a 'activo'.");
+                    // Usamos la función de la API para actualizar el estado en Firestore.
+                    await api.updateUserStatus(user.uid, 'activo');
+                }
+                
                 api.setCurrentUser(user.uid);
                 await initState(); // Espera a que los datos iniciales se carguen.
                 
                 showApp();
                 bindEventListeners(); // Vincula los eventos DESPUÉS de cargar los datos.
 
+                // Esta comprobación ahora usa el estado (getState) que ya está inicializado.
                 if (getState().settings.adminUids.includes(user.uid)) {
                     await actions.loadAndSetAllUsers();
                 }
