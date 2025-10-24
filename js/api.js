@@ -22,11 +22,11 @@ let auth;
 let db;
 let currentUserId = null;
 
-// --- INICIO DE LA SOLUCIÓN AL PROBLEMA DE DATOS AISLADOS ---
-// UID del propietario de los datos. Todos los usuarios leerán y escribirán aquí.
-const DATA_OWNER_UID = 'gjsYFFm1QmfpdGodTBXFExrQiRz1'; 
+// --- INICIO DE LA CORRECCIÓN ---
+// Se elimina la constante DATA_OWNER_UID.
+// dataDocRef se establecerá dinámicamente basado en el usuario que inicie sesión.
 let dataDocRef = null; 
-// --- FIN DE LA SOLUCIÓN ---
+// --- FIN DE LA CORRECCIÓN ---
 
 let unsubscribeFromData = null;
 let unsubscribeFromUsers = null;
@@ -68,10 +68,10 @@ export function initFirebaseServices(firebaseApp, firebaseAuth, firestoreDb) {
     app = firebaseApp;
     auth = firebaseAuth;
     db = firestoreDb;
-    // --- INICIO DE LA SOLUCIÓN AL PROBLEMA DE DATOS AISLADOS ---
-    // La referencia a los datos ahora apunta siempre al documento del propietario.
-    dataDocRef = doc(db, 'usuarios', DATA_OWNER_UID, 'estado', 'mainState');
-    // --- FIN DE LA SOLUCIÓN ---
+    // --- INICIO DE LA CORRECCIÓN ---
+    // La referencia a dataDocRef ya no se establece aquí.
+    // Se establecerá en setCurrentUser.
+    // --- FIN DE LA CORRECCIÓN ---
 }
 
 // Funciones para que otros módulos puedan acceder a las instancias si es necesario
@@ -91,6 +91,15 @@ export function setCurrentUser(uid) {
             unsubscribeFromUsers();
             unsubscribeFromUsers = null;
         }
+        // --- INICIO DE LA CORRECCIÓN ---
+        dataDocRef = null; // Limpiar la referencia al cerrar sesión
+        // --- FIN DE LA CORRECCIÓN ---
+    } else {
+        // --- INICIO DE LA CORRECCIÓN ---
+        // Establece la referencia de datos al ID del usuario que acaba de iniciar sesión.
+        // Esto hace que la app cargue los datos del usuario correcto.
+        dataDocRef = doc(db, 'usuarios', currentUserId, 'estado', 'mainState');
+        // --- FIN DE LA CORRECCIÓN ---
     }
 }
 
@@ -242,9 +251,9 @@ export async function logoutUser() {
 // --- Funciones de Base de Datos ---
 
 export async function loadData() {
-    if (!dataDocRef) {
+    if (!dataDocRef) { // Esto ahora se verifica después de que setCurrentUser lo establezca
         updateConnectionStatus('error', 'No autenticado');
-        throw new Error("Referencia a datos no inicializada.");
+        throw new Error("Referencia a datos no inicializada. El usuario puede no estar autenticado.");
     }
     updateConnectionStatus('loading', 'Cargando datos...');
     try {
@@ -302,4 +311,3 @@ export function listenForDataChanges(onDataChange) {
         updateConnectionStatus('error', 'Desconectado');
     });
 }
-
