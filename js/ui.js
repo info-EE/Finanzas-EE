@@ -327,7 +327,6 @@ function renderTransactions() {
             .join('');
         tbody.innerHTML = rowsHtml;
     }
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderAccountsTab() {
@@ -335,7 +334,6 @@ function renderAccountsTab() {
     const accountsGrid = document.getElementById('accounts-grid');
     if (!accountsGrid) return;
     accountsGrid.innerHTML = accounts.map(createAccountCard).join('');
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderBalanceLegendAndChart() {
@@ -625,7 +623,6 @@ function renderMainBalances() {
             <span class="font-semibold">${formatCurrency(acc.balance, acc.currency)}</span>
         </div>
     `).join('');
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderPendingInvoices() {
@@ -640,7 +637,6 @@ function renderPendingInvoices() {
             <i data-lucide="check-circle-2" class="w-8 h-8 mx-auto mb-2 text-green-500"></i>
             <p>¡Todo al día!</p>
         </div>`;
-        // No llamamos a lucide.createIcons() aquí
         return;
     }
 
@@ -693,7 +689,6 @@ function renderDocuments(type, tableBody, searchInputId) {
                    .join('');
         tableBody.innerHTML = rowsHtml;
     }
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderClients() {
@@ -712,7 +707,6 @@ function renderClients() {
     }
     
     tbody.innerHTML = clients.map(createClientRow).join('');
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderClientsChart() {
@@ -814,7 +808,6 @@ function renderInvestments() {
                        .join('');
         tbody.innerHTML = rowsHtml;
     }
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderInvestmentAssetsList() {
@@ -839,7 +832,6 @@ function renderInvestmentAssetsList() {
             </button>`;
         listEl.appendChild(div);
     });
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderUserManagement() {
@@ -922,7 +914,6 @@ function renderUserManagement() {
             </div>
         `;
     }).join('');
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderSettings() {
@@ -1007,7 +998,6 @@ function renderSettings() {
     if (permissions.manage_fiscal_settings && taxRateInput && settings && settings.fiscalParameters) {
         taxRateInput.value = settings.fiscalParameters.corporateTaxRate;
     }
-    // No llamamos a lucide.createIcons() aquí
 }
 
 function renderReport() {
@@ -1015,7 +1005,6 @@ function renderReport() {
     if (!elements.reportDisplayArea) return;
     if (!activeReport || !activeReport.type || activeReport.data.length === 0) {
         elements.reportDisplayArea.innerHTML = `<div class="text-center text-gray-500 flex flex-col items-center justify-center h-full"><i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i><h3 class="font-semibold text-lg">No hay datos para el reporte</h3><p class="text-sm">Pruebe con otros filtros o añada datos.</p></div>`;
-        // No llamamos a lucide.createIcons() aquí
         return;
     }
 
@@ -1099,7 +1088,6 @@ function renderReport() {
             </div>
         </div>
         <div class="overflow-x-auto">${tableHtml}</div>`;
-    // No llamamos a lucide.createIcons() aquí
 }
 
 
@@ -1114,7 +1102,6 @@ function renderIvaReport() {
                 <i data-lucide="info" class="w-12 h-12 mx-auto mb-4"></i>
                 <p>Seleccione un mes y genere el reporte para ver los resultados.</p>
             </div>`;
-        // No llamamos a lucide.createIcons() aquí
         return;
     }
 
@@ -1186,7 +1173,6 @@ function renderIvaReport() {
             </div>
         </div>
     `;
-    // No llamamos a lucide.createIcons() aquí
 }
 
 // --- Funciones de Utilidad y Ayuda para la UI ---
@@ -1652,7 +1638,6 @@ export function showInvoiceViewer(invoiceId) {
     </div>`;
     elements.invoiceViewerModal.classList.remove('hidden');
     elements.invoiceViewerModal.classList.add('flex');
-    // No llamamos a lucide.createIcons() aquí
 }
 
 export function showReceiptViewer(invoice) {
@@ -1719,7 +1704,6 @@ export function showReceiptViewer(invoice) {
     </div>`;
     elements.invoiceViewerModal.classList.remove('hidden');
     elements.invoiceViewerModal.classList.add('flex');
-    // No llamamos a lucide.createIcons() aquí
 }
 
 export function hideInvoiceViewer() {
@@ -1867,7 +1851,6 @@ export function updateConnectionStatus(status, message) {
             statusText.classList.add('text-red-400');
             break;
     }
-    // No llamamos a lucide.createIcons() aquí
 }
 
 /**
@@ -1991,18 +1974,22 @@ export function renderAll() {
     
     populateSelects();
 
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Llamamos a lucide.createIcons() UNA SOLA VEZ al final de todo el renderizado.
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        try {
-            lucide.createIcons();
-        } catch (error) {
-            console.error("Error al ejecutar lucide.createIcons():", error);
-            // Opcionalmente, mostrar un mensaje al usuario si los iconos fallan
-            // showAlertModal('Error de Iconos', 'No se pudieron cargar algunos iconos.');
+    // --- INICIO DE LA NUEVA CORRECCIÓN ---
+    // Añadimos un pequeño retraso antes de crear los iconos.
+    // Esto da tiempo al navegador a estabilizar el DOM.
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            try {
+                lucide.createIcons();
+            } catch (error) {
+                console.error("Error al ejecutar lucide.createIcons() con retraso:", error);
+                // Opcionalmente, mostrar un mensaje al usuario si los iconos fallan
+                // showAlertModal('Error de Iconos', 'No se pudieron cargar algunos iconos.');
+            }
+        } else {
+            console.error("La librería Lucide no está disponible (con retraso).");
         }
-    } else {
-        console.error("La librería Lucide no está disponible.");
-    }
-    // --- FIN DE LA CORRECCIÓN ---
+    }, 50); // 50 milisegundos de retraso
+    // --- FIN DE LA NUEVA CORRECCIÓN ---
 }
+
