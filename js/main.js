@@ -25,7 +25,12 @@ const firebaseConfig = {
 function main() {
     let db;
     let isAppInitialized = false; // Guardián de inicialización
-    const defaultAdmins = getDefaultState().settings.adminUids || []; // Obtener admins por defecto
+    // *** INICIO DE LA MODIFICACIÓN ***
+    // Obtenemos también la lista de emails de administradores.
+    const defaultAdmins = getDefaultState().settings.adminUids || [];
+    const defaultAdminEmails = getDefaultState().settings.adminEmails || [];
+    // *** FIN DE LA MODIFICACIÓN ***
+
 
     // 1. Inicializar Firebase
     try {
@@ -51,11 +56,16 @@ function main() {
         if (user) {
             if (isAppInitialized) return; // Si ya está inicializado, no hacer nada más.
 
-            const isAdmin = defaultAdmins.includes(user.uid);
+            // *** INICIO DE LA MODIFICACIÓN ***
+            // Se comprueba si el usuario es admin por UID o por Email.
+            const isAdmin = defaultAdmins.includes(user.uid) || defaultAdminEmails.includes(user.email);
+            // *** FIN DE LA MODIFICACIÓN ***
+            
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile || !userProfile.email) {
                  console.log("Creando perfil de usuario...");
+                 // La lógica de 'pendiente' sigue siendo correcta para nuevos usuarios que NO son admin.
                  await api.createUserProfile(user.uid, user.email, isAdmin ? 'activo' : 'pendiente');
                  userProfile = await api.getUserProfile(user.uid); // Recargar perfil después de crearlo
                  console.log("Perfil creado:", userProfile);
@@ -67,6 +77,7 @@ function main() {
                 console.log("Usuario administrador detectado.");
                 canAccess = true;
                 // Si es admin y su perfil no está 'activo', corregirlo
+                // Esta lógica ahora se ejecutará para ti.
                 if (userProfile && userProfile.status !== 'activo') {
                     console.log("Corrigiendo estado del administrador a 'activo'...");
                     await api.updateUserPermissions(user.uid, { status: 'activo' });
@@ -148,13 +159,18 @@ function main() {
 // 5. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
 
-// --- CORRECCIÓN: Ejecutar lucide.createIcons() con un pequeño retraso ---
+// --- CORRECCIÓN: Ejecutar lucide.createIcons() con un pequeño retraso Y especificando los elementos ---
 document.addEventListener('DOMContentLoaded', () => {
     // Añadir un pequeño retraso
     setTimeout(() => {
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
             try {
-                lucide.createIcons();
+                // *** INICIO DE LA MODIFICACIÓN ***
+                // Especificamos que solo procese los elementos <i> con el atributo data-lucide
+                lucide.createIcons({
+                    nodes: document.querySelectorAll('i[data-lucide]')
+                });
+                // *** FIN DE LA MODIFICACIÓN ***
                 console.log("Lucide icons created on DOMContentLoaded (with delay).");
             } catch (error) {
                 console.error("Error creating Lucide icons on DOMContentLoaded (with delay):", error);
