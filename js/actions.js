@@ -1,66 +1,46 @@
 import { getState, setState } from './store.js';
-import { saveData, getAllUsers, updateUserStatus, updateUserPermissions } from './api.js';
+// --- INICIO REFACTOR (FASE 1) ---
+// Importamos las nuevas funciones de api.js y quitamos saveData
+import { 
+    getAllUsers, 
+    updateUserStatus, 
+    updateUserPermissions,
+    addDocToCollection,
+    updateDocInCollection,
+    deleteDocFromCollection,
+    saveSettings
+} from './api.js';
+// --- FIN REFACTOR (FASE 1) ---
 
-// --- Lógica Interna de Actualización Incremental de Balances ---
+
+// --- Lógica Interna de Actualización de Balances (REFACTORIZADA) ---
 
 /**
- * Aplica el efecto de una transacción a los saldos de las cuentas.
- * @param {Array} accounts - El array actual de cuentas.
- * @param {Object} transaction - La transacción a aplicar.
- * @returns {Array} Un nuevo array de cuentas con los saldos actualizados.
+ * Calcula el nuevo saldo de una cuenta después de aplicar o revertir una transacción.
+ * @param {number} currentBalance - El saldo actual de la cuenta.
+ * @param {Object} transaction - La transacción a aplicar/revertir.
+ * @param {'apply' | 'revert'} actionType - Si se debe aplicar o revertir la transacción.
+ * @returns {number} El nuevo saldo calculado.
  */
-function applyTransactionToBalances(accounts, transaction) {
+function getNewBalance(currentBalance, transaction, actionType = 'apply') {
     // Las transacciones de saldo inicial no deben afectar los cálculos incrementales.
     if (transaction.isInitialBalance) {
-        return accounts;
+        return currentBalance;
     }
 
-    const accountIndex = accounts.findIndex(acc => acc.name === transaction.account);
-    if (accountIndex === -1) {
-        return accounts; // No se encontró la cuenta, no se hace nada.
-    }
-
-    const updatedAccounts = [...accounts];
-    const accountToUpdate = { ...updatedAccounts[accountIndex] };
+    let newBalance = currentBalance;
+    const amount = transaction.amount || 0;
+    const iva = transaction.iva || 0;
+    const sign = (actionType === 'apply') ? 1 : -1;
 
     if (transaction.type === 'Ingreso') {
-        accountToUpdate.balance += transaction.amount;
+        newBalance += (amount * sign);
     } else { // Egreso
-        accountToUpdate.balance -= (transaction.amount + (transaction.iva || 0));
-    }
-
-    updatedAccounts[accountIndex] = accountToUpdate;
-    return updatedAccounts;
-}
-
-/**
- * Revierte el efecto de una transacción de los saldos de las cuentas.
- * @param {Array} accounts - El array actual de cuentas.
- * @param {Object} transaction - La transacción a revertir.
- * @returns {Array} Un nuevo array de cuentas con los saldos actualizados.
- */
-function revertTransactionFromBalances(accounts, transaction) {
-    // Las transacciones de saldo inicial no deben afectar los cálculos incrementales.
-    if (transaction.isInitialBalance) {
-        return accounts;
+        newBalance -= ((amount + iva) * sign);
     }
     
-    const accountIndex = accounts.findIndex(acc => acc.name === transaction.account);
-    if (accountIndex === -1) {
-        return accounts;
-    }
-
-    const updatedAccounts = [...accounts];
-    const accountToUpdate = { ...updatedAccounts[accountIndex] };
-
-    if (transaction.type === 'Ingreso') {
-        accountToUpdate.balance -= transaction.amount;
-    } else { // Egreso
-        accountToUpdate.balance += (transaction.amount + (transaction.iva || 0));
-    }
-
-    updatedAccounts[accountIndex] = accountToUpdate;
-    return updatedAccounts;
+    // Redondear a 2 decimales para evitar problemas con punto flotante
+    return Math.round(newBalance * 100) / 100;
 }
 
 
@@ -125,6 +105,8 @@ export async function toggleUserStatusAction(userId, currentStatus) {
     return success;
 }
 
+// --- REFACTORIZADO (FASE 1) ---
+// Ahora usa saveSettings en lugar de saveData/setState
 export async function blockUserAction(userId) {
     const { settings } = getState();
     const adminUids = (settings && settings.adminUids) || [];
@@ -139,77 +121,120 @@ export async function blockUserAction(userId) {
             ...settings,
             blockedUserIds: [...blockedUserIds, userId]
         };
-        setState({ settings: newSettings });
-        await saveData(getState()); // Guardamos el estado actualizado con la lista de bloqueo
+        // setState({ settings: newSettings }); // No es necesario, el listener lo hará
+        await saveSettings(newSettings); // Guardamos la nueva configuración en Firestore
         await loadAndSetAllUsers(); // Refrescamos la lista de usuarios en la UI
         return { success: true };
     }
     return { success: true, message: 'El usuario ya estaba bloqueado.' };
 }
 
-export function saveTransaction(transactionData, transactionId) {
-    let { transactions, accounts } = getState();
-    let updatedTransactions = [...transactions];
+// --- REFACTORIZADO (FASE 1) ---
+// Lógica de guardado completamente nueva.
+// Ahora actualiza la transacción y el saldo de la(s) cuenta(s) afectada(s) en Firestore.
+export async function saveTransaction(transactionData, transactionId) {
+    let { accounts, transactions } = getState();
+    
+    // Prepara los datos de la transacción (sin ID, Firestore lo genera)
+    const newTransactionData = { 
+        ...transactionData, 
+        isInitialBalance: false 
+    };
 
     if (transactionId) {
         // --- Lógica para EDITAR una transacción existente ---
-        const transactionIndex = updatedTransactions.findIndex(t => t.id === transactionId);
-        if (transactionIndex !== -1) {
-            const oldTransaction = updatedTransactions[transactionIndex];
-            
-            // 1. Revertir el saldo de la transacción antigua.
-            accounts = revertTransactionFromBalances(accounts, oldTransaction);
-            
-            // 2. Crear la nueva transacción y actualizar el array.
-            const updatedTransaction = { ...oldTransaction, ...transactionData };
-            updatedTransactions[transactionIndex] = updatedTransaction;
-            
-            // 3. Aplicar el saldo de la nueva transacción.
-            accounts = applyTransactionToBalances(accounts, updatedTransaction);
+        const oldTransaction = transactions.find(t => t.id === transactionId);
+        if (!oldTransaction) {
+            console.error("No se encontró la transacción antigua para editar.");
+            return;
         }
+
+        const oldAccount = accounts.find(acc => acc.name === oldTransaction.account);
+        const newAccount = accounts.find(acc => acc.name === newTransactionData.account);
+
+        if (!newAccount) {
+            console.error("No se encontró la nueva cuenta para editar.");
+            return;
+        }
+
+        if (oldAccount && oldAccount.id === newAccount.id) {
+            // El usuario modificó la transacción, pero la cuenta es la misma
+            const balanceReverted = getNewBalance(newAccount.balance, oldTransaction, 'revert');
+            const newBalance = getNewBalance(balanceReverted, newTransactionData, 'apply');
+            
+            await updateDocInCollection('accounts', newAccount.id, { balance: newBalance });
+        } else if (oldAccount) {
+            // El usuario cambió la cuenta de la transacción
+            // 1. Revertir el saldo de la cuenta antigua
+            const oldAccountBalance = getNewBalance(oldAccount.balance, oldTransaction, 'revert');
+            await updateDocInCollection('accounts', oldAccount.id, { balance: oldAccountBalance });
+            
+            // 2. Aplicar el saldo a la cuenta nueva
+            const newAccountBalance = getNewBalance(newAccount.balance, newTransactionData, 'apply');
+            await updateDocInCollection('accounts', newAccount.id, { balance: newAccountBalance });
+        }
+        
+        // 3. Finalmente, actualizar la transacción en sí
+        await updateDocInCollection('transactions', transactionId, newTransactionData);
+
     } else {
         // --- Lógica para AÑADIR una nueva transacción ---
-        const newTransaction = { ...transactionData, id: crypto.randomUUID(), isInitialBalance: false };
-        updatedTransactions.push(newTransaction);
+        const account = accounts.find(acc => acc.name === newTransactionData.account);
+        if (!account) {
+            console.error("No se encontró la cuenta para añadir la transacción.");
+            return;
+        }
         
-        // Aplicar el efecto de la nueva transacción al saldo de la cuenta correspondiente.
-        accounts = applyTransactionToBalances(accounts, newTransaction);
+        // 1. Calcular el nuevo saldo
+        const newBalance = getNewBalance(account.balance, newTransactionData, 'apply');
+        
+        // 2. Actualizar el saldo de la cuenta
+        await updateDocInCollection('accounts', account.id, { balance: newBalance });
+        
+        // 3. Añadir la nueva transacción
+        await addDocToCollection('transactions', newTransactionData);
     }
     
-    setState({ transactions: updatedTransactions, accounts });
-    saveData(getState()); // Guardar el nuevo estado
+    // Ya no se llama a setState ni a saveData. El listener de onSnapshot se encargará.
 }
 
-export function deleteTransaction(transactionId) {
+// --- REFACTORIZADO (FASE 1) ---
+// Lógica de eliminado completamente nueva.
+export async function deleteTransaction(transactionId) {
     let { transactions, accounts } = getState();
     const transactionToDelete = transactions.find(t => t.id === transactionId);
 
     if (transactionToDelete) {
-        // Revertir el efecto de la transacción en el saldo antes de eliminarla.
-        const updatedAccounts = revertTransactionFromBalances(accounts, transactionToDelete);
-        const updatedTransactions = transactions.filter(t => t.id !== transactionId);
-        setState({ transactions: updatedTransactions, accounts: updatedAccounts });
-        saveData(getState()); // Guardar el nuevo estado
+        const account = accounts.find(acc => acc.name === transactionToDelete.account);
+        
+        if (account) {
+            // 1. Revertir el saldo de la cuenta afectada
+            const newBalance = getNewBalance(account.balance, transactionToDelete, 'revert');
+            await updateDocInCollection('accounts', account.id, { balance: newBalance });
+        }
+        
+        // 2. Eliminar la transacción
+        await deleteDocFromCollection('transactions', transactionId);
     }
 }
 
-export function addAccount(accountData) {
-    const { accounts, transactions } = getState();
-    
+// --- REFACTORIZADO (FASE 1) ---
+export async function addAccount(accountData) {
+    // El ID lo genera Firestore
     const newAccount = {
-        id: crypto.randomUUID(),
         name: accountData.name,
         currency: accountData.currency,
-        symbol: accountData.currency === 'EUR' ? '€' : '$',
         balance: accountData.balance, // El saldo inicial se establece directamente.
         logoHtml: accountData.logoHtml
     };
 
-    let updatedTransactions = [...transactions];
-    // La transacción de "Saldo Inicial" es solo un registro, no se usa para cálculos incrementales.
+    // 1. Añadir la nueva cuenta
+    await addDocToCollection('accounts', newAccount);
+
+    // 2. Si hay saldo inicial, crear la transacción de "Saldo Inicial"
     if (accountData.balance !== 0) {
-        updatedTransactions.push({
-            id: crypto.randomUUID(),
+        const initialTx = {
+            // id: crypto.randomUUID(), // No es necesario
             date: new Date().toISOString().slice(0, 10),
             description: 'Saldo Inicial',
             type: 'Ingreso',
@@ -218,38 +243,36 @@ export function addAccount(accountData) {
             category: 'Ajuste de Saldo',
             amount: accountData.balance,
             currency: accountData.currency,
-            isInitialBalance: true // Marcar como saldo inicial para que sea ignorada en los cálculos.
-        });
+            isInitialBalance: true // Marcar como saldo inicial.
+        };
+        await addDocToCollection('transactions', initialTx);
     }
+}
 
-    const updatedAccounts = [...accounts, newAccount];
+// --- REFACTORIZADO (FASE 1) ---
+export async function deleteAccount(accountId) {
+    // Por ahora, solo eliminamos la cuenta.
+    // Eliminar transacciones asociadas es una operación compleja (batch delete)
+    // que es mejor implementar con cuidado más adelante.
+    await deleteDocFromCollection('accounts', accountId);
     
-    setState({ accounts: updatedAccounts, transactions: updatedTransactions });
-    saveData(getState()); // Guardar el nuevo estado
+    // Advertencia: Esto dejará transacciones "huérfanas" que apuntan a una cuenta
+    // que ya no existe. El UI deberá manejar esto.
 }
 
-export function deleteAccount(accountName) {
-    const { accounts, transactions } = getState();
-    const updatedAccounts = accounts.filter(acc => acc.name !== accountName);
-    // Al eliminar la cuenta, también se eliminan sus transacciones asociadas.
-    const updatedTransactions = transactions.filter(t => t.account !== accountName);
-    setState({ accounts: updatedAccounts, transactions: updatedTransactions });
-    saveData(getState()); // Guardar el nuevo estado
-}
+// --- REFACTORIZADO (FASE 1) ---
+export async function updateBalance(accountName, newBalance) {
+    const { accounts } = getState();
+    const account = accounts.find(acc => acc.name === accountName);
+    if (!account) return;
 
-export function updateBalance(accountName, newBalance) {
-    const { accounts, transactions } = getState();
-    const accountIndex = accounts.findIndex(acc => acc.name === accountName);
-    if (accountIndex === -1) return;
-
-    const account = accounts[accountIndex];
     const currentBalance = account.balance;
     const difference = newBalance - currentBalance;
 
     if (difference !== 0) {
         // 1. Crear la transacción de ajuste para mantener un registro.
         const adjustmentTransaction = {
-            id: crypto.randomUUID(),
+            // id: crypto.randomUUID(), // No es necesario
             date: new Date().toISOString().slice(0, 10),
             description: 'Ajuste de saldo manual',
             type: difference > 0 ? 'Ingreso' : 'Egreso',
@@ -260,145 +283,140 @@ export function updateBalance(accountName, newBalance) {
             currency: account.currency,
             isInitialBalance: false
         };
-        const updatedTransactions = [...transactions, adjustmentTransaction];
+        await addDocToCollection('transactions', adjustmentTransaction);
 
         // 2. Actualizar el saldo de la cuenta directamente.
-        const updatedAccounts = [...accounts];
-        updatedAccounts[accountIndex] = { ...account, balance: newBalance };
-        
-        setState({ transactions: updatedTransactions, accounts: updatedAccounts });
-        saveData(getState()); // Guardar el nuevo estado
+        await updateDocInCollection('accounts', account.id, { balance: newBalance });
     }
 }
 
-export function addTransfer(transferData) {
+// --- REFACTORIZADO (FASE 1) ---
+export async function addTransfer(transferData) {
     const { date, fromAccountName, toAccountName, amount, feeSource, receivedAmount } = transferData;
-    let { accounts, transactions } = getState();
+    let { accounts } = getState();
     
     const fromAccount = accounts.find(a => a.name === fromAccountName);
     const toAccount = accounts.find(a => a.name === toAccountName);
     
-    let newTransactions = [];
+    if (!fromAccount || !toAccount) {
+        console.error("No se encontraron las cuentas para la transferencia");
+        return;
+    }
 
     // 1. Crear las transacciones de la transferencia.
-    newTransactions.push({
-        id: crypto.randomUUID(), date,
+    const txOut = {
+        // id: crypto.randomUUID(), // No es necesario
+        date,
         description: `Transferencia a ${toAccountName}`,
         type: 'Egreso', part: 'A', account: fromAccountName,
         category: 'Transferencia', amount: amount, currency: fromAccount.currency, iva: 0
-    });
+    };
+    await addDocToCollection('transactions', txOut);
 
-    newTransactions.push({
-        id: crypto.randomUUID(), date,
+    const txIn = {
+        // id: crypto.randomUUID(), // No es necesario
+        date,
         description: `Transferencia desde ${fromAccountName}`,
         type: 'Ingreso', part: 'A', account: toAccountName,
         category: 'Transferencia', amount: receivedAmount, currency: toAccount.currency, iva: 0
-    });
+    };
+    await addDocToCollection('transactions', txIn);
     
     if (feeSource > 0) {
-        newTransactions.push({
-            id: crypto.randomUUID(), date,
+        const txFee = {
+            // id: crypto.randomUUID(), // No es necesario
+            date,
             description: `Comisión por transferencia a ${toAccountName}`,
             type: 'Egreso', part: 'A', account: fromAccountName,
             category: 'Comisiones', amount: feeSource, currency: fromAccount.currency, iva: 0
-        });
+        };
+        await addDocToCollection('transactions', txFee);
     }
 
-    // 2. Actualizar los saldos de las cuentas de forma incremental.
-    let updatedAccounts = [...accounts];
-    const fromAccountIndex = updatedAccounts.findIndex(a => a.name === fromAccountName);
-    const toAccountIndex = updatedAccounts.findIndex(a => a.name === toAccountName);
+    // 2. Actualizar los saldos de las cuentas.
+    const totalDebit = amount + feeSource;
+    const newFromBalance = fromAccount.balance - totalDebit;
+    const newToBalance = toAccount.balance + receivedAmount;
 
-    if (fromAccountIndex !== -1) {
-        const totalDebit = amount + feeSource;
-        updatedAccounts[fromAccountIndex] = { ...updatedAccounts[fromAccountIndex], balance: updatedAccounts[fromAccountIndex].balance - totalDebit };
-    }
-    if (toAccountIndex !== -1) {
-         updatedAccounts[toAccountIndex] = { ...updatedAccounts[toAccountIndex], balance: updatedAccounts[toAccountIndex].balance + receivedAmount };
-    }
-
-    const updatedTransactions = [...transactions, ...newTransactions];
-    setState({ transactions: updatedTransactions, accounts: updatedAccounts });
-    saveData(getState()); // Guardar el nuevo estado
+    await updateDocInCollection('accounts', fromAccount.id, { balance: newFromBalance });
+    await updateDocInCollection('accounts', toAccount.id, { balance: newToBalance });
 }
 
-export function addCategory(categoryName, type) {
+// --- REFACTORIZADO (FASE 1) ---
+// Ahora guarda las categorías en el documento de Settings
+export async function addCategory(categoryName, type) {
     const state = getState();
+    const { settings } = state;
     let updatedList;
     let key;
 
     if (type === 'income') {
         key = 'incomeCategories';
-        updatedList = [...state.incomeCategories, categoryName];
+        updatedList = [...(settings.incomeCategories || []), categoryName];
     } else if (type === 'expense') {
         key = 'expenseCategories';
-        updatedList = [...state.expenseCategories, categoryName];
+        updatedList = [...(settings.expenseCategories || []), categoryName];
     } else if (type === 'operationType') {
         key = 'invoiceOperationTypes';
-        updatedList = [...state.invoiceOperationTypes, categoryName];
+        updatedList = [...(settings.invoiceOperationTypes || []), categoryName];
     } else if (type === 'taxIdType') {
         key = 'taxIdTypes';
-        updatedList = [...state.taxIdTypes, categoryName];
+        updatedList = [...(settings.taxIdTypes || []), categoryName];
     } else {
         return;
     }
     
-    setState({ [key]: updatedList });
-    saveData(getState()); // Guardar el nuevo estado
+    await saveSettings({ [key]: updatedList });
 }
 
-export function deleteCategory(categoryName, type) {
+// --- REFACTORIZADO (FASE 1) ---
+export async function deleteCategory(categoryName, type) {
     const state = getState();
+    const { settings } = state;
     let updatedList;
     let key;
 
     if (type === 'income') {
         key = 'incomeCategories';
-        updatedList = state.incomeCategories.filter(cat => cat !== categoryName);
+        updatedList = (settings.incomeCategories || []).filter(cat => cat !== categoryName);
     } else if (type === 'expense') {
         key = 'expenseCategories';
-        updatedList = state.expenseCategories.filter(cat => cat !== categoryName);
+        updatedList = (settings.expenseCategories || []).filter(cat => cat !== categoryName);
     } else if (type === 'operationType') {
         key = 'invoiceOperationTypes';
-        updatedList = state.invoiceOperationTypes.filter(cat => cat !== categoryName);
+        updatedList = (settings.invoiceOperationTypes || []).filter(cat => cat !== categoryName);
     } else if (type === 'taxIdType') {
         key = 'taxIdTypes';
-        updatedList = state.taxIdTypes.filter(cat => cat !== categoryName);
+        updatedList = (settings.taxIdTypes || []).filter(cat => cat !== categoryName);
     } else {
         return;
     }
     
-    setState({ [key]: updatedList });
-    saveData(getState()); // Guardar el nuevo estado
+    await saveSettings({ [key]: updatedList });
 }
 
-export function saveClient(clientData, clientId) {
-    const { clients } = getState();
-    let updatedClients = [...clients];
-
+// --- REFACTORIZADO (FASE 1) ---
+export async function saveClient(clientData, clientId) {
     if (clientId) {
-        const index = updatedClients.findIndex(c => c.id === clientId);
-        if (index !== -1) {
-            updatedClients[index] = { ...updatedClients[index], ...clientData };
-        }
+        await updateDocInCollection('clients', clientId, clientData);
     } else {
-        updatedClients.push({ ...clientData, id: crypto.randomUUID() });
+        // const newId = crypto.randomUUID(); // No es necesario
+        await addDocToCollection('clients', clientData);
     }
-    
-    setState({ clients: updatedClients });
-    saveData(getState()); // Guardar el nuevo estado
 }
 
-export function deleteClient(clientId) {
-    const { clients } = getState();
-    const updatedClients = clients.filter(c => c.id !== clientId);
-    setState({ clients: updatedClients });
-    saveData(getState()); // Guardar el nuevo estado
+// --- REFACTORIZADO (FASE 1) ---
+export async function deleteClient(clientId) {
+    await deleteDocFromCollection('clients', clientId);
 }
 
-export function addDocument(docData) {
-    const { documents, settings } = getState();
-    const newDocument = { ...docData, id: crypto.randomUUID() };
+// --- REFACTORIZADO (FASE 1) ---
+export async function addDocument(docData) {
+    const { settings } = getState();
+    // const newDocument = { ...docData, id: crypto.randomUUID() }; // No es necesario
+    const newDocument = { ...docData };
+
+    await addDocToCollection('documents', newDocument);
 
     let updatedSettings = settings;
 
@@ -424,74 +442,55 @@ export function addDocument(docData) {
                 lastInvoiceYear: nextYear
             }
         };
+        
+        await saveSettings(updatedSettings);
     }
-
-    setState({
-        documents: [...documents, newDocument],
-        settings: updatedSettings
-    });
-    saveData(getState());
 }
 
-export function toggleDocumentStatus(docId) {
+// --- REFACTORIZADO (FASE 1) ---
+export async function toggleDocumentStatus(docId) {
     const { documents } = getState();
-    const updatedDocuments = documents.map(doc => {
-        if (doc.id === docId) {
-            return { ...doc, status: doc.status === 'Adeudada' ? 'Cobrada' : 'Adeudada' };
-        }
-        return doc;
-    });
-    setState({ documents: updatedDocuments });
-    saveData(getState()); // Guardar el nuevo estado
-}
-
-export function deleteDocument(docId) {
-    const { documents } = getState();
-    const updatedDocuments = documents.filter(doc => doc.id !== docId);
-    setState({ documents: updatedDocuments });
-    saveData(getState()); // Guardar el nuevo estado
-}
-
-export function savePaymentDetails(invoiceId, paymentData) {
-    const { documents } = getState();
-    let updatedInvoice = null;
-    const updatedDocuments = documents.map(doc => {
-        if (doc.id === invoiceId) {
-            updatedInvoice = { ...doc, paymentDetails: paymentData };
-            return updatedInvoice;
-        }
-        return doc;
-    });
-
-    if (updatedInvoice) {
-        setState({ documents: updatedDocuments });
-        saveData(getState()); // Guardar el nuevo estado
+    const doc = documents.find(d => d.id === docId);
+    if (doc) {
+        const newStatus = doc.status === 'Adeudada' ? 'Cobrada' : 'Adeudada';
+        await updateDocInCollection('documents', docId, { status: newStatus });
     }
-    
-    return updatedInvoice;
 }
 
-export function saveAeatConfig(aeatConfig) {
+// --- REFACTORIZADO (FASE 1) ---
+export async function deleteDocument(docId) {
+    await deleteDocFromCollection('documents', docId);
+}
+
+// --- REFACTORIZADO (FASE 1) ---
+export async function savePaymentDetails(invoiceId, paymentData) {
+    await updateDocInCollection('documents', invoiceId, { paymentDetails: paymentData });
+    // Esta función ya no necesita devolver la factura, el handler se encargará.
+}
+
+// --- REFACTORIZADO (FASE 1) ---
+export async function saveAeatConfig(aeatConfig) {
     const { settings } = getState();
     const updatedSettings = { ...settings, aeatConfig };
-    setState({ settings: updatedSettings });
-    saveData(getState()); // Guardar el nuevo estado
+    await saveSettings(updatedSettings);
 }
 
-export function toggleAeatModule() {
+// --- REFACTORIZADO (FASE 1) ---
+export async function toggleAeatModule() {
     const { settings } = getState();
     const updatedSettings = { ...settings, aeatModuleActive: !settings.aeatModuleActive };
-    setState({ settings: updatedSettings });
-    saveData(getState()); // Guardar el nuevo estado
+    await saveSettings(updatedSettings);
 }
 
-export function saveFiscalParams(fiscalParams) {
+// --- REFACTORIZADO (FASE 1) ---
+export async function saveFiscalParams(fiscalParams) {
     const { settings } = getState();
     const updatedSettings = { ...settings, fiscalParameters: fiscalParams };
-    setState({ settings: updatedSettings });
-    saveData(getState()); // Guardar el nuevo estado
+    await saveSettings(updatedSettings);
 }
 
+// --- SIN CAMBIOS ---
+// Esta acción solo modifica el estado local (volátil), no guarda en DB.
 export function generateReport(filters) {
     const { transactions, documents, settings } = getState();
     let data = [], title = '', columns = [];
@@ -599,6 +598,8 @@ export function generateReport(filters) {
     setState({ activeReport: { type: filters.type, data, title, columns } });
 }
 
+// --- SIN CAMBIOS ---
+// Esta acción solo modifica el estado local (volátil), no guarda en DB.
 export function generateIvaReport(month) {
     const { transactions, documents } = getState();
     const [year, monthNum] = month.split('-').map(Number);
@@ -649,9 +650,13 @@ export function generateIvaReport(month) {
     setState({ activeIvaReport: ivaReport });
 }
 
-
-export function closeYear(startDate, endDate) {
-    const { transactions, documents, archivedData } = getState();
+// --- REFACTORIZADO (FASE 1) ---
+// Esta acción es compleja. Por ahora, la refactorizamos para que guarde
+// el 'archivedData' en el documento de 'settings'.
+// La eliminación de transacciones/documentos requerirá un batch write,
+// que implementaremos más adelante. Por ahora, solo archivamos.
+export async function closeYear(startDate, endDate) {
+    const { transactions, documents, archivedData, settings } = getState();
     const year = new Date(endDate).getFullYear();
 
     const start = new Date(startDate);
@@ -672,41 +677,48 @@ export function closeYear(startDate, endDate) {
     }
     newArchivedData[year].transactions.push(...transactionsToArchive);
     newArchivedData[year].documents.push(...documentsToArchive);
+    
+    // Guardar los datos archivados en el documento de settings
+    await saveSettings({ ...settings, archivedData: newArchivedData });
 
-    const remainingTransactions = transactions.filter(t => {
-        const tDate = new Date(t.date + 'T00:00:00Z');
-        return tDate < start || tDate > end;
-    });
-    const remainingDocuments = documents.filter(d => {
-        const dDate = new Date(d.date + 'T00:00:00Z');
-        return dDate < start || dDate > end;
-    });
+    // --- Lógica de Eliminación (TODO) ---
+    // La eliminación de los datos originales debe hacerse con un batch write
+    // para no sobrecargar las llamadas a la API.
+    // Por ahora, advertimos que esto no está implementado.
+    console.warn("Función 'closeYear': Los datos han sido archivados en settings, pero la eliminación de los registros originales aún no está implementada en esta refactorización.");
 
-    setState({
-        transactions: remainingTransactions,
-        documents: remainingDocuments,
-        archivedData: newArchivedData
-    });
-    saveData(getState()); // Guardar el nuevo estado
+    /*
+    // Lógica futura con batch writes:
+    const txIdsToDelete = transactionsToArchive.map(t => t.id);
+    const docIdsToDelete = documentsToArchive.map(d => d.id);
+    await api.batchDelete('transactions', txIdsToDelete);
+    await api.batchDelete('documents', docIdsToDelete);
+    */
+
+    // setState({
+    //     transactions: remainingTransactions,
+    //     documents: remainingDocuments,
+    //     archivedData: newArchivedData
+    // });
+    // saveData(getState()); // Guardar el nuevo estado -- COMENTADO
 }
 
 // --- Investment Actions ---
 
-export function addInvestmentAsset(assetData) {
-    const { investmentAssets } = getState();
-    const newAsset = { ...assetData, id: crypto.randomUUID() };
-    setState({ investmentAssets: [...investmentAssets, newAsset] });
-    saveData(getState()); // Guardar el nuevo estado
+// --- REFACTORIZADO (FASE 1) ---
+export async function addInvestmentAsset(assetData) {
+    // const newAsset = { ...assetData, id: crypto.randomUUID() }; // No es necesario
+    await addDocToCollection('investmentAssets', assetData);
 }
 
-export function deleteInvestmentAsset(assetId) {
-    const { investmentAssets } = getState();
-    const updatedAssets = investmentAssets.filter(asset => asset.id !== assetId);
-    setState({ investmentAssets: updatedAssets });
-    saveData(getState()); // Guardar el nuevo estado
+// --- REFACTORIZADO (FASE 1) ---
+export async function deleteInvestmentAsset(assetId) {
+    await deleteDocFromCollection('investmentAssets', assetId);
 }
 
-export function addInvestment(investmentData) {
+// --- REFACTORIZADO (FASE 1) ---
+// saveTransaction ya es async, así que usamos await
+export async function addInvestment(investmentData) {
     const { accounts } = getState();
     const account = accounts.find(acc => acc.name === investmentData.account);
 
@@ -726,5 +738,6 @@ export function addInvestment(investmentData) {
         investmentAssetId: investmentData.assetId 
     };
 
-    saveTransaction(transactionData);
+    // Usamos await porque saveTransaction ahora es asíncrono
+    await saveTransaction(transactionData);
 }

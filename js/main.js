@@ -2,7 +2,7 @@
 // Importa las funciones necesarias de Firebase v9
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"; // Se quitan imports no usados aquí
 
 import { subscribe, initState, setState, getState, getDefaultState } from './store.js'; // Importar getDefaultState
 import { bindAuthEventListeners, bindEventListeners } from './handlers.js';
@@ -91,9 +91,12 @@ async function main() {
             const isAdminByEmail = defaultAdminsByEmail.includes(user.email);
             const isAdmin = isAdminByUid || isAdminByEmail; // Es admin si cumple CUALQUIERA
 
-            if (isAppInitialized) {
-                 return;
-            }
+            // --- INICIO REFACTOR (FASE 1) ---
+            // Se quita el guardián isAppInitialized para permitir re-sincronización si cambia el usuario
+            // if (isAppInitialized) {
+            //      return;
+            // }
+            // --- FIN REFACTOR (FASE 1) ---
 
             let userProfile = await api.getUserProfile(user.uid);
 
@@ -123,7 +126,7 @@ async function main() {
 
             if (canAccess) {
                 api.setCurrentUser(user.uid);
-                await initState();
+                await initState(); // Carga los datos iniciales (una vez)
 
                 showApp();
                 // Vincula el resto de los eventos de la aplicación aquí
@@ -133,33 +136,72 @@ async function main() {
                 const hasAdminPermissions = finalPermissions && finalPermissions.manage_users;
 
                 if (hasAdminPermissions) {
-                    await actions.loadAndSetAllUsers();
-                    api.listenForAllUsersChanges((allUsers) => {
+                    await actions.loadAndSetAllUsers(); // Carga inicial
+                    api.listenForAllUsersChanges((allUsers) => { // Listener
                          setState({ allUsers });
                     });
                 } else {
                      setState({ allUsers: [] });
                 }
 
-                api.listenForDataChanges((newData) => {
-                    const currentState = getState();
-                    const currentPermissions = currentState.permissions;
-                    const canManageUsersNow = currentPermissions && currentPermissions.manage_users;
-                    const updatedState = { ...currentState, ...newData };
-                    if (newData.settings) {
-                        updatedState.settings = { ...currentState.settings, ...newData.settings };
-                    } else {
-                        updatedState.settings = currentState.settings;
-                    }
-                    if (!canManageUsersNow) {
-                       updatedState.allUsers = currentState.allUsers || [];
-                    }
-                    updatedState.permissions = currentState.permissions;
-                    setState(updatedState);
+                // --- INICIO REFACTOR (FASE 1) ---
+                // Configurar listeners individuales para cada colección
+                api.listenForCollectionChanges('accounts', (updatedAccounts) => {
+                    setState({ accounts: updatedAccounts });
                 });
+                api.listenForCollectionChanges('transactions', (updatedTransactions) => {
+                    // Importante: Recalcular balances cuando cambian las transacciones
+                    // Esta lógica podría moverse a una función helper si se vuelve compleja
+                    let { accounts } = getState();
+                    if (accounts && accounts.length > 0) {
+                        const recalculatedAccounts = accounts.map(acc => {
+                            let newBalance = 0;
+                            // Busca la transacción de saldo inicial (si existe)
+                            const initialTx = updatedTransactions.find(t => t.account === acc.name && t.isInitialBalance);
+                            if (initialTx) {
+                                newBalance = initialTx.amount;
+                            }
+                            // Aplica el resto de transacciones
+                            updatedTransactions
+                                .filter(t => t.account === acc.name && !t.isInitialBalance)
+                                .forEach(t => {
+                                    if (t.type === 'Ingreso') newBalance += t.amount;
+                                    else newBalance -= (t.amount + (t.iva || 0));
+                                });
+                             // Redondear al final
+                            return { ...acc, balance: Math.round(newBalance * 100) / 100 };
+                        });
+                        setState({ transactions: updatedTransactions, accounts: recalculatedAccounts });
+                    } else {
+                        setState({ transactions: updatedTransactions }); // Solo actualiza transacciones si no hay cuentas
+                    }
+                });
+                api.listenForCollectionChanges('documents', (updatedDocuments) => {
+                    setState({ documents: updatedDocuments });
+                });
+                api.listenForCollectionChanges('clients', (updatedClients) => {
+                    setState({ clients: updatedClients });
+                });
+                api.listenForCollectionChanges('investmentAssets', (updatedAssets) => {
+                    setState({ investmentAssets: updatedAssets });
+                });
+                api.listenForSettingsChanges((updatedSettings) => {
+                    // Fusionar con settings existentes para no perder datos volátiles
+                    const currentState = getState();
+                    const mergedSettings = { ...currentState.settings, ...updatedSettings };
+                    
+                    // Asegurar que las categorías esenciales siempre estén presentes
+                    mergedSettings.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(updatedSettings?.incomeCategories || [])])];
+                    mergedSettings.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(updatedSettings?.expenseCategories || [])])];
+                    mergedSettings.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(updatedSettings?.invoiceOperationTypes || [])])];
+                    mergedSettings.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(updatedSettings?.taxIdTypes || [])])];
+                    
+                    setState({ settings: mergedSettings });
+                });
+                // --- FIN REFACTOR (FASE 1) ---
 
                 switchPage('inicio');
-                isAppInitialized = true;
+                isAppInitialized = true; // Marcamos como inicializado DESPUÉS de configurar listeners
 
             } else {
                 if (userProfile && userProfile.status === 'pendiente') {
@@ -167,12 +209,12 @@ async function main() {
                 } else {
                     showAuthError('No tienes permiso para acceder a esta aplicación.');
                 }
-                api.logoutUser();
+                api.logoutUser(); // Desloguea si no tiene acceso
             }
         } else {
             api.setCurrentUser(null);
             hideApp();
-            isAppInitialized = false;
+            isAppInitialized = false; // Resetear al cerrar sesión
         }
     });
 
@@ -193,4 +235,3 @@ async function main() {
 document.addEventListener('DOMContentLoaded', main);
 
 // --- ELIMINADO: Ya no necesitamos el listener separado para crear iconos ---
-

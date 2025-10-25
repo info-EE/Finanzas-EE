@@ -1,4 +1,10 @@
-import { loadData, saveData, getAuthInstance, getUserProfile } from './api.js';
+import { 
+    loadCollection, 
+    loadSettings, 
+    saveSettings, 
+    getAuthInstance, 
+    getUserProfile 
+} from './api.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 
 // --- Catálogo de Logos ---
@@ -34,10 +40,7 @@ function getReadOnlyPermissions() {
     };
 }
 
-// --- INICIO DE LA CORRECCIÓN ---
-// Añadimos 'export' aquí para que main.js pueda importar esta función.
 export function getDefaultState() {
-// --- FIN DE LA CORRECCIÓN ---
     return {
         logoCatalog: LOGO_CATALOG,
         accounts: [],
@@ -45,8 +48,8 @@ export function getDefaultState() {
         documents: [],
         clients: [],
         investmentAssets: [
-            { id: crypto.randomUUID(), name: 'Bitcoin', category: 'Criptomoneda' },
-            { id: crypto.randomUUID(), name: 'Acciones Apple (AAPL)', category: 'Acción' },
+            // { id: crypto.randomUUID(), name: 'Bitcoin', category: 'Criptomoneda' },
+            // { id: crypto.randomUUID(), name: 'Acciones Apple (AAPL)', category: 'Acción' },
         ],
         incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
         expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
@@ -106,13 +109,16 @@ export function resetState() {
     notify();
 }
 
+
+// --- REFACTORIZADO (FASE 1) ---
+// Esta función ahora carga los datos desde colecciones separadas.
 export async function initState() {
     const defaultState = getDefaultState();
     const auth = getAuthInstance();
     const currentUser = auth.currentUser;
 
     let finalState = defaultState;
-    finalState.permissions = {};
+    finalState.permissions = {}; // Inicia sin permisos
 
     try {
         if (currentUser) {
@@ -133,27 +139,50 @@ export async function initState() {
                 }
             }
             
-            // PASO 3: Si el usuario tiene algún permiso (es decir, está activo), cargar los datos compartidos.
+            // PASO 3: Si el usuario tiene algún permiso (es decir, está activo), cargar los datos.
             const canReadData = Object.values(finalState.permissions).some(p => p === true);
 
             if (canReadData) {
-                const loadedStateResult = await loadData();
-                if (loadedStateResult.exists) {
-                    const remoteData = loadedStateResult.data || {};
-                    const permissionsBackup = finalState.permissions; // Guardar permisos calculados
-                    
-                    finalState = { ...defaultState, ...remoteData };
-                    finalState.permissions = permissionsBackup; // Restaurar permisos
-                    
-                    finalState.settings = { ...defaultState.settings, ...(remoteData.settings || {}) };
-                    finalState.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(remoteData.incomeCategories || [])])];
-                    finalState.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(remoteData.expenseCategories || [])])];
-                    finalState.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(remoteData.invoiceOperationTypes || [])])];
-                    finalState.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(remoteData.taxIdTypes || [])])];
+                // Carga los 'settings' primero
+                const loadedSettings = await loadSettings();
+                
+                // Carga el resto de los datos de sus propias colecciones
+                const loadedAccounts = await loadCollection('accounts');
+                const loadedTransactions = await loadCollection('transactions');
+                const loadedDocuments = await loadCollection('documents');
+                const loadedClients = await loadCollection('clients');
+                const loadedInvestmentAssets = await loadCollection('investmentAssets');
+
+                if (loadedSettings) {
+                    // Si hay settings, los fusiona con los default
+                    finalState.settings = { ...defaultState.settings, ...loadedSettings };
+                    // Fusiona categorías para asegurar que las esenciales siempre estén
+                    finalState.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(loadedSettings.incomeCategories || [])])];
+                    finalState.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(loadedSettings.expenseCategories || [])])];
+                    finalState.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(loadedSettings.invoiceOperationTypes || [])])];
+                    finalState.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(loadedSettings.taxIdTypes || [])])];
                 } else {
-                    console.log("No se encontró estado remoto, se usará el estado por defecto.");
-                    await saveData(finalState);
+                    // Si no hay settings (primera vez o migración), guarda los settings por defecto
+                    console.log("No se encontró estado remoto, guardando settings por defecto.");
+                    // Preparamos los settings para guardar (solo las categorías, no el objeto settings completo)
+                    const defaultSettingsToSave = {
+                        ...defaultState.settings,
+                        incomeCategories: defaultState.incomeCategories,
+                        expenseCategories: defaultState.expenseCategories,
+                        invoiceOperationTypes: defaultState.invoiceOperationTypes,
+                        taxIdTypes: defaultState.taxIdTypes
+                    };
+                    await saveSettings(defaultSettingsToSave);
                 }
+                
+                // Asigna los datos cargados de las colecciones
+                finalState.accounts = loadedAccounts;
+                finalState.transactions = loadedTransactions;
+                finalState.documents = loadedDocuments;
+                finalState.clients = loadedClients;
+                // Manejo especial para 'investmentAssets': si no hay nada cargado, usa los del default
+                finalState.investmentAssets = loadedInvestmentAssets.length > 0 ? loadedInvestmentAssets : defaultState.investmentAssets;
+
             }
         }
         

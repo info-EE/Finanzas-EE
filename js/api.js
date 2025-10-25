@@ -11,7 +11,10 @@ import {
     onSnapshot,
     collection,
     getDocs,
-    updateDoc
+    updateDoc,
+    addDoc,
+    deleteDoc,
+    query
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 // Restauramos la importación de ui.js para recuperar los avisos
@@ -23,14 +26,12 @@ let auth;
 let db;
 let currentUserId = null;
 
-// --- INICIO DE LA CORRECCIÓN (Mantenemos el UID dinámico) ---
-// Se elimina la constante DATA_OWNER_UID.
-// dataDocRef se establecerá dinámicamente basado en el usuario que inicie sesión.
-let dataDocRef = null; 
-// --- FIN DE LA CORRECCIÓN ---
+// --- INICIO DE LA REFACTORIZACIÓN (FASE 1) ---
+// Objeto para mantener un registro de los listeners 'onSnapshot' activos.
+// Esto nos permite cancelarlos al cerrar sesión.
+let activeListeners = {}; 
+// --- FIN DE LA REFACTORIZACIÓN ---
 
-let unsubscribeFromData = null;
-let unsubscribeFromUsers = null;
 
 /**
  * Devuelve un objeto con todos los permisos del sistema establecidos en 'false'.
@@ -69,7 +70,6 @@ export function initFirebaseServices(firebaseApp, firebaseAuth, firestoreDb) {
     app = firebaseApp;
     auth = firebaseAuth;
     db = firestoreDb;
-    // La referencia a dataDocRef se establecerá en setCurrentUser.
 }
 
 // Funciones para que otros módulos puedan acceder a las instancias si es necesario
@@ -77,23 +77,30 @@ export function getAuthInstance() {
     return auth;
 }
 
+// --- REFACTORIZADO (FASE 1) ---
+/**
+ * Cancela todos los listeners de onSnapshot activos.
+ * Se llama al cerrar sesión para prevenir fugas de memoria.
+ */
+function clearAllListeners() {
+    console.log("Limpiando listeners activos...");
+    for (const key in activeListeners) {
+        if (typeof activeListeners[key] === 'function') {
+            activeListeners[key](); // Llama a la función de 'unsubscribe'
+        }
+    }
+    activeListeners = {}; // Resetea el objeto
+}
+
+// --- REFACTORIZADO (FASE 1) ---
 export function setCurrentUser(uid) {
     currentUserId = uid;
     if (!uid) {
         // Limpiar todo al cerrar sesión o si no hay usuario
-        if (unsubscribeFromData) {
-            unsubscribeFromData();
-            unsubscribeFromData = null;
-        }
-        if (unsubscribeFromUsers) {
-            unsubscribeFromUsers();
-            unsubscribeFromUsers = null;
-        }
-        dataDocRef = null; // Limpiar la referencia al cerrar sesión
-    } else {
-        // Establece la referencia de datos al ID del usuario que acaba de iniciar sesión.
-        dataDocRef = doc(db, 'usuarios', currentUserId, 'estado', 'mainState');
+        clearAllListeners();
+        // dataDocRef ya no se usa, no es necesario limpiarlo.
     }
+    // Ya no establecemos 'dataDocRef'. Las referencias se construirán dinámicamente.
 }
 
 function translateAuthError(errorCode) {
@@ -161,11 +168,13 @@ export async function getAllUsers() {
 }
 
 export function listenForAllUsersChanges(onUsersUpdate) {
-    if (unsubscribeFromUsers) {
-        unsubscribeFromUsers();
+    // --- REFACTORIZADO (FASE 1) ---
+    // Aseguramos que el listener se guarde y se pueda limpiar
+    if (activeListeners.users) {
+        activeListeners.users();
     }
     const usersCollection = collection(db, 'usuarios');
-    unsubscribeFromUsers = onSnapshot(usersCollection, (snapshot) => {
+    activeListeners.users = onSnapshot(usersCollection, (snapshot) => {
         const userList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         onUsersUpdate(userList);
     }, (error) => {
@@ -231,14 +240,9 @@ export async function loginUser(email, password) {
 
 export async function logoutUser() {
     try {
-        if (unsubscribeFromData) {
-            unsubscribeFromData();
-            unsubscribeFromData = null;
-        }
-        if (unsubscribeFromUsers) {
-            unsubscribeFromUsers();
-            unsubscribeFromUsers = null;
-        }
+        // --- REFACTORIZADO (FASE 1) ---
+        // Limpiamos todos los listeners al cerrar sesión.
+        clearAllListeners();
         await signOut(auth);
     } catch (error) {
         console.error("Error al cerrar sesión:", error);
@@ -246,67 +250,224 @@ export async function logoutUser() {
 }
 
 
-// --- Funciones de Base de Datos ---
+// ---
+// --- INICIO DE LA REFACTORIZACIÓN DE DATOS (FASE 1) ---
+// ---
 
-export async function loadData() {
-    if (!dataDocRef) { // Esto ahora se verifica después de que setCurrentUser lo establezca
-        updateConnectionStatus('error', 'No autenticado');
-        throw new Error("Referencia a datos no inicializada. El usuario puede no estar autenticado.");
-    }
-    updateConnectionStatus('loading', 'Cargando datos...');
+// --- Funciones Helper de Referencia ---
+
+/**
+ * Obtiene la referencia a una subcolección del usuario actual.
+ * @param {string} collectionName - El nombre de la colección (ej. 'transactions', 'accounts').
+ * @returns {CollectionReference}
+ */
+function getCollectionRef(collectionName) {
+    if (!currentUserId) throw new Error("Usuario no autenticado.");
+    return collection(db, 'usuarios', currentUserId, collectionName);
+}
+
+/**
+ * Obtiene la referencia a un documento específico en una subcolección del usuario.
+ * @param {string} collectionName - El nombre de la colección.
+ * @param {string} docId - El ID del documento.
+ * @returns {DocumentReference}
+ */
+function getDocRef(collectionName, docId) {
+    if (!currentUserId) throw new Error("Usuario no autenticado.");
+    return doc(db, 'usuarios', currentUserId, collectionName, docId);
+}
+
+/**
+ * Obtiene la referencia al documento de configuración del usuario.
+ * Usamos un ID fijo 'userSettings' para que siempre sea el mismo documento.
+ * @returns {DocumentReference}
+ */
+function getSettingsDocRef() {
+    if (!currentUserId) throw new Error("Usuario no autenticado.");
+    // Guardamos settings como un documento separado en una colección 'settings'
+    // para mantenerlo separado del documento de perfil del usuario.
+    return doc(db, 'usuarios', currentUserId, 'settings', 'userSettings');
+}
+
+// --- Funciones de Carga de Datos (Reemplazan a loadData) ---
+
+/**
+ * Carga todos los documentos de una subcolección una sola vez.
+ * @param {string} collectionName - La colección a cargar (ej. 'accounts').
+ * @returns {Promise<Array>} - Un array con los datos de los documentos, incluyendo su ID.
+ */
+export async function loadCollection(collectionName) {
+    if (!currentUserId) return [];
+    updateConnectionStatus('loading', `Cargando ${collectionName}...`);
     try {
-        const docSnap = await getDoc(dataDocRef);
+        const q = query(getCollectionRef(collectionName));
+        const querySnapshot = await getDocs(q);
+        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateConnectionStatus('success', `${collectionName} cargados`);
+        return data;
+    } catch (error) {
+        console.error(`Error al cargar la colección ${collectionName}:`, error);
+        updateConnectionStatus('error', `Error cargando ${collectionName}`);
+        return [];
+    }
+}
+
+/**
+ * Carga el documento de configuración del usuario una sola vez.
+ * @returns {Promise<Object|null>} - El objeto de configuración o null si no existe.
+ */
+export async function loadSettings() {
+    if (!currentUserId) return null;
+    updateConnectionStatus('loading', 'Cargando configuración...');
+    try {
+        const docSnap = await getDoc(getSettingsDocRef());
         if (docSnap.exists()) {
-            console.log("Datos cargados desde Firebase.");
-            updateConnectionStatus('success', 'Datos cargados');
-            return { data: docSnap.data(), exists: true };
+            updateConnectionStatus('success', 'Configuración cargada');
+            return docSnap.data();
         } else {
-            console.log("No se encontró ningún documento, se usará el estado por defecto.");
-            updateConnectionStatus('success', 'Listo para inicializar');
-            return { data: null, exists: false };
+            updateConnectionStatus('success', 'Configuración no encontrada');
+            return null;
         }
     } catch (error) {
-        console.error("Error al cargar datos desde Firebase:", error);
-        updateConnectionStatus('error', 'Error de carga');
+        console.error("Error al cargar la configuración:", error);
+        updateConnectionStatus('error', 'Error en configuración');
+        return null;
+    }
+}
+
+// --- Funciones de Escritura de Datos (Reemplazan a saveData) ---
+
+/**
+ * Añade un nuevo documento a una subcolección del usuario.
+ * @param {string} collectionName - La colección (ej. 'transactions').
+ * @param {Object} data - El objeto de datos a añadir.
+ * @returns {Promise<DocumentReference>} - La referencia al nuevo documento.
+ */
+export async function addDocToCollection(collectionName, data) {
+    if (!currentUserId) throw new Error("Usuario no autenticado.");
+    updateConnectionStatus('loading', 'Guardando...');
+    try {
+        const docRef = await addDoc(getCollectionRef(collectionName), data);
+        updateConnectionStatus('success', 'Guardado');
+        return docRef;
+    } catch (error) {
+        console.error(`Error al añadir documento a ${collectionName}:`, error);
+        updateConnectionStatus('error', 'Error al guardar');
         throw error;
     }
 }
 
-export async function saveData(state) {
-    if (!dataDocRef) {
-        updateConnectionStatus('error', 'No autenticado');
-        return;
-    }
-    updateConnectionStatus('loading', 'Guardando...');
+/**
+ * Actualiza un documento existente en una subcolección del usuario.
+ * @param {string} collectionName - La colección (ej. 'accounts').
+ * @param {string} docId - El ID del documento a actualizar.
+ * @param {Object} data - El objeto con los campos a actualizar.
+ */
+export async function updateDocInCollection(collectionName, docId, data) {
+    if (!currentUserId) throw new Error("Usuario no autenticado.");
+    updateConnectionStatus('loading', 'Actualizando...');
     try {
-        // Excluimos `allUsers` del guardado para evitar redundancia y posibles conflictos.
-        const { allUsers, ...stateToSave } = state;
-        const finalState = { ...stateToSave, activeReport: { type: null, data: [] }, activeIvaReport: null };
-
-        await setDoc(dataDocRef, finalState, { merge: true });
-        console.log("Datos guardados en Firebase.");
-        setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000);
+        await updateDoc(getDocRef(collectionName, docId), data);
+        updateConnectionStatus('success', 'Actualizado');
     } catch (error) {
-        console.error("Error al guardar datos en Firebase:", error);
-        updateConnectionStatus('error', 'Error al guardar');
+        console.error(`Error al actualizar documento en ${collectionName}:`, error);
+        updateConnectionStatus('error', 'Error al actualizar');
+        throw error;
     }
 }
 
-export function listenForDataChanges(onDataChange) {
-    if (unsubscribeFromData) {
-        unsubscribeFromData();
+/**
+ * Elimina un documento de una subcolección del usuario.
+ * @param {string} collectionName - La colección (ej. 'transactions').
+ * @param {string} docId - El ID del documento a eliminar.
+ */
+export async function deleteDocFromCollection(collectionName, docId) {
+    if (!currentUserId) throw new Error("Usuario no autenticado.");
+    updateConnectionStatus('loading', 'Eliminando...');
+    try {
+        await deleteDoc(getDocRef(collectionName, docId));
+        updateConnectionStatus('success', 'Eliminado');
+    } catch (error) {
+        console.error(`Error al eliminar documento de ${collectionName}:`, error);
+        updateConnectionStatus('error', 'Error al eliminar');
+        throw error;
     }
-    if (!dataDocRef) return;
+}
+
+/**
+ * Guarda el documento de configuración del usuario.
+ * @param {Object} settingsData - El objeto de configuración a guardar.
+ */
+export async function saveSettings(settingsData) {
+    if (!currentUserId) throw new Error("Usuario no autenticado.");
+    updateConnectionStatus('loading', 'Guardando configuración...');
+    try {
+        // Usamos setDoc con merge:true para crear o sobrescribir parcialmente.
+        await setDoc(getSettingsDocRef(), settingsData, { merge: true });
+        updateConnectionStatus('success', 'Configuración guardada');
+    } catch (error) {
+        console.error("Error al guardar la configuración:", error);
+        updateConnectionStatus('error', 'Error al guardar config.');
+        throw error;
+    }
+}
+
+
+// --- Funciones de Sincronización en Tiempo Real (Reemplazan a listenForDataChanges) ---
+
+/**
+ * Escucha cambios en tiempo real en una subcolección del usuario.
+ * @param {string} collectionName - La colección a escuchar (ej. 'transactions').
+ * @param {Function} onUpdate - Callback que se ejecuta con los nuevos datos (un array).
+ */
+export function listenForCollectionChanges(collectionName, onUpdate) {
+    if (!currentUserId) return;
     
-    unsubscribeFromData = onSnapshot(dataDocRef, (doc) => {
-        if (doc.exists()) {
-            console.log("Se detectó un cambio en Firebase. Actualizando estado local.");
-            updateConnectionStatus('success', 'Sincronizado');
-            onDataChange(doc.data());
-        }
+    // Cancela cualquier listener anterior para esta misma colección
+    if (activeListeners[collectionName]) {
+        activeListeners[collectionName]();
+    }
+
+    updateConnectionStatus('loading', `Sincronizando ${collectionName}...`);
+    
+    const q = query(getCollectionRef(collectionName));
+    
+    activeListeners[collectionName] = onSnapshot(q, (querySnapshot) => {
+        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        onUpdate(data); // Llama al callback (en store.js) con los datos actualizados
+        updateConnectionStatus('success', 'Sincronizado');
     }, (error) => {
-        console.error("Error en el listener de Firebase:", error);
+        console.error(`Error en listener de ${collectionName}:`, error);
         updateConnectionStatus('error', 'Desconectado');
     });
 }
 
+/**
+ * Escucha cambios en tiempo real en el documento de configuración.
+ * @param {Function} onUpdate - Callback que se ejecuta con los nuevos datos (un objeto).
+ */
+export function listenForSettingsChanges(onUpdate) {
+    if (!currentUserId) return;
+
+    if (activeListeners.settings) {
+        activeListeners.settings();
+    }
+
+    updateConnectionStatus('loading', 'Sincronizando configuración...');
+
+    activeListeners.settings = onSnapshot(getSettingsDocRef(), (docSnap) => {
+        if (docSnap.exists()) {
+            onUpdate(docSnap.data());
+        } else {
+            onUpdate(null); // El documento no existe
+        }
+        updateConnectionStatus('success', 'Sincronizado');
+    }, (error) => {
+        console.error("Error en listener de settings:", error);
+        updateConnectionStatus('error', 'Desconectado');
+    });
+}
+
+// ---
+// --- FIN DE LA REFACTORIZACIÓN DE DATOS (FASE 1) ---
+// ---

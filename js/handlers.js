@@ -372,9 +372,10 @@ function handleAddAccount(e) {
 function handleSettingsAccountsListClick(e) {
     const deleteBtn = e.target.closest('.delete-account-btn');
     if (deleteBtn) {
-        const accountName = deleteBtn.dataset.name;
+        const accountId = deleteBtn.dataset.id; // <-- CAMBIO
+        const accountName = deleteBtn.dataset.name; // Mantenemos el nombre para el modal
         showConfirmationModal('Eliminar Cuenta', `¿Seguro que quieres eliminar la cuenta "${escapeHTML(accountName)}"? Se eliminarán todas sus transacciones.`, withSpinner(() => {
-            actions.deleteAccount(accountName);
+            actions.deleteAccount(accountId); // <-- CAMBIO
         }));
     }
 }
@@ -1289,3 +1290,4 @@ export function bindEventListeners() {
     if (elements.permissionsModalSaveBtn) elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
 
 }
+

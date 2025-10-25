@@ -952,7 +952,7 @@ function renderSettings() {
             div.className = "flex items-center justify-between bg-gray-800/50 p-2 rounded";
             div.innerHTML = `
                 <div class="flex items-center gap-2 text-sm">${acc.logoHtml || ''}<span>${escapeHTML(acc.name)}</span></div>
-                <button class="delete-account-btn p-1 text-red-400 hover:text-red-300" data-name="${escapeHTML(acc.name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+                <button class="delete-account-btn p-1 text-red-400 hover:text-red-300" data-id="${acc.id}" data-name="${escapeHTML(acc.name)}"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
             elements.settingsAccountsList.appendChild(div);
         });
     }
@@ -1976,3 +1976,4 @@ export function renderAll() {
 
     // --- CORRECCIÓN: Se eliminó la llamada a lucide.createIcons() de aquí ---
 }
+
