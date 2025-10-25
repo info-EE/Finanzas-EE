@@ -41,21 +41,6 @@ function main() {
         return;
     }
 
-    // --- CORRECCIÓN DE ICONOS MOVIDA AQUÍ ---
-    // Llamar a lucide.createIcons() DESPUÉS de inicializar Firebase,
-    // pero ANTES de configurar el listener de autenticación.
-    try {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            lucide.createIcons();
-            console.log("Lucide icons created successfully from main.js (after Firebase init)");
-        } else {
-            console.error("Lucide library not available in main.js (after Firebase init)");
-        }
-    } catch (error) {
-        console.error("Error creating Lucide icons from main.js (after Firebase init):", error);
-    }
-    // --- FIN DE LA CORRECCIÓN ---
-
     // 2. Configurar Chart.js y el Store
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#e0e0e0';
@@ -162,4 +147,3 @@ function main() {
 
 // 5. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
-
