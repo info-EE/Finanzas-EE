@@ -1974,22 +1974,5 @@ export function renderAll() {
     
     populateSelects();
 
-    // --- INICIO DE LA NUEVA CORRECCIÓN ---
-    // Añadimos un pequeño retraso antes de crear los iconos.
-    // Esto da tiempo al navegador a estabilizar el DOM.
-    setTimeout(() => {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            try {
-                lucide.createIcons();
-            } catch (error) {
-                console.error("Error al ejecutar lucide.createIcons() con retraso:", error);
-                // Opcionalmente, mostrar un mensaje al usuario si los iconos fallan
-                // showAlertModal('Error de Iconos', 'No se pudieron cargar algunos iconos.');
-            }
-        } else {
-            console.error("La librería Lucide no está disponible (con retraso).");
-        }
-    }, 50); // 50 milisegundos de retraso
-    // --- FIN DE LA NUEVA CORRECCIÓN ---
+    // --- CORRECCIÓN: Se eliminó la llamada a lucide.createIcons() de aquí ---
 }
-

@@ -147,3 +147,18 @@ function main() {
 
 // 5. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
+
+// --- CORRECCIÓN: Ejecutar lucide.createIcons() una vez después de que el DOM esté listo ---
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        try {
+            lucide.createIcons();
+            console.log("Lucide icons created on DOMContentLoaded.");
+        } catch (error) {
+            console.error("Error creating Lucide icons on DOMContentLoaded:", error);
+        }
+    } else {
+        console.error("Lucide library not available on DOMContentLoaded.");
+    }
+});
+
