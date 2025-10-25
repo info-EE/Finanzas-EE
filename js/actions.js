@@ -1,47 +1,20 @@
+// Importaciones de Fase 1
 import { getState, setState } from './store.js';
-// --- INICIO REFACTOR (FASE 1) ---
-// Importamos las nuevas funciones de api.js y quitamos saveData
 import { 
+    addDocToCollection, 
+    updateDocInCollection,
+    deleteDocFromCollection,
+    saveSettings,
     getAllUsers, 
     updateUserStatus, 
     updateUserPermissions,
-    addDocToCollection,
-    updateDocInCollection,
-    deleteDocFromCollection,
-    saveSettings
+    // --- NUEVA IMPORTACIÓN DE FASE 2 ---
+    incrementAccountBalance 
 } from './api.js';
-// --- FIN REFACTOR (FASE 1) ---
 
-
-// --- Lógica Interna de Actualización de Balances (REFACTORIZADA) ---
-
-/**
- * Calcula el nuevo saldo de una cuenta después de aplicar o revertir una transacción.
- * @param {number} currentBalance - El saldo actual de la cuenta.
- * @param {Object} transaction - La transacción a aplicar/revertir.
- * @param {'apply' | 'revert'} actionType - Si se debe aplicar o revertir la transacción.
- * @returns {number} El nuevo saldo calculado.
- */
-function getNewBalance(currentBalance, transaction, actionType = 'apply') {
-    // Las transacciones de saldo inicial no deben afectar los cálculos incrementales.
-    if (transaction.isInitialBalance) {
-        return currentBalance;
-    }
-
-    let newBalance = currentBalance;
-    const amount = transaction.amount || 0;
-    const iva = transaction.iva || 0;
-    const sign = (actionType === 'apply') ? 1 : -1;
-
-    if (transaction.type === 'Ingreso') {
-        newBalance += (amount * sign);
-    } else { // Egreso
-        newBalance -= ((amount + iva) * sign);
-    }
-    
-    // Redondear a 2 decimales para evitar problemas con punto flotante
-    return Math.round(newBalance * 100) / 100;
-}
+// --- Lógica Interna de Actualización de Balances (ELIMINADA EN FASE 2) ---
+// Las funciones applyTransactionToBalances y revertTransactionFromBalances
+// han sido eliminadas. La lógica ahora se maneja con incrementAccountBalance.
 
 
 // --- Acciones Públicas (modifican el estado y lo guardan) ---
@@ -105,8 +78,6 @@ export async function toggleUserStatusAction(userId, currentStatus) {
     return success;
 }
 
-// --- REFACTORIZADO (FASE 1) ---
-// Ahora usa saveSettings en lugar de saveData/setState
 export async function blockUserAction(userId) {
     const { settings } = getState();
     const adminUids = (settings && settings.adminUids) || [];
@@ -121,381 +92,408 @@ export async function blockUserAction(userId) {
             ...settings,
             blockedUserIds: [...blockedUserIds, userId]
         };
-        // setState({ settings: newSettings }); // No es necesario, el listener lo hará
-        await saveSettings(newSettings); // Guardamos la nueva configuración en Firestore
+        await saveSettings(newSettings); // (Modificado en Fase 1)
         await loadAndSetAllUsers(); // Refrescamos la lista de usuarios en la UI
         return { success: true };
     }
     return { success: true, message: 'El usuario ya estaba bloqueado.' };
 }
 
-// --- REFACTORIZADO (FASE 1) ---
-// Lógica de guardado completamente nueva.
-// Ahora actualiza la transacción y el saldo de la(s) cuenta(s) afectada(s) en Firestore.
+// --- MODIFICADO EN FASE 2 ---
 export async function saveTransaction(transactionData, transactionId) {
-    let { accounts, transactions } = getState();
+    const { accounts, transactions } = getState();
     
-    // Prepara los datos de la transacción (sin ID, Firestore lo genera)
-    const newTransactionData = { 
-        ...transactionData, 
-        isInitialBalance: false 
-    };
+    // 1. Encontrar la cuenta (documento) correspondiente al nombre
+    const newAccount = accounts.find(acc => acc.name === transactionData.account);
+    if (!newAccount) {
+        console.error("No se encontró la cuenta:", transactionData.account);
+        return;
+    }
+    
+    // 2. Calcular el monto a aplicar (positivo para ingreso, negativo para egreso)
+    const amountToApply = transactionData.type === 'Ingreso'
+        ? transactionData.amount
+        : -(transactionData.amount + (transactionData.iva || 0));
 
     if (transactionId) {
-        // --- Lógica para EDITAR una transacción existente ---
+        // --- Lógica para EDITAR ---
         const oldTransaction = transactions.find(t => t.id === transactionId);
-        if (!oldTransaction) {
-            console.error("No se encontró la transacción antigua para editar.");
-            return;
-        }
+        if (!oldTransaction) return;
 
         const oldAccount = accounts.find(acc => acc.name === oldTransaction.account);
-        const newAccount = accounts.find(acc => acc.name === newTransactionData.account);
+        if (!oldAccount) return;
 
-        if (!newAccount) {
-            console.error("No se encontró la nueva cuenta para editar.");
-            return;
-        }
+        // 1. Calcular el monto a revertir
+        const amountToRevert = oldTransaction.type === 'Ingreso'
+            ? -oldTransaction.amount
+            : (oldTransaction.amount + (oldTransaction.iva || 0));
 
-        if (oldAccount && oldAccount.id === newAccount.id) {
-            // El usuario modificó la transacción, pero la cuenta es la misma
-            const balanceReverted = getNewBalance(newAccount.balance, oldTransaction, 'revert');
-            const newBalance = getNewBalance(balanceReverted, newTransactionData, 'apply');
-            
-            await updateDocInCollection('accounts', newAccount.id, { balance: newBalance });
-        } else if (oldAccount) {
-            // El usuario cambió la cuenta de la transacción
-            // 1. Revertir el saldo de la cuenta antigua
-            const oldAccountBalance = getNewBalance(oldAccount.balance, oldTransaction, 'revert');
-            await updateDocInCollection('accounts', oldAccount.id, { balance: oldAccountBalance });
-            
-            // 2. Aplicar el saldo a la cuenta nueva
-            const newAccountBalance = getNewBalance(newAccount.balance, newTransactionData, 'apply');
-            await updateDocInCollection('accounts', newAccount.id, { balance: newAccountBalance });
+        // 2. Actualizar el documento de la transacción
+        const updatedTransactionData = { ...transactionData, accountId: newAccount.id };
+        await updateDocInCollection('transactions', transactionId, updatedTransactionData);
+
+        // 3. Actualizar saldos
+        if (oldAccount.id === newAccount.id) {
+            // La cuenta es la misma, solo calculamos la diferencia neta
+            const netChange = amountToApply + amountToRevert;
+            if (netChange !== 0) { // Solo actualiza si hay un cambio neto
+                await incrementAccountBalance(newAccount.id, netChange);
+            }
+        } else {
+            // La cuenta cambió, revertimos en la antigua y aplicamos en la nueva
+            await incrementAccountBalance(oldAccount.id, amountToRevert);
+            await incrementAccountBalance(newAccount.id, amountToApply);
         }
-        
-        // 3. Finalmente, actualizar la transacción en sí
-        await updateDocInCollection('transactions', transactionId, newTransactionData);
 
     } else {
-        // --- Lógica para AÑADIR una nueva transacción ---
-        const account = accounts.find(acc => acc.name === newTransactionData.account);
-        if (!account) {
-            console.error("No se encontró la cuenta para añadir la transacción.");
-            return;
-        }
+        // --- Lógica para AÑADIR ---
+        const newTransaction = { 
+            ...transactionData, 
+            isInitialBalance: false, 
+            accountId: newAccount.id // Guardamos el ID de la cuenta para referencia
+        };
         
-        // 1. Calcular el nuevo saldo
-        const newBalance = getNewBalance(account.balance, newTransactionData, 'apply');
+        // 1. Añadir el documento de la transacción
+        // Usamos addDocToCollection que ahora devuelve el doc con ID
+        const addedTransaction = await addDocToCollection('transactions', newTransaction); 
         
         // 2. Actualizar el saldo de la cuenta
-        await updateDocInCollection('accounts', account.id, { balance: newBalance });
-        
-        // 3. Añadir la nueva transacción
-        await addDocToCollection('transactions', newTransactionData);
+        await incrementAccountBalance(newAccount.id, amountToApply);
     }
-    
-    // Ya no se llama a setState ni a saveData. El listener de onSnapshot se encargará.
 }
 
-// --- REFACTORIZADO (FASE 1) ---
-// Lógica de eliminado completamente nueva.
+// --- MODIFICADO EN FASE 2 ---
 export async function deleteTransaction(transactionId) {
-    let { transactions, accounts } = getState();
+    const { transactions, accounts } = getState();
     const transactionToDelete = transactions.find(t => t.id === transactionId);
+    if (!transactionToDelete) return;
 
-    if (transactionToDelete) {
-        const account = accounts.find(acc => acc.name === transactionToDelete.account);
-        
-        if (account) {
-            // 1. Revertir el saldo de la cuenta afectada
-            const newBalance = getNewBalance(account.balance, transactionToDelete, 'revert');
-            await updateDocInCollection('accounts', account.id, { balance: newBalance });
-        }
-        
-        // 2. Eliminar la transacción
-        await deleteDocFromCollection('transactions', transactionId);
+    // Usamos accountId si existe, si no, buscamos por nombre (para compatibilidad temporal)
+    const accountId = transactionToDelete.accountId || accounts.find(acc => acc.name === transactionToDelete.account)?.id; 
+    
+    if (!accountId) {
+        console.error("No se pudo encontrar el ID de la cuenta para la transacción a eliminar:", transactionToDelete);
+        return;
     }
+
+    // 1. Calcular el monto a revertir
+    const amountToRevert = transactionToDelete.type === 'Ingreso'
+        ? -transactionToDelete.amount
+        : (transactionToDelete.amount + (transactionToDelete.iva || 0));
+
+    // 2. Eliminar el documento de la transacción
+    await deleteDocFromCollection('transactions', transactionId);
+    
+    // 3. Actualizar el saldo de la cuenta (revirtiendo)
+    await incrementAccountBalance(accountId, amountToRevert);
 }
 
-// --- REFACTORIZADO (FASE 1) ---
+// --- MODIFICADO EN FASE 2 ---
 export async function addAccount(accountData) {
-    // El ID lo genera Firestore
+    // El saldo inicial se establece directamente en el documento de la cuenta.
     const newAccount = {
+        // ID se genera en addDocToCollection ahora
         name: accountData.name,
         currency: accountData.currency,
-        balance: accountData.balance, // El saldo inicial se establece directamente.
+        symbol: accountData.currency === 'EUR' ? '€' : '$',
+        balance: accountData.balance || 0, // Asegura que balance sea un número
         logoHtml: accountData.logoHtml
     };
-
-    // 1. Añadir la nueva cuenta
-    await addDocToCollection('accounts', newAccount);
-
-    // 2. Si hay saldo inicial, crear la transacción de "Saldo Inicial"
-    if (accountData.balance !== 0) {
-        const initialTx = {
-            // id: crypto.randomUUID(), // No es necesario
-            date: new Date().toISOString().slice(0, 10),
-            description: 'Saldo Inicial',
-            type: 'Ingreso',
-            part: 'A',
-            account: accountData.name,
-            category: 'Ajuste de Saldo',
-            amount: accountData.balance,
-            currency: accountData.currency,
-            isInitialBalance: true // Marcar como saldo inicial.
-        };
-        await addDocToCollection('transactions', initialTx);
-    }
-}
-
-// --- REFACTORIZADO (FASE 1) ---
-export async function deleteAccount(accountId) {
-    // Por ahora, solo eliminamos la cuenta.
-    // Eliminar transacciones asociadas es una operación compleja (batch delete)
-    // que es mejor implementar con cuidado más adelante.
-    await deleteDocFromCollection('accounts', accountId);
     
-    // Advertencia: Esto dejará transacciones "huérfanas" que apuntan a una cuenta
-    // que ya no existe. El UI deberá manejar esto.
+    // Ya no creamos una transacción de "Saldo Inicial".
+    // El balance se guarda al crear la cuenta.
+    await addDocToCollection('accounts', newAccount);
 }
 
-// --- REFACTORIZADO (FASE 1) ---
+// --- MODIFICADO EN FASE 2 ---
+export async function deleteAccount(accountId) {
+    const { accounts, transactions } = getState(); // Necesitamos transactions para la verificación
+    
+    const accountToDelete = accounts.find(acc => acc.id === accountId);
+    if (!accountToDelete) return;
+
+    // Si el saldo no es CERO EXACTO, no la eliminamos.
+    // Comparamos con un margen pequeño por posibles errores de punto flotante.
+    if (Math.abs(accountToDelete.balance) > 0.001) { 
+        alert("No se puede eliminar una cuenta con saldo diferente de cero. Realice un ajuste a 0 primero.");
+        return; 
+    }
+    
+    // Comprobar si hay transacciones asociadas a esta cuenta (usando accountId si existe)
+    const hasTransactions = transactions.some(t => t.accountId === accountId || t.account === accountToDelete.name);
+    if (hasTransactions) {
+         alert("No se puede eliminar una cuenta que tiene transacciones asociadas. Esta acción se ha bloqueado por seguridad.");
+         return;
+    }
+
+    // Si saldo es 0 y no hay transacciones, se elimina.
+    await deleteDocFromCollection('accounts', accountId);
+}
+
+// --- MODIFICADO EN FASE 2 ---
 export async function updateBalance(accountName, newBalance) {
     const { accounts } = getState();
     const account = accounts.find(acc => acc.name === accountName);
     if (!account) return;
 
-    const currentBalance = account.balance;
+    // Obtenemos el saldo actual directamente del estado (que está sincronizado)
+    const currentBalance = account.balance; 
     const difference = newBalance - currentBalance;
 
-    if (difference !== 0) {
+    if (Math.abs(difference) > 0.001) { // Solo si la diferencia es significativa
         // 1. Crear la transacción de ajuste para mantener un registro.
         const adjustmentTransaction = {
-            // id: crypto.randomUUID(), // No es necesario
             date: new Date().toISOString().slice(0, 10),
             description: 'Ajuste de saldo manual',
             type: difference > 0 ? 'Ingreso' : 'Egreso',
             part: 'A',
-            account: accountName,
+            account: accountName, // Mantenemos el nombre aquí por ahora
             category: 'Ajuste de Saldo',
             amount: Math.abs(difference),
             currency: account.currency,
-            isInitialBalance: false
+            isInitialBalance: false,
+            accountId: account.id // Guardamos el ID
         };
+        
+        // 2. Añadir la transacción de ajuste
         await addDocToCollection('transactions', adjustmentTransaction);
 
-        // 2. Actualizar el saldo de la cuenta directamente.
-        await updateDocInCollection('accounts', account.id, { balance: newBalance });
+        // 3. Actualizar el saldo de la cuenta con la diferencia usando increment
+        await incrementAccountBalance(account.id, difference);
+    } else {
+        console.log("La diferencia de saldo es demasiado pequeña, no se realiza ajuste.");
     }
 }
 
-// --- REFACTORIZADO (FASE 1) ---
+// --- MODIFICADO EN FASE 2 ---
 export async function addTransfer(transferData) {
     const { date, fromAccountName, toAccountName, amount, feeSource, receivedAmount } = transferData;
-    let { accounts } = getState();
+    const { accounts } = getState();
     
     const fromAccount = accounts.find(a => a.name === fromAccountName);
     const toAccount = accounts.find(a => a.name === toAccountName);
     
     if (!fromAccount || !toAccount) {
-        console.error("No se encontraron las cuentas para la transferencia");
+        console.error("Cuenta de origen o destino no encontrada.");
         return;
     }
 
-    // 1. Crear las transacciones de la transferencia.
-    const txOut = {
-        // id: crypto.randomUUID(), // No es necesario
+    // 1. Crear las transacciones (ahora incluyen accountId)
+    const egresoTransData = {
         date,
         description: `Transferencia a ${toAccountName}`,
-        type: 'Egreso', part: 'A', account: fromAccountName,
-        category: 'Transferencia', amount: amount, currency: fromAccount.currency, iva: 0
+        type: 'Egreso', part: 'A', account: fromAccountName, // Mantenemos nombre por ahora
+        category: 'Transferencia', amount: amount, currency: fromAccount.currency, iva: 0,
+        accountId: fromAccount.id 
     };
-    await addDocToCollection('transactions', txOut);
 
-    const txIn = {
-        // id: crypto.randomUUID(), // No es necesario
+    const ingresoTransData = {
         date,
         description: `Transferencia desde ${fromAccountName}`,
-        type: 'Ingreso', part: 'A', account: toAccountName,
-        category: 'Transferencia', amount: receivedAmount, currency: toAccount.currency, iva: 0
+        type: 'Ingreso', part: 'A', account: toAccountName, // Mantenemos nombre por ahora
+        category: 'Transferencia', amount: receivedAmount, currency: toAccount.currency, iva: 0,
+        accountId: toAccount.id
     };
-    await addDocToCollection('transactions', txIn);
     
+    // 2. Usamos Promise.all para ejecutar todo en paralelo
+    const promises = [
+        addDocToCollection('transactions', egresoTransData),
+        addDocToCollection('transactions', ingresoTransData),
+        incrementAccountBalance(fromAccount.id, -amount), // Restar monto enviado
+        incrementAccountBalance(toAccount.id, receivedAmount) // Sumar monto recibido
+    ];
+
+    // 3. Manejar la comisión (si existe)
     if (feeSource > 0) {
-        const txFee = {
-            // id: crypto.randomUUID(), // No es necesario
+        const feeTransData = {
             date,
             description: `Comisión por transferencia a ${toAccountName}`,
-            type: 'Egreso', part: 'A', account: fromAccountName,
-            category: 'Comisiones', amount: feeSource, currency: fromAccount.currency, iva: 0
+            type: 'Egreso', part: 'A', account: fromAccountName, // Mantenemos nombre
+            category: 'Comisiones', amount: feeSource, currency: fromAccount.currency, iva: 0,
+            accountId: fromAccount.id 
         };
-        await addDocToCollection('transactions', txFee);
+        promises.push(addDocToCollection('transactions', feeTransData));
+        promises.push(incrementAccountBalance(fromAccount.id, -feeSource)); // Restar comisión
     }
 
-    // 2. Actualizar los saldos de las cuentas.
-    const totalDebit = amount + feeSource;
-    const newFromBalance = fromAccount.balance - totalDebit;
-    const newToBalance = toAccount.balance + receivedAmount;
-
-    await updateDocInCollection('accounts', fromAccount.id, { balance: newFromBalance });
-    await updateDocInCollection('accounts', toAccount.id, { balance: newToBalance });
+    // Esperar a que todas las operaciones de la base de datos terminen
+    await Promise.all(promises);
 }
 
-// --- REFACTORIZADO (FASE 1) ---
-// Ahora guarda las categorías en el documento de Settings
-export async function addCategory(categoryName, type) {
+// --- Acciones de Categorías, Clientes, Documentos (Sin cambios en Fase 2) ---
+
+export async function addCategory(categoryName, type) { // Modificado para ser async
     const state = getState();
-    const { settings } = state;
     let updatedList;
     let key;
 
     if (type === 'income') {
         key = 'incomeCategories';
-        updatedList = [...(settings.incomeCategories || []), categoryName];
+        updatedList = [...new Set([...state.incomeCategories, categoryName])]; // Evita duplicados
     } else if (type === 'expense') {
         key = 'expenseCategories';
-        updatedList = [...(settings.expenseCategories || []), categoryName];
+        updatedList = [...new Set([...state.expenseCategories, categoryName])]; // Evita duplicados
     } else if (type === 'operationType') {
         key = 'invoiceOperationTypes';
-        updatedList = [...(settings.invoiceOperationTypes || []), categoryName];
+        updatedList = [...new Set([...state.invoiceOperationTypes, categoryName])]; // Evita duplicados
     } else if (type === 'taxIdType') {
         key = 'taxIdTypes';
-        updatedList = [...(settings.taxIdTypes || []), categoryName];
+        updatedList = [...new Set([...state.taxIdTypes, categoryName])]; // Evita duplicados
     } else {
         return;
     }
     
-    await saveSettings({ [key]: updatedList });
+    // Las categorías se guardan en el documento 'settings'
+    const { settings } = getState();
+    // Solo guardar si la lista realmente cambió
+    if (state[key].length !== updatedList.length) {
+        const updatedSettings = { ...settings, [key]: updatedList };
+        await saveSettings(updatedSettings); // (de Fase 1, ahora async)
+    }
 }
 
-// --- REFACTORIZADO (FASE 1) ---
-export async function deleteCategory(categoryName, type) {
+export async function deleteCategory(categoryName, type) { // Modificado para ser async
     const state = getState();
-    const { settings } = state;
     let updatedList;
     let key;
 
     if (type === 'income') {
         key = 'incomeCategories';
-        updatedList = (settings.incomeCategories || []).filter(cat => cat !== categoryName);
+        updatedList = state.incomeCategories.filter(cat => cat !== categoryName);
     } else if (type === 'expense') {
         key = 'expenseCategories';
-        updatedList = (settings.expenseCategories || []).filter(cat => cat !== categoryName);
+        updatedList = state.expenseCategories.filter(cat => cat !== categoryName);
     } else if (type === 'operationType') {
         key = 'invoiceOperationTypes';
-        updatedList = (settings.invoiceOperationTypes || []).filter(cat => cat !== categoryName);
+        updatedList = state.invoiceOperationTypes.filter(cat => cat !== categoryName);
     } else if (type === 'taxIdType') {
         key = 'taxIdTypes';
-        updatedList = (settings.taxIdTypes || []).filter(cat => cat !== categoryName);
+        updatedList = state.taxIdTypes.filter(cat => cat !== categoryName);
     } else {
         return;
     }
     
-    await saveSettings({ [key]: updatedList });
+    const { settings } = getState();
+    // Solo guardar si la lista realmente cambió
+    if (state[key].length !== updatedList.length) {
+        const updatedSettings = { ...settings, [key]: updatedList };
+        await saveSettings(updatedSettings); // (de Fase 1, ahora async)
+    }
 }
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function saveClient(clientData, clientId) {
     if (clientId) {
-        await updateDocInCollection('clients', clientId, clientData);
+        await updateDocInCollection('clients', clientId, clientData); // (de Fase 1)
     } else {
-        // const newId = crypto.randomUUID(); // No es necesario
-        await addDocToCollection('clients', clientData);
+        await addDocToCollection('clients', clientData); // (de Fase 1)
     }
 }
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function deleteClient(clientId) {
-    await deleteDocFromCollection('clients', clientId);
+    await deleteDocFromCollection('clients', clientId); // (de Fase 1)
 }
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function addDocument(docData) {
     const { settings } = getState();
-    // const newDocument = { ...docData, id: crypto.randomUUID() }; // No es necesario
-    const newDocument = { ...docData };
-
-    await addDocToCollection('documents', newDocument);
-
+    
     let updatedSettings = settings;
+    let settingsChanged = false; // Flag para saber si guardar settings
 
     // Si es una factura, actualizamos el contador.
-    if (docData.type === 'Factura') {
+    if (docData.type === 'Factura' && settings.invoiceCounter) { // Asegurarse que invoiceCounter existe
         const currentCounter = settings.invoiceCounter;
-        const currentYear = new Date(docData.date).getFullYear();
-        let nextNumber;
-        let nextYear;
+        // Usar la fecha del documento o la actual si no está definida
+        const docDate = docData.date ? new Date(docData.date) : new Date();
+        const currentYear = docDate.getFullYear();
+        let nextNumber = currentCounter.nextInvoiceNumber;
+        let nextYear = currentCounter.lastInvoiceYear;
 
         if (currentYear > currentCounter.lastInvoiceYear) {
             nextNumber = 2; // El 1 se acaba de usar para esta factura
             nextYear = currentYear;
-        } else {
+            settingsChanged = true;
+        } else if (currentYear === currentCounter.lastInvoiceYear) {
             nextNumber = currentCounter.nextInvoiceNumber + 1;
-            nextYear = currentCounter.lastInvoiceYear;
+            settingsChanged = true;
+        } else {
+            // No actualizamos el contador si la fecha es anterior al último año registrado
+             console.warn(`Intentando añadir factura (${docData.number}) con fecha (${docData.date}) anterior al último año registrado (${currentCounter.lastInvoiceYear}). El contador no se actualizará.`);
         }
 
-        updatedSettings = {
-            ...settings,
-            invoiceCounter: {
-                nextInvoiceNumber: nextNumber,
-                lastInvoiceYear: nextYear
-            }
-        };
-        
-        await saveSettings(updatedSettings);
+        if(settingsChanged) {
+            updatedSettings = {
+                ...settings,
+                invoiceCounter: {
+                    nextInvoiceNumber: nextNumber,
+                    lastInvoiceYear: nextYear
+                }
+            };
+            // Guardar los settings actualizados SOLO si cambiaron
+            await saveSettings(updatedSettings); // (de Fase 1)
+        }
+    } else if (docData.type === 'Factura' && !settings.invoiceCounter) {
+        console.error("Error: Intentando añadir factura pero 'invoiceCounter' no está definido en settings.");
+        // Podríamos inicializarlo aquí si fuese necesario
     }
+
+    // Guardar el documento independientemente del contador
+    await addDocToCollection('documents', docData); // (de Fase 1)
 }
 
-// --- REFACTORIZADO (FASE 1) ---
+
 export async function toggleDocumentStatus(docId) {
     const { documents } = getState();
     const doc = documents.find(d => d.id === docId);
     if (doc) {
         const newStatus = doc.status === 'Adeudada' ? 'Cobrada' : 'Adeudada';
-        await updateDocInCollection('documents', docId, { status: newStatus });
+        await updateDocInCollection('documents', docId, { status: newStatus }); // (de Fase 1)
     }
 }
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function deleteDocument(docId) {
-    await deleteDocFromCollection('documents', docId);
+    await deleteDocFromCollection('documents', docId); // (de Fase 1)
 }
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function savePaymentDetails(invoiceId, paymentData) {
-    await updateDocInCollection('documents', invoiceId, { paymentDetails: paymentData });
-    // Esta función ya no necesita devolver la factura, el handler se encargará.
+    const { documents } = getState();
+    const invoice = documents.find(doc => doc.id === invoiceId);
+    if (!invoice) return null;
+
+    // Actualizamos en Firestore primero
+    await updateDocInCollection('documents', invoiceId, { paymentDetails: paymentData }); // (de Fase 1)
+
+    // Devolvemos la factura actualizada localmente para el visor de recibos
+    // (obtenemos la versión más reciente del estado que ya se actualizó por el listener)
+    const updatedInvoiceFromState = getState().documents.find(doc => doc.id === invoiceId); 
+    return updatedInvoiceFromState || { ...invoice, paymentDetails: paymentData }; // Fallback por si el listener tarda
 }
 
-// --- REFACTORIZADO (FASE 1) ---
+
 export async function saveAeatConfig(aeatConfig) {
     const { settings } = getState();
     const updatedSettings = { ...settings, aeatConfig };
-    await saveSettings(updatedSettings);
+    await saveSettings(updatedSettings); // (de Fase 1)
 }
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function toggleAeatModule() {
     const { settings } = getState();
     const updatedSettings = { ...settings, aeatModuleActive: !settings.aeatModuleActive };
-    await saveSettings(updatedSettings);
+    await saveSettings(updatedSettings); // (de Fase 1)
 }
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function saveFiscalParams(fiscalParams) {
     const { settings } = getState();
     const updatedSettings = { ...settings, fiscalParameters: fiscalParams };
-    await saveSettings(updatedSettings);
+    await saveSettings(updatedSettings); // (de Fase 1)
 }
 
-// --- SIN CAMBIOS ---
-// Esta acción solo modifica el estado local (volátil), no guarda en DB.
+// --- Acciones de Reportes, Archivos (Sin cambios en Fase 2) ---
+
 export function generateReport(filters) {
-    const { transactions, documents, settings } = getState();
+    const { transactions, documents, settings } = getState(); // Obtiene el estado actual
     let data = [], title = '', columns = [];
 
-    // --- Lógica de cálculo de fechas ---
+    // --- Lógica de cálculo de fechas (sin cambios) ---
     let startDate, endDate;
     if (filters.type !== 'sociedades') {
         switch (filters.period) {
@@ -524,102 +522,142 @@ export function generateReport(filters) {
                 startDate = new Date(Date.UTC(filters.year, 0, 1));
                 endDate = new Date(Date.UTC(filters.year, 11, 31, 23, 59, 59, 999));
                 break;
+            default: // Añadir default por si acaso
+                console.error("Periodo de reporte no válido:", filters.period);
+                return;
         }
+    } else { // Para 'sociedades'
+         const year = parseInt(filters.year, 10);
+         switch (filters.period) {
+            case '1P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 2, 31, 23, 59, 59, 999)); break;
+            case '2P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 8, 30, 23, 59, 59, 999)); break;
+            case '3P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 10, 30, 23, 59, 59, 999)); break;
+            default:
+                 console.error("Periodo de sociedades no válido:", filters.period);
+                 return;
+         }
     }
 
-    // --- Lógica específica por tipo de reporte ---
+
+    // --- Lógica específica por tipo de reporte (sin cambios funcionales) ---
     if (filters.type === 'movimientos') {
-        title = `Reporte de Movimientos`;
+        title = `Reporte de Movimientos (${filters.period})`; // Añadir periodo al título
         columns = ["Fecha", "Descripción", "Cuenta", "Categoría", "Tipo", "Monto", "Moneda", "Parte"];
         data = transactions
             .filter(t => {
-                const tDate = new Date(t.date + 'T00:00:00Z');
+                // Parsear fecha asegurando UTC para evitar problemas de zona horaria
+                const tDate = new Date(t.date + 'T00:00:00Z'); 
                 const inDateRange = tDate >= startDate && tDate <= endDate;
                 const accountMatch = filters.account === 'all' || t.account === filters.account;
                 const partMatch = filters.part === 'all' || t.part === filters.part;
                 return inDateRange && accountMatch && partMatch;
             })
+            // Ordenar por fecha descendente ANTES de mapear
+            .sort((a, b) => new Date(b.date + 'T00:00:00Z') - new Date(a.date + 'T00:00:00Z'))
             .map(item => [item.date, item.description, item.account, item.category, item.type, item.amount, item.currency, item.part]);
 
     } else if (filters.type === 'documentos') {
-        title = `Reporte de Documentos`;
+        title = `Reporte de Documentos (${filters.period})`; // Añadir periodo al título
         columns = ["Fecha", "Número", "Cliente", "Monto", "Moneda", "Estado", "Tipo"];
         data = documents
             .filter(d => {
                 const dDate = new Date(d.date + 'T00:00:00Z');
                 return dDate >= startDate && dDate <= endDate;
             })
+            .sort((a, b) => new Date(b.date + 'T00:00:00Z') - new Date(a.date + 'T00:00:00Z'))
             .map(item => [item.date, item.number, item.client, item.amount, item.currency, item.status, item.type]);
     
     } else if (filters.type === 'inversiones') {
-        title = `Reporte de Inversiones`;
+        title = `Reporte de Inversiones (${filters.period})`; // Añadir periodo al título
         columns = ["Fecha", "Descripción", "Cuenta Origen", "Monto", "Moneda"];
         data = transactions
             .filter(t => {
                 const tDate = new Date(t.date + 'T00:00:00Z');
-                return tDate >= startDate && tDate <= endDate && t.category === 'Inversión';
+                // Asegurarse de que startDate y endDate estén definidos
+                return startDate && endDate && tDate >= startDate && tDate <= endDate && t.category === 'Inversión';
             })
+            .sort((a, b) => new Date(b.date + 'T00:00:00Z') - new Date(a.date + 'T00:00:00Z'))
             .map(item => [item.date, item.description, item.account, item.amount, item.currency]);
 
     } else if (filters.type === 'sociedades') {
         const year = parseInt(filters.year, 10);
-        switch (filters.period) {
-            case '1P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 2, 31, 23, 59, 59, 999)); break;
-            case '2P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 8, 30, 23, 59, 59, 999)); break;
-            case '3P': startDate = new Date(Date.UTC(year, 0, 1)); endDate = new Date(Date.UTC(year, 10, 30, 23, 59, 59, 999)); break;
-        }
-        const fiscalAccounts = ['CAIXA Bank', 'Banco WISE'];
+        
+        // La lógica de fechas ya está arriba
+        
+        const fiscalAccounts = ['CAIXA Bank', 'Banco WISE']; // Nombres exactos de las cuentas fiscales
+        
+        // Usar settings del estado actual
+        const currentSettings = getState().settings; 
+        const taxRate = currentSettings?.fiscalParameters?.corporateTaxRate ?? 17; // Usar valor de settings o 17% por defecto
+        
         const filteredTransactions = transactions.filter(t => {
             const tDate = new Date(t.date + 'T00:00:00Z');
-            return tDate >= startDate && tDate <= endDate && t.part === 'A' && fiscalAccounts.includes(t.account) && t.currency === 'EUR';
+            // Asegurarse de que startDate y endDate estén definidos
+            return startDate && endDate && tDate >= startDate && tDate <= endDate && 
+                   t.part === 'A' && 
+                   fiscalAccounts.includes(t.account) && // Filtrar por nombre de cuenta
+                   t.currency === 'EUR'; // Solo EUR
         });
 
         let totalIngresos = 0, totalEgresos = 0;
         filteredTransactions.forEach(t => {
-            if (t.type === 'Ingreso') totalIngresos += t.amount;
-            else totalEgresos += t.amount + (t.iva || 0);
+            // Asegurarse que amount e iva son números
+            const amount = Number(t.amount) || 0;
+            const iva = Number(t.iva) || 0;
+            
+            // Excluir transferencias e inversiones del cálculo base
+            if (t.category !== 'Transferencia' && t.category !== 'Inversión' && t.category !== 'Ajuste de Saldo') {
+                if (t.type === 'Ingreso') {
+                    totalIngresos += amount;
+                } else { // Egreso
+                    totalEgresos += (amount + iva); // Sumar IVA a los gastos
+                }
+            }
         });
 
         const resultadoContable = totalIngresos - totalEgresos;
-        const taxRate = settings.fiscalParameters.corporateTaxRate;
         const pagoACuenta = resultadoContable > 0 ? resultadoContable * (taxRate / 100) : 0;
         
         title = `Estimación Imp. Sociedades - ${filters.period} ${year}`;
-        columns = ["Concepto", "Importe"];
+        columns = ["Concepto", "Importe (€)"]; // Especificar moneda
         data = [
-            ["Total Ingresos Computables", totalIngresos],
-            ["Total Gastos Deducibles", totalEgresos],
-            ["Resultado Contable Acumulado", resultadoContable],
-            [`Pago a cuenta estimado (${taxRate}%)`, pagoACuenta]
+            ["Total Ingresos Computables (A)", totalIngresos.toFixed(2)],
+            ["Total Gastos Deducibles (A)", totalEgresos.toFixed(2)],
+            ["Resultado Contable Acumulado (A)", resultadoContable.toFixed(2)],
+            [`Pago a cuenta estimado (${taxRate}%)`, pagoACuenta.toFixed(2)]
         ];
+    } else {
+        console.error("Tipo de reporte no reconocido:", filters.type);
+        return; // Salir si el tipo no es válido
     }
     
-    // Los reportes son datos volátiles, no necesitan guardarse.
+    // Los reportes son datos volátiles, no necesitan guardarse en Firestore.
+    // Solo actualizamos el estado local para la UI.
     setState({ activeReport: { type: filters.type, data, title, columns } });
 }
 
-// --- SIN CAMBIOS ---
-// Esta acción solo modifica el estado local (volátil), no guarda en DB.
+
 export function generateIvaReport(month) {
     const { transactions, documents } = getState();
     const [year, monthNum] = month.split('-').map(Number);
 
     const ivaSoportado = transactions.filter(t => {
-        const tDate = new Date(t.date);
+        const tDate = new Date(t.date + 'T00:00:00Z'); // Usar UTC para consistencia
         return t.type === 'Egreso' && t.iva > 0 &&
-               tDate.getFullYear() === year &&
-               tDate.getMonth() + 1 === monthNum;
+               tDate.getUTCFullYear() === year &&
+               tDate.getUTCMonth() + 1 === monthNum;
     });
 
     const ivaRepercutido = documents.filter(doc => {
-        const dDate = new Date(doc.date);
+        const dDate = new Date(doc.date + 'T00:00:00Z'); // Usar UTC para consistencia
         return doc.type === 'Factura' && doc.iva > 0 &&
-               dDate.getFullYear() === year &&
-               dDate.getMonth() + 1 === monthNum;
+               dDate.getUTCFullYear() === year &&
+               dDate.getUTCMonth() + 1 === monthNum;
     });
 
-    const totalSoportado = ivaSoportado.reduce((sum, t) => sum + t.iva, 0);
-    const totalRepercutido = ivaRepercutido.reduce((sum, d) => sum + d.iva, 0);
+    // Asegurarse de sumar solo números válidos
+    const totalSoportado = ivaSoportado.reduce((sum, t) => sum + (Number(t.iva) || 0), 0);
+    const totalRepercutido = ivaRepercutido.reduce((sum, d) => sum + (Number(d.iva) || 0), 0);
 
     const ivaReport = {
         month: month,
@@ -628,8 +666,8 @@ export function generateIvaReport(month) {
             items: ivaSoportado.map(t => ({
                 date: t.date,
                 description: t.description,
-                base: t.amount,
-                iva: t.iva,
+                base: Number(t.amount) || 0,
+                iva: Number(t.iva) || 0,
                 currency: t.currency
             }))
         },
@@ -639,8 +677,8 @@ export function generateIvaReport(month) {
                 date: d.date,
                 number: d.number,
                 client: d.client,
-                base: d.subtotal,
-                iva: d.iva,
+                base: Number(d.subtotal) || 0,
+                iva: Number(d.iva) || 0,
                 currency: d.currency
             }))
         },
@@ -650,94 +688,50 @@ export function generateIvaReport(month) {
     setState({ activeIvaReport: ivaReport });
 }
 
-// --- REFACTORIZADO (FASE 1) ---
-// Esta acción es compleja. Por ahora, la refactorizamos para que guarde
-// el 'archivedData' en el documento de 'settings'.
-// La eliminación de transacciones/documentos requerirá un batch write,
-// que implementaremos más adelante. Por ahora, solo archivamos.
 export async function closeYear(startDate, endDate) {
-    const { transactions, documents, archivedData, settings } = getState();
-    const year = new Date(endDate).getFullYear();
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    const transactionsToArchive = transactions.filter(t => {
-        const tDate = new Date(t.date + 'T00:00:00Z');
-        return tDate >= start && tDate <= end;
-    });
-    const documentsToArchive = documents.filter(d => {
-        const dDate = new Date(d.date + 'T00:00:00Z');
-        return dDate >= start && dDate <= end;
-    });
-
-    const newArchivedData = { ...archivedData };
-    if (!newArchivedData[year]) {
-        newArchivedData[year] = { transactions: [], documents: [] };
-    }
-    newArchivedData[year].transactions.push(...transactionsToArchive);
-    newArchivedData[year].documents.push(...documentsToArchive);
-    
-    // Guardar los datos archivados en el documento de settings
-    await saveSettings({ ...settings, archivedData: newArchivedData });
-
-    // --- Lógica de Eliminación (TODO) ---
-    // La eliminación de los datos originales debe hacerse con un batch write
-    // para no sobrecargar las llamadas a la API.
-    // Por ahora, advertimos que esto no está implementado.
-    console.warn("Función 'closeYear': Los datos han sido archivados en settings, pero la eliminación de los registros originales aún no está implementada en esta refactorización.");
-
-    /*
-    // Lógica futura con batch writes:
-    const txIdsToDelete = transactionsToArchive.map(t => t.id);
-    const docIdsToDelete = documentsToArchive.map(d => d.id);
-    await api.batchDelete('transactions', txIdsToDelete);
-    await api.batchDelete('documents', docIdsToDelete);
-    */
-
-    // setState({
-    //     transactions: remainingTransactions,
-    //     documents: remainingDocuments,
-    //     archivedData: newArchivedData
-    // });
-    // saveData(getState()); // Guardar el nuevo estado -- COMENTADO
+    // La implementación actual es compleja y riesgosa con Firestore.
+    // Se necesita una estrategia diferente (ej. Firebase Functions) para archivar
+    // datos de forma segura y eficiente sin exceder límites de documentos.
+    console.warn("La función 'closeYear' (Cierre Anual) está desactivada. Requiere una reimplementación más robusta.");
+    alert("La función de Cierre Anual está desactivada temporalmente.");
+    // No se hace nada
 }
 
 // --- Investment Actions ---
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function addInvestmentAsset(assetData) {
-    // const newAsset = { ...assetData, id: crypto.randomUUID() }; // No es necesario
-    await addDocToCollection('investmentAssets', assetData);
+    await addDocToCollection('investmentAssets', assetData); // (de Fase 1)
 }
 
-// --- REFACTORIZADO (FASE 1) ---
 export async function deleteInvestmentAsset(assetId) {
-    await deleteDocFromCollection('investmentAssets', assetId);
+    await deleteDocFromCollection('investmentAssets', assetId); // (de Fase 1)
 }
 
-// --- REFACTORIZADO (FASE 1) ---
-// saveTransaction ya es async, así que usamos await
+// --- MODIFICADO EN FASE 2 ---
 export async function addInvestment(investmentData) {
     const { accounts } = getState();
     const account = accounts.find(acc => acc.name === investmentData.account);
 
-    if (!account) return;
+    if (!account) {
+        console.error("Cuenta no encontrada para la inversión:", investmentData.account);
+        return;
+    }
 
     const transactionData = {
         date: investmentData.date,
-        description: `Inversión en ${investmentData.assetName}: ${investmentData.description}`,
+        description: `Inversión en ${investmentData.assetName || 'activo desconocido'}: ${investmentData.description || ''}`,
         type: 'Egreso',
         part: 'A', // Las inversiones generalmente son parte 'A'
-        account: investmentData.account,
+        account: investmentData.account, // Mantenemos nombre por ahora
         category: 'Inversión',
-        amount: investmentData.amount,
+        amount: Number(investmentData.amount) || 0, // Asegurar que es número
         iva: 0,
         currency: account.currency,
-        // Guardamos una referencia al ID del activo para un futuro seguimiento
-        investmentAssetId: investmentData.assetId 
+        investmentAssetId: investmentData.assetId,
+        accountId: account.id // Añadido en Fase 2
     };
 
-    // Usamos await porque saveTransaction ahora es asíncrono
+    // Usamos saveTransaction para que maneje la actualización del saldo
     await saveTransaction(transactionData);
 }
+
