@@ -300,10 +300,18 @@ function handleTransactionsTableClick(e) {
 
     if (editBtn) {
         const id = editBtn.dataset.id;
-        const { transactions } = getState();
+        const { transactions, accounts } = getState(); // Necesitamos accounts
+        if (!transactions || !accounts) return; // Chequeo extra
+
         const transaction = transactions.find(t => t.id === id);
         if (transaction) {
             const form = elements.transactionForm;
+            if (!form) return; // Chequeo si el formulario existe
+
+            // Buscar la cuenta por accountId para obtener el nombre
+            const account = accounts.find(acc => acc.id === transaction.accountId);
+            const accountName = account ? account.name : ''; // Obtener nombre si se encontró
+
             form.querySelector('#transaction-id').value = transaction.id;
             form.querySelector('#transaction-date').value = transaction.date;
             form.querySelector('#transaction-description').value = transaction.description;
@@ -311,7 +319,7 @@ function handleTransactionsTableClick(e) {
             populateCategories(); // Update categories based on type first
             form.querySelector('#transaction-category').value = transaction.category;
             form.querySelector('#transaction-part').value = transaction.part;
-            form.querySelector('#transaction-account').value = transaction.account;
+            form.querySelector('#transaction-account').value = accountName; // Usar el nombre encontrado
             form.querySelector('#transaction-amount').value = transaction.amount;
             form.querySelector('#transaction-iva').value = transaction.iva || '';
             updateCurrencySymbol(); // Update symbol based on selected account
@@ -326,7 +334,12 @@ function handleTransactionsTableClick(e) {
     if (deleteBtn) {
         const id = deleteBtn.dataset.id;
         showConfirmationModal('Eliminar Movimiento', '¿Estás seguro de que quieres eliminar este movimiento?', withSpinner(() => {
-            actions.deleteTransaction(id);
+            // Pasar ID de transacción y ID de cuenta para la acción de borrado
+            const { transactions } = getState();
+            const transactionToDelete = transactions.find(t => t.id === id);
+            if (transactionToDelete) {
+                actions.deleteTransaction(id, transactionToDelete.accountId); // Pasar ambos IDs
+            }
         }));
     }
 }

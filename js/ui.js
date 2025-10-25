@@ -165,7 +165,33 @@ export function hidePermissionsModal() {
 // --- Funciones Creadoras de Elementos ---
 
 function createTransactionRow(t) {
-    const { permissions } = getState();
+    const { permissions, accounts } = getState(); // Necesitamos accounts
+    // Asegurarse de que accounts existe y no está vacío antes de proceder
+    if (!accounts || accounts.length === 0) {
+        console.warn(`createTransactionRow: No se encontraron cuentas para la transacción ${t.id}`);
+        // Puedes devolver una fila con un mensaje de error o datos incompletos
+        // Por ahora, devolveremos una fila básica indicando el problema
+        return `
+        <tr class="border-b border-gray-800 text-red-400">
+            <td class="py-3 px-3">${t.date}</td>
+            <td class="py-3 px-3">${escapeHTML(t.description)}</td>
+            <td class="py-3 px-3 italic">Cuenta no encontrada (ID: ${t.accountId})</td>
+            <td class="py-3 px-3">${escapeHTML(t.category)}</td>
+            <td class="py-3 px-3">${escapeHTML(t.part)}</td>
+            <td class="py-3 px-3 text-right">-</td>
+            <td class="py-3 px-3 text-right">-</td>
+            <td class="py-3 px-3"></td>
+        </tr>`;
+    }
+
+
+    // Buscar el nombre y moneda de la cuenta usando accountId
+    const account = accounts.find(acc => acc.id === t.accountId);
+    // Si la cuenta no se encuentra (puede pasar si se borró), usar valores por defecto seguros
+    const accountName = account ? account.name : `Cuenta Borrada (ID: ${t.accountId})`;
+    const currency = account ? account.currency : 'EUR'; // Fallback a EUR
+
+
     const amountColor = t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400';
     const sign = t.type === 'Ingreso' ? '+' : '-';
 
@@ -184,11 +210,11 @@ function createTransactionRow(t) {
         <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
             <td class="py-3 px-3">${t.date}</td>
             <td class="py-3 px-3">${escapeHTML(t.description)}</td>
-            <td class="py-3 px-3">${escapeHTML(t.account)}</td>
+            <td class="py-3 px-3">${escapeHTML(accountName)}</td>
             <td class="py-3 px-3">${escapeHTML(t.category)}</td>
             <td class="py-3 px-3">${escapeHTML(t.part)}</td>
-            <td class="py-3 px-3 text-right text-gray-400">${t.iva > 0 ? formatCurrency(t.iva, t.currency) : '-'}</td>
-            <td class="py-3 px-3 text-right font-medium ${amountColor}">${sign} ${formatCurrency(t.amount, t.currency)}</td>
+            <td class="py-3 px-3 text-right text-gray-400">${t.iva > 0 ? formatCurrency(t.iva, currency) : '-'}</td>
+            <td class="py-3 px-3 text-right font-medium ${amountColor}">${sign} ${formatCurrency(t.amount, currency)}</td>
             <td class="py-3 px-3">${actionsHtml}</td>
         </tr>`;
 }
@@ -280,9 +306,29 @@ function createClientRow(client) {
 }
 
 function createInvestmentRow(t, allAssets) {
-    const { permissions } = getState();
+    const { permissions, accounts } = getState(); // Necesitamos accounts
+    // Añadir chequeos robustos
+    if (!permissions || !accounts || accounts.length === 0 || !allAssets) {
+         console.warn(`createInvestmentRow: Faltan datos (permisos, cuentas o activos) para transacción ${t.id}`);
+         // Devolver fila indicando el problema
+         return `
+         <tr class="border-b border-gray-800 text-red-400">
+             <td class="py-3 px-3">${t.date}</td>
+             <td class="py-2 px-3 italic">Datos incompletos</td>
+             <td class="py-2 px-3 italic">Cuenta no encontrada (ID: ${t.accountId})</td>
+             <td class="py-2 px-3 text-right">-</td>
+             <td class="py-2 px-3 text-center"></td>
+         </tr>`;
+    }
+
     const asset = allAssets.find(a => a.id === t.investmentAssetId);
     const assetName = asset ? asset.name : 'Activo Desconocido';
+
+    // Buscar cuenta por accountId
+    const account = accounts.find(acc => acc.id === t.accountId);
+    // Usar valores por defecto si la cuenta no se encuentra
+    const accountName = account ? account.name : `Cuenta Borrada (ID: ${t.accountId})`;
+    const currency = account ? account.currency : 'EUR'; // Fallback a EUR
 
     const actionsHtml = permissions.manage_investments ? `
         <button class="delete-investment-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar Inversión">
@@ -293,39 +339,55 @@ function createInvestmentRow(t, allAssets) {
         <tr class="border-b border-gray-800 hover:bg-gray-800/50">
             <td class="py-3 px-3">${t.date}</td>
             <td class="py-2 px-3">${escapeHTML(assetName)}</td>
-            <td class="py-2 px-3">${escapeHTML(t.account)}</td>
-            <td class="py-2 px-3 text-right">${formatCurrency(t.amount, t.currency)}</td>
+            <td class="py-2 px-3">${escapeHTML(accountName)}</td>
+            <td class="py-2 px-3 text-right">${formatCurrency(t.amount, currency)}</td>
             <td class="py-2 px-3 text-center">${actionsHtml}</td>
         </tr>`;
 }
 
 // --- Funciones de Renderizado Principales ---
 
-function renderTransactions() {
-    const { transactions } = getState();
+function renderTransactions() { // Lógica de búsqueda necesita adaptarse si se quiere buscar por nombre de cuenta
+    const { transactions, accounts } = getState(); // Necesitamos accounts para la búsqueda por nombre
     const tbody = elements.transactionsTableBody;
-    if (!tbody) return;
+    // Añadir chequeos robustos
+    if (!tbody || !transactions || !accounts || accounts.length === 0) {
+        console.warn("renderTransactions: Faltan datos (tbody, transactions o accounts)");
+        if(tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">Cargando datos o no hay cuentas...</td></tr>`;
+        return;
+    }
 
     let filteredTransactions = transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
     const searchInput = document.getElementById('cashflow-search');
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
     if (searchTerm) {
-        filteredTransactions = filteredTransactions.filter(t => 
-            t.description.toLowerCase().includes(searchTerm) ||
-            t.account.toLowerCase().includes(searchTerm) ||
-            t.category.toLowerCase().includes(searchTerm)
-        );
+        filteredTransactions = filteredTransactions.filter(t => {
+            const account = accounts.find(acc => acc.id === t.accountId); // Buscar cuenta
+            const accountName = account ? account.name.toLowerCase() : ''; // Nombre en minúsculas
+            // Asegurarse de que category existe antes de llamar a toLowerCase()
+            const categoryName = t.category ? t.category.toLowerCase() : '';
+            return t.description.toLowerCase().includes(searchTerm) ||
+                   accountName.includes(searchTerm) || // Buscar por nombre de cuenta
+                   categoryName.includes(searchTerm); // Buscar por categoría
+        });
     }
-    
+
+
     if (filteredTransactions.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">No hay movimientos.</td></tr>`;
+        const message = searchTerm ? "No hay movimientos que coincidan con la búsqueda." : "No hay movimientos registrados.";
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">${message}</td></tr>`;
     } else {
-        const rowsHtml = filteredTransactions
+        // Usar map y luego join para evitar errores si createTransactionRow devuelve ''
+        const rowsHtmlArray = filteredTransactions
             .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .map(createTransactionRow)
-            .join('');
-        tbody.innerHTML = rowsHtml;
+            .map(createTransactionRow) // createTransactionRow ya usa accountId y maneja cuenta no encontrada
+            .filter(row => row !== ''); // Filtrar filas vacías (si accounts no estaba listo)
+        tbody.innerHTML = rowsHtmlArray.join('');
+    }
+    // Crear iconos para los botones de acción (si aplica)
+    if (typeof lucide !== 'undefined' && lucide.createIcons && tbody.querySelector('i[data-lucide]')) {
+        lucide.createIcons({ nodes: tbody.querySelectorAll('i[data-lucide]') });
     }
 }
 
@@ -410,12 +472,22 @@ function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, c
 
 function updateInicioKPIs() {
     const { transactions, accounts } = getState();
-    if(!transactions || !accounts) return;
+    // Añadir chequeos más robustos
+    if(!transactions || !accounts || accounts.length === 0) {
+        console.warn("updateInicioKPIs: Faltan datos (transactions o accounts)");
+        // Poner KPIs a 0 o 'N/A' si faltan datos
+        ['kpi-monthly-income', 'kpi-monthly-expense', 'kpi-monthly-profit', 'kpi-total-balance'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = formatCurrency(0, 'EUR'); // Mostrar 0.00 € en lugar de N/A
+        });
+        return;
+    }
+
 
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) return;
     const currency = currencySelect.value;
-    
+
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -426,25 +498,35 @@ function updateInicioKPIs() {
     transactions
         .filter(t => {
             const tDate = new Date(t.date);
-            return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear && t.currency === currency;
+            // Necesitamos buscar la moneda de la cuenta a través del ID
+            const account = accounts.find(acc => acc.id === t.accountId);
+            // Comprobar que la cuenta existe y coincide la moneda y el período, y la fecha es válida
+            return account && account.currency === currency &&
+                   t.date && !isNaN(tDate.getTime()) && // Chequeo fecha válida
+                   tDate.getMonth() === currentMonth &&
+                   tDate.getFullYear() === currentYear;
         })
         .forEach(t => {
             if (t.type === 'Ingreso') {
                 monthlyIncome += t.amount;
             } else if (t.type === 'Egreso') {
-                monthlyExpense += t.amount;
+                monthlyExpense += (t.amount + (t.iva || 0)); // Sumar IVA a los gastos
             }
         });
 
     const monthlyProfit = monthlyIncome - monthlyExpense;
-    const totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
+    // Calcular saldo total solo de cuentas existentes en la moneda seleccionada
+    const totalBalance = accounts
+        .filter(a => a.currency === currency)
+        .reduce((sum, a) => sum + a.balance, 0);
+
 
     const kpiIncomeEl = document.getElementById('kpi-monthly-income');
     if (kpiIncomeEl) kpiIncomeEl.textContent = formatCurrency(monthlyIncome, currency);
 
     const kpiExpenseEl = document.getElementById('kpi-monthly-expense');
     if (kpiExpenseEl) kpiExpenseEl.textContent = formatCurrency(monthlyExpense, currency);
-    
+
     const kpiProfitEl = document.getElementById('kpi-monthly-profit');
     if (kpiProfitEl) {
         kpiProfitEl.textContent = formatCurrency(monthlyProfit, currency);
@@ -457,12 +539,28 @@ function updateInicioKPIs() {
 }
 
 function renderAnnualFlowChart() {
-    const { transactions } = getState();
+    const { transactions, accounts } = getState(); // Necesitamos accounts
     const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
-    if (!annualCtx || !transactions) return;
+    // Añadir chequeos robustos
+    if (!annualCtx || !transactions || !accounts || accounts.length === 0) {
+        console.warn("renderAnnualFlowChart: Faltan datos (context, transactions o accounts)");
+        // Opcional: limpiar gráfico si existía
+        if (charts.annualFlowChart) {
+            charts.annualFlowChart.destroy();
+            charts.annualFlowChart = null;
+        }
+        // Opcional: mostrar mensaje en el canvas
+        if (annualCtx) {
+             annualCtx.clearRect(0, 0, annualCtx.canvas.width, annualCtx.canvas.height);
+             annualCtx.fillStyle = '#6b7280'; annualCtx.textAlign = 'center';
+             annualCtx.fillText("No hay datos para mostrar.", annualCtx.canvas.width / 2, annualCtx.canvas.height / 2);
+        }
+        return;
+    }
+
 
     if (charts.annualFlowChart) charts.annualFlowChart.destroy();
-    
+
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) return;
     const selectedCurrency = currencySelect.value;
@@ -473,20 +571,36 @@ function renderAnnualFlowChart() {
     const expenseData = Array(12).fill(0);
 
     transactions
-        .filter(t => new Date(t.date).getFullYear() === currentYear && t.currency === selectedCurrency)
+        .filter(t => {
+            // Filtrar por año y moneda usando el accountId
+            const account = accounts.find(acc => acc.id === t.accountId);
+            // Asegurarse que la cuenta existe y la fecha es válida
+            return account && account.currency === selectedCurrency &&
+                   t.date && new Date(t.date).getFullYear() === currentYear;
+        })
         .forEach(t => {
-            const month = new Date(t.date).getMonth();
-            if (t.type === 'Ingreso') incomeData[month] += t.amount;
-            else if (t.type === 'Egreso') expenseData[month] += t.amount;
+            const date = new Date(t.date);
+            // Comprobar si la fecha es válida antes de getMonth()
+            if (!isNaN(date.getTime())) {
+                const month = date.getMonth();
+                 // Asegurarse de que el mes está en el rango 0-11
+                if (month >= 0 && month <= 11) {
+                    if (t.type === 'Ingreso') {
+                        incomeData[month] += t.amount;
+                    } else if (t.type === 'Egreso') {
+                        expenseData[month] += (t.amount + (t.iva || 0)); // Incluir IVA
+                    }
+                } else {
+                    console.warn(`renderAnnualFlowChart: Mes inválido (${month}) encontrado en transacción ${t.id}: ${t.date}`);
+                }
+            } else {
+                 console.warn(`renderAnnualFlowChart: Fecha inválida encontrada en transacción ${t.id}: ${t.date}`);
+            }
         });
-    
-    const incomeGradient = annualCtx.createLinearGradient(0, 0, 0, 320);
-    incomeGradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
-    incomeGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-    const expenseGradient = annualCtx.createLinearGradient(0, 0, 0, 320);
-    expenseGradient.addColorStop(0, 'rgba(239, 68, 68, 0.5)');
-    expenseGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
 
+    // Configuración del gráfico (sin cambios)
+    const incomeGradient = annualCtx.createLinearGradient(0, 0, 0, 320); incomeGradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)'); incomeGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    const expenseGradient = annualCtx.createLinearGradient(0, 0, 0, 320); expenseGradient.addColorStop(0, 'rgba(239, 68, 68, 0.5)'); expenseGradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
     charts.annualFlowChart = new Chart(annualCtx, {
         type: 'line',
         data: {
@@ -496,8 +610,8 @@ function renderAnnualFlowChart() {
                 { label: `Egresos (${getCurrencySymbol(selectedCurrency)})`, data: expenseData, borderColor: 'rgba(239, 68, 68, 1)', backgroundColor: expenseGradient, fill: true, tension: 0.4 }
             ]
         },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
+        options: {
+            responsive: true, maintainAspectRatio: false,
             scales: { y: { beginAtZero: true } },
             plugins: { legend: { position: 'bottom' } }
         }
@@ -505,37 +619,65 @@ function renderAnnualFlowChart() {
 }
 
 function renderExpenseDistributionChart() {
-    const { transactions } = getState();
+    const { transactions, accounts } = getState(); // Necesitamos accounts
     const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
-    if (!ctx || !transactions) return;
+    // Añadir chequeos robustos
+    if (!ctx || !transactions || !accounts || accounts.length === 0) {
+        console.warn("renderExpenseDistributionChart: Faltan datos (context, transactions o accounts)");
+        if (charts.expenseDistributionChart) { // Limpiar gráfico si existe
+            charts.expenseDistributionChart.destroy();
+            charts.expenseDistributionChart = null;
+        }
+        if (ctx) { // Mostrar mensaje en canvas si no hay datos
+             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+             ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center';
+             ctx.fillText("No hay datos para mostrar.", ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+        return;
+    }
+
 
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) return;
     const currency = currencySelect.value;
-    
+
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
     const expenseByCategory = transactions
         .filter(t => {
+            // Filtrar por tipo, moneda (usando accountId), mes y año
+            const account = accounts.find(acc => acc.id === t.accountId);
+            // Asegurarse que la cuenta existe y la fecha es válida
             const tDate = new Date(t.date);
-            return t.type === 'Egreso' && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear && t.currency === currency;
+            return t.type === 'Egreso' && account && account.currency === currency &&
+                   t.date && !isNaN(tDate.getTime()) && // Comprobar fecha válida
+                   tDate.getMonth() === currentMonth &&
+                   tDate.getFullYear() === currentYear;
         })
         .reduce((acc, t) => {
-            acc[t.category] = (acc[t.category] || 0) + t.amount;
+            // Asegurarse de que t.category existe
+            const category = t.category || 'Sin Categoría';
+            acc[category] = (acc[category] || 0) + (t.amount + (t.iva || 0)); // Incluir IVA
             return acc;
         }, {});
+
 
     const labels = Object.keys(expenseByCategory);
     const data = Object.values(expenseByCategory);
 
     if (charts.expenseDistributionChart) charts.expenseDistributionChart.destroy();
-    
+
+    // Si no hay datos, limpiar y salir (importante para evitar errores)
     if (labels.length === 0) {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // Limpiar canvas
+        ctx.fillStyle = '#6b7280'; ctx.textAlign = 'center'; // Mostrar mensaje
+        ctx.fillText(`No hay gastos en ${currency} este mes.`, ctx.canvas.width / 2, ctx.canvas.height / 2);
         return;
     }
 
+    // Configuración del gráfico (sin cambios)
     charts.expenseDistributionChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -567,12 +709,17 @@ function renderExpenseDistributionChart() {
 }
 
 function renderRecentTransactions() {
-    const { transactions } = getState();
+    const { transactions, accounts } = getState(); // Necesitamos accounts
     const container = document.getElementById('recent-transactions-container');
-    if (!container || !transactions) return;
+    // Añadir chequeos robustos
+    if (!container || !transactions || !accounts || accounts.length === 0) {
+        if(container) container.innerHTML = `<p class="text-center text-gray-500 py-4">Cargando o no hay datos...</p>`;
+        return;
+    }
+
 
     const recent = transactions
-        .filter(t => !t.isInitialBalance)
+        .filter(t => !t.isInitialBalance) // Excluir saldos iniciales
         .sort((a, b) => new Date(b.date) - new Date(a.date))
         .slice(0, 5);
 
@@ -581,23 +728,31 @@ function renderRecentTransactions() {
         return;
     }
 
+    // Usar map y filter para evitar errores si no se encuentra la cuenta
+    const rowsHtmlArray = recent.map(t => {
+        const isIncome = t.type === 'Ingreso';
+        // Buscar nombre y moneda de la cuenta por accountId
+        const account = accounts.find(acc => acc.id === t.accountId);
+        // Si no se encuentra la cuenta, usar placeholders seguros
+        const accountName = account ? account.name : `Cuenta Borrada (ID: ${t.accountId})`;
+        const currency = account ? account.currency : 'EUR'; // Fallback a EUR
+        return `
+            <tr class="border-b border-gray-800 last:border-b-0">
+                <td class="py-3 px-3">
+                    <p class="font-medium">${escapeHTML(t.description)}</p>
+                    <p class="text-xs text-gray-400">${t.date} - ${escapeHTML(accountName)}</p>
+                </td>
+                <td class="py-3 px-3 text-right font-semibold ${isIncome ? 'text-green-400' : 'text-red-400'}">
+                    ${isIncome ? '+' : '-'} ${formatCurrency(t.amount, currency)}
+                </td>
+            </tr>
+        `;
+    }).filter(row => row !== null); // Filtrar resultados nulos si hubo error en map
+
     container.innerHTML = `
         <table class="w-full text-left">
             <tbody>
-                ${recent.map(t => {
-                    const isIncome = t.type === 'Ingreso';
-                    return `
-                        <tr class="border-b border-gray-800 last:border-b-0">
-                            <td class="py-3 px-3">
-                                <p class="font-medium">${escapeHTML(t.description)}</p>
-                                <p class="text-xs text-gray-400">${t.date} - ${escapeHTML(t.account)}</p>
-                            </td>
-                            <td class="py-3 px-3 text-right font-semibold ${isIncome ? 'text-green-400' : 'text-red-400'}">
-                                ${isIncome ? '+' : '-'} ${formatCurrency(t.amount, t.currency)}
-                            </td>
-                        </tr>
-                    `;
-                }).join('')}
+                ${rowsHtmlArray.join('')}
             </tbody>
         </table>`;
 }
@@ -781,32 +936,61 @@ function renderClientsChart() {
 }
 
 function renderInvestments() {
-    const { transactions, investmentAssets, permissions } = getState();
+    const { transactions, investmentAssets, permissions, accounts } = getState(); // Necesitamos accounts
     const tbody = elements.investmentsTableBody;
-    if (!tbody || !permissions) return;
-    
-    if(elements.addInvestmentForm && elements.addInvestmentForm.parentElement) {
-        elements.addInvestmentForm.parentElement.classList.toggle('hidden', !permissions.manage_investments);
+    // Añadir chequeo de accounts y investmentAssets
+    if (!tbody || !permissions || !accounts || accounts.length === 0 || !investmentAssets || !transactions) {
+         console.warn("renderInvestments: Faltan datos.");
+         if(tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Cargando datos o no hay cuentas/activos...</td></tr>`;
+         // Ocultar formulario si no hay permisos
+         const addInvestmentFormCard = elements.addInvestmentForm?.parentElement;
+         if (addInvestmentFormCard && (!permissions || !permissions.manage_investments)) {
+             addInvestmentFormCard.classList.add('hidden');
+         }
+         return;
     }
 
+    // Ocultar formulario si no hay permiso
+    const addInvestmentFormCard = elements.addInvestmentForm?.parentElement;
+    if (addInvestmentFormCard) {
+        addInvestmentFormCard.classList.toggle('hidden', !permissions.manage_investments);
+    }
+
+
     const investmentsData = transactions.filter(t => t.category === 'Inversión');
-    
-    const totalInvestedEUR = investmentsData.filter(t => t.currency === 'EUR').reduce((sum, t) => sum + t.amount, 0);
-    const totalInvestedUSD = investmentsData.filter(t => t.currency === 'USD').reduce((sum, t) => sum + t.amount, 0);
-    
+
+    // Calcular totales por moneda usando accountId
+    const totals = investmentsData.reduce((acc, t) => {
+        // Buscar cuenta por ID
+        const account = accounts.find(a => a.id === t.accountId);
+        if (account) { // Asegurarse que la cuenta existe
+            acc[account.currency] = (acc[account.currency] || 0) + t.amount;
+        } else {
+             console.warn(`renderInvestments: No se encontró cuenta con ID ${t.accountId} para transacción ${t.id}`);
+        }
+        return acc;
+    }, {});
+
+    // Mostrar totales
     const totalEurEl = document.getElementById('total-invested-eur');
-    if (totalEurEl) totalEurEl.textContent = formatCurrency(totalInvestedEUR, 'EUR');
-
+    if (totalEurEl) totalEurEl.textContent = formatCurrency(totals['EUR'] || 0, 'EUR');
     const totalUsdEl = document.getElementById('total-invested-usd');
-    if (totalUsdEl) totalUsdEl.textContent = formatCurrency(totalInvestedUSD, 'USD');
+    if (totalUsdEl) totalUsdEl.textContent = formatCurrency(totals['USD'] || 0, 'USD');
 
+    // Renderizar tabla
     if (investmentsData.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No hay movimientos de inversión.</td></tr>`;
     } else {
-        const rowsHtml = investmentsData.sort((a, b) => new Date(b.date) - new Date(a.date))
-                       .map(t => createInvestmentRow(t, investmentAssets))
-                       .join('');
-        tbody.innerHTML = rowsHtml;
+        // Usar map y filter para manejar cuentas no encontradas
+        const rowsHtmlArray = investmentsData
+                       .sort((a, b) => new Date(b.date) - new Date(a.date))
+                       .map(t => createInvestmentRow(t, investmentAssets)) // Ya usa accountId y maneja cuenta no encontrada
+                       .filter(row => row !== ''); // Filtrar filas potencialmente vacías
+        tbody.innerHTML = rowsHtmlArray.join('');
+    }
+    // Crear iconos para los botones de acción (si aplica)
+    if (typeof lucide !== 'undefined' && lucide.createIcons && tbody.querySelector('i[data-lucide]')) {
+         lucide.createIcons({ nodes: tbody.querySelectorAll('i[data-lucide]') });
     }
 }
 
@@ -1001,40 +1185,49 @@ function renderSettings() {
 }
 
 function renderReport() {
-    const { activeReport } = getState();
-    if (!elements.reportDisplayArea) return;
-    if (!activeReport || !activeReport.type || activeReport.data.length === 0) {
+    const { activeReport, accounts } = getState(); // Necesitamos accounts por si acaso (aunque los datos ya vienen preparados)
+    // Añadir chequeos robustos
+    if (!elements.reportDisplayArea || !accounts || accounts.length === 0) {
+        console.warn("renderReport: Falta el área de display o no hay cuentas cargadas.");
+        if(elements.reportDisplayArea) elements.reportDisplayArea.innerHTML = `<div class="text-center text-gray-500 flex flex-col items-center justify-center h-full"><i data-lucide="alert-circle" class="w-16 h-16 mb-4 text-yellow-500"></i><h3 class="font-semibold text-lg">Error al cargar</h3><p class="text-sm">No se pueden mostrar reportes sin datos de cuentas.</p></div>`;
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); // Crear icono de alerta
+        return;
+    }
+    if (!activeReport || !activeReport.type || !activeReport.data || activeReport.data.length === 0) {
         elements.reportDisplayArea.innerHTML = `<div class="text-center text-gray-500 flex flex-col items-center justify-center h-full"><i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i><h3 class="font-semibold text-lg">No hay datos para el reporte</h3><p class="text-sm">Pruebe con otros filtros o añada datos.</p></div>`;
+        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons(); // Crear icono
         return;
     }
 
+
     const { type, title, columns, data } = activeReport;
 
+    // Lógica del footer para 'movimientos' (verificar uso de moneda)
     let footerHtml = '';
     if (type === 'movimientos') {
         const totals = {};
         const typeIndex = columns.indexOf("Tipo");
         const amountIndex = columns.indexOf("Monto");
+        // Asegurarse de que la columna "Moneda" existe
         const currencyIndex = columns.indexOf("Moneda");
 
         if (typeIndex !== -1 && amountIndex !== -1 && currencyIndex !== -1) {
             data.forEach(row => {
                 const type = row[typeIndex];
-                const amount = row[amountIndex];
+                 // Asegurarse de que el monto es numérico, si no, tratar como 0
+                const amount = Number(row[amountIndex]);
+                if (isNaN(amount)) {
+                    console.warn(`renderReport (footer): Monto inválido encontrado: ${row[amountIndex]}`);
+                    return; // Saltar esta fila si el monto no es válido
+                }
+
+                // Usar la moneda que viene en los datos del reporte
                 const currency = row[currencyIndex];
-                
-                if (!totals[currency]) {
-                    totals[currency] = 0;
-                }
-                
-                if (type === 'Ingreso') {
-                    totals[currency] += amount;
-                } else {
-                    totals[currency] -= amount;
-                }
+                if (!totals[currency]) totals[currency] = 0;
+                totals[currency] += (type === 'Ingreso' ? amount : -amount); // Simplificado
             });
         }
-        
+
         const totalsContent = Object.keys(totals).map(currency => {
             const total = totals[currency];
             const colorClass = total >= 0 ? 'text-green-400' : 'text-red-400';
@@ -1042,38 +1235,56 @@ function renderReport() {
         }).join('');
 
         if (Object.keys(totals).length > 0) {
-            footerHtml = `
-                <tfoot>
-                    <tr class="border-t-2 border-gray-600">
-                        <td colspan="${columns.length - 2}" class="py-3 px-3 text-right font-semibold">TOTAL NETO:</td>
-                        <td class="py-3 px-3 text-right" colspan="2">${totalsContent}</td>
-                    </tr>
-                </tfoot>`;
+            footerHtml = `<tfoot><tr class="border-t-2 border-gray-600"><td colspan="${columns.length - 2}" class="py-3 px-3 text-right font-semibold">TOTAL NETO:</td><td class="py-3 px-3 text-right" colspan="2">${totalsContent}</td></tr></tfoot>`;
         }
     }
 
+    // Crear encabezado de tabla
     let tableHtml = `<table class="w-full text-left"><thead><tr class="border-b border-gray-700">`;
     columns.forEach(col => tableHtml += `<th class="py-2 px-3 text-sm font-semibold text-gray-400">${col}</th>`);
     tableHtml += `</tr></thead><tbody>`;
 
+    // Crear filas de tabla (usar nombre de cuenta ya preparado en actions.js)
     data.forEach(row => {
         tableHtml += `<tr class="border-b border-gray-800">`;
         row.forEach((cell, index) => {
-            const isNumeric = typeof cell === 'number';
-            const isAmount = columns[index].toLowerCase() === 'monto' || columns[index].toLowerCase() === 'importe';
-            const currency = isAmount ? (row[6] || 'EUR') : undefined;
-            
-            let cellContent = isAmount ? formatCurrency(cell, currency) : escapeHTML(String(cell));
-            if(columns[index] === "Monto" && row[4] === 'Egreso') {
-                cellContent = `- ${cellContent}`;
+             // Asegurarse de que 'columns' y 'index' son válidos antes de usarlos
+            if (!columns || index >= columns.length) {
+                console.warn(`renderReport: Índice de columna (${index}) fuera de rango.`);
+                tableHtml += `<td class="py-2 px-3 text-sm text-red-500">Error</td>`; // Indicar error en la celda
+                return; // Saltar esta celda
+            }
+            const columnName = columns[index]; // Nombre de la columna actual
+            const isNumeric = typeof cell === 'number' || (typeof cell === 'string' && cell.trim() !== '' && !isNaN(parseFloat(cell)));
+            // Detectar columnas de monto (ampliado)
+            const isAmountColumn = ["Monto", "Importe", "Importe (€)", "Pago a cuenta estimado", "Resultado Contable Acumulado", "Total Ingresos Computables", "Total Gastos Deducibles"].some(h => columnName.startsWith(h));
+            let cellContent = cell;
+
+
+            if (isAmountColumn && (typeof cell === 'number' || (typeof cell === 'string' && cell.trim() !== '' && !isNaN(parseFloat(cell))))) {
+                 const amount = typeof cell === 'number' ? cell : parseFloat(cell);
+                 // Usar la moneda que viene en los datos del reporte (si existe la columna)
+                 const currencyColumnIndex = columns.indexOf("Moneda");
+                 // Usar ?? para fallback seguro a 'EUR' si no hay moneda o es null/undefined
+                 const currency = (type === 'sociedades' ? 'EUR' : (currencyColumnIndex !== -1 ? row[currencyColumnIndex] : 'EUR')) ?? 'EUR';
+                 cellContent = formatCurrency(amount, currency);
+                 // Añadir signo negativo para egresos en reporte de movimientos
+                 const typeColumnIndex = columns.indexOf("Tipo");
+                 if (type === 'movimientos' && columnName === "Monto" && typeColumnIndex !== -1 && row[typeColumnIndex] === 'Egreso') {
+                    cellContent = `- ${cellContent}`;
+                 }
+            } else {
+                 // Convertir undefined/null a cadena vacía antes de escapar
+                 cellContent = escapeHTML(String(cell ?? ''));
             }
 
-            tableHtml += `<td class="py-2 px-3 text-sm ${isNumeric ? 'text-right' : ''}">${cellContent}</td>`;
+            tableHtml += `<td class="py-2 px-3 text-sm ${isNumeric || isAmountColumn ? 'text-right' : ''}">${cellContent}</td>`;
         });
         tableHtml += `</tr>`;
     });
     tableHtml += `</tbody>${footerHtml}</table>`;
 
+    // Renderizar área de reporte con botón de descarga
     elements.reportDisplayArea.innerHTML = `
         <div class="flex justify-between items-start mb-4">
             <h3 class="font-semibold text-lg">${title}</h3>
@@ -1088,6 +1299,10 @@ function renderReport() {
             </div>
         </div>
         <div class="overflow-x-auto">${tableHtml}</div>`;
+    // Crear icono del botón de descarga
+    if (typeof lucide !== 'undefined' && lucide.createIcons && elements.reportDisplayArea.querySelector('i[data-lucide]')) {
+         lucide.createIcons({ nodes: elements.reportDisplayArea.querySelectorAll('i[data-lucide]') });
+    }
 }
 
 
