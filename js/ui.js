@@ -472,7 +472,9 @@ function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, c
 
 function updateInicioKPIs() {
     const { transactions, accounts } = getState();
-    // Añadir chequeos más robustos
+    
+    console.log(\"updateInicioKPIs: Verificando datos...\", { transactions, accounts });
+// Añadir chequeos más robustos
     if(!transactions || !accounts || accounts.length === 0) {
         console.warn("updateInicioKPIs: Faltan datos (transactions o accounts)");
         // Poner KPIs a 0 o 'N/A' si faltan datos
