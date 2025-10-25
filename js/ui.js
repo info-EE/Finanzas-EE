@@ -94,7 +94,7 @@ export const elements = {
     permissionsModalCancelBtn: document.getElementById('permissions-modal-cancel-btn'),
 };
 
-const charts = {
+export const charts = {
     accountsBalanceChartEUR: null,
     accountsBalanceChartUSD: null,
     annualFlowChart: null,
