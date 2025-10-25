@@ -7,10 +7,8 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- --- INICIO DE LA CORRECCIÓN --- -->
-    <!-- Se fija la versión de Lucide a una estable (0.320.0) en lugar de @latest -->
+    <!-- Se fija la versión de Lucide a una estable (0.320.0) -->
     <script src="https://unpkg.com/lucide@0.320.0"></script>
-    <!-- --- FIN DE LA CORRECCIÓN --- -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
@@ -1232,13 +1230,25 @@
         <div class="spinner" role="status"></div>
     </div>
     
-    <!-- INICIO DE LA CORRECCIÓN DE ICONOS -->
-    <!-- Esta línea ejecuta la librería de iconos para dibujar los iconos del login al cargar la página -->
-    <script>
-        lucide.createIcons();
-    </script>
-    <!-- FIN DE LA CORRECCIÓN DE ICONOS -->
-
+    <!-- INICIO DE LA CORRECCIÓN DE ICONOS (MOVIDO) -->
     <script type="module" src="js/main.js?v=1.2"></script>
+    <!-- Mover la llamada a createIcons aquí, dentro de un listener DOMContentLoaded -->
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                try {
+                    lucide.createIcons();
+                    console.log("Lucide icons created successfully on DOMContentLoaded.");
+                } catch (error) {
+                    console.error("Error creating Lucide icons on DOMContentLoaded:", error);
+                }
+            } else {
+                 console.error("Lucide library not available on DOMContentLoaded.");
+            }
+        });
+    </script>
+    <!-- FIN DE LA CORRECCIÓN DE ICONOS (MOVIDO) -->
+
 </body>
 </html>
+
