@@ -122,7 +122,7 @@ function populatePermissionsModal(user) {
     for (const key in PERMISSION_DESCRIPTIONS) {
         const isChecked = userPermissions[key] === true;
         const { label, description } = PERMISSION_DESCRIPTIONS[key];
-        
+
         const permissionHTML = `
             <div class="flex items-start justify-between bg-gray-800/50 p-3 rounded-lg">
                 <div>
@@ -214,8 +214,8 @@ function handleUserManagementClick(e) {
         if (!userEmailElement) return;
         const userEmail = userEmailElement.textContent;
         showConfirmationModal(
-            'Eliminar Usuario', 
-            `¿Estás seguro de que quieres ocultar el perfil de "${escapeHTML(userEmail)}"? El usuario desaparecerá de esta lista.`, 
+            'Eliminar Usuario',
+            `¿Estás seguro de que quieres ocultar el perfil de "${escapeHTML(userEmail)}"? El usuario desaparecerá de esta lista.`,
             async () => {
                 const result = await withSpinner(async () => await actions.blockUserAction(userId))();
                 if (result && !result.success) {
@@ -232,16 +232,23 @@ function handleUserManagementClick(e) {
 function handleTogglePassword(e) {
     const button = e.currentTarget;
     const input = button.previousElementSibling;
-    const icon = button.querySelector('svg');
+    const icon = button.querySelector('i[data-lucide]'); // Select the icon element directly
+
+    if (!input || !icon) return; // Exit if elements are not found
 
     if (input.type === 'password') {
         input.type = 'text';
-        icon.outerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+        // Change the icon's data-lucide attribute and recreate it
+        icon.setAttribute('data-lucide', 'eye-off');
     } else {
         input.type = 'password';
-        icon.outerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
+        // Change the icon's data-lucide attribute and recreate it
+        icon.setAttribute('data-lucide', 'eye');
     }
-    lucide.createIcons();
+    // Recreate icons specifically for the updated element
+    lucide.createIcons({
+        nodes: [icon]
+    });
 }
 
 function handleTransactionFormSubmit(e) {
@@ -301,14 +308,14 @@ function handleTransactionsTableClick(e) {
             form.querySelector('#transaction-date').value = transaction.date;
             form.querySelector('#transaction-description').value = transaction.description;
             form.querySelector('#transaction-type').value = transaction.type;
-            populateCategories();
+            populateCategories(); // Update categories based on type first
             form.querySelector('#transaction-category').value = transaction.category;
             form.querySelector('#transaction-part').value = transaction.part;
             form.querySelector('#transaction-account').value = transaction.account;
             form.querySelector('#transaction-amount').value = transaction.amount;
             form.querySelector('#transaction-iva').value = transaction.iva || '';
-            updateCurrencySymbol();
-            
+            updateCurrencySymbol(); // Update symbol based on selected account
+
             form.querySelector('#form-submit-button-text').textContent = 'Actualizar';
             form.querySelector('#form-cancel-button').classList.remove('hidden');
             form.querySelector('#form-title').textContent = 'Editar Movimiento';
@@ -323,6 +330,7 @@ function handleTransactionsTableClick(e) {
         }));
     }
 }
+
 
 function handleAddAccount(e) {
     e.preventDefault();
@@ -347,14 +355,14 @@ function handleAddAccount(e) {
         showAlertModal('Error', 'Ya existe una cuenta con ese nombre.');
         return;
     }
-    
+
     const accountData = {
         name: name,
         currency: form.querySelector('#new-account-currency').value,
         balance: balance || 0,
         logoHtml: logoHtml,
     };
-    
+
     withSpinner(() => {
         actions.addAccount(accountData);
         form.reset();
@@ -394,7 +402,7 @@ function handleTransferFormSubmit(e) {
     const form = e.target;
     const fromAccountName = form.querySelector('#transfer-from').value;
     const toAccountName = form.querySelector('#transfer-to').value;
-    
+
     if (fromAccountName === toAccountName) {
         showAlertModal('Error', 'La cuenta de origen y destino no pueden ser la misma.');
         return;
@@ -408,15 +416,23 @@ function handleTransferFormSubmit(e) {
 
     const { accounts } = getState();
     const fromAccount = accounts.find(a => a.name === fromAccountName);
-    let receivedAmount = amount;
-    
-    if (fromAccount.currency !== accounts.find(a=>a.name === toAccountName).currency) {
-        receivedAmount = parseFloat(form.querySelector('#transfer-extra-field').value);
-        if (isNaN(receivedAmount) || !receivedAmount || receivedAmount <= 0) {
-            showAlertModal('Error', 'Debes especificar un monto a recibir válido para transferencias entre monedas diferentes.');
+    const toAccount = accounts.find(a => a.name === toAccountName); // Find the 'to' account
+    let receivedAmount = amount; // Default: same amount
+
+    // Check if currencies are different
+    if (fromAccount && toAccount && fromAccount.currency !== toAccount.currency) {
+        const receivedAmountInput = form.querySelector('#transfer-extra-field').value;
+        if (!receivedAmountInput) {
+            showAlertModal('Error', 'Debes especificar el monto a recibir para transferencias entre monedas diferentes.');
+            return;
+        }
+        receivedAmount = parseFloat(receivedAmountInput);
+        if (isNaN(receivedAmount) || receivedAmount <= 0) {
+            showAlertModal('Error', 'El monto a recibir debe ser un número positivo válido.');
             return;
         }
     }
+
 
     const transferData = {
         date: form.querySelector('#transfer-date').value,
@@ -424,15 +440,20 @@ function handleTransferFormSubmit(e) {
         toAccountName,
         amount: amount,
         feeSource: parseFloat(form.querySelector('#transfer-fee-source').value) || 0,
+        // Use receivedAmount calculated above
         receivedAmount: receivedAmount,
     };
 
     withSpinner(() => {
         actions.addTransfer(transferData);
         form.reset();
+        // Set default date again after reset
+        const dateInput = form.querySelector('#transfer-date');
+        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
         updateTransferFormUI();
     })();
 }
+
 
 function handleAddCategory(e, type) {
     e.preventDefault();
@@ -462,7 +483,7 @@ function handleDeleteCategory(e, type, essentialCategories) {
     const deleteBtn = e.target.closest('.delete-category-btn');
     if (deleteBtn) {
         const categoryName = deleteBtn.dataset.name;
-        
+
         if (essentialCategories.includes(categoryName)) {
             showAlertModal('Error', 'No se puede eliminar una categoría esencial del sistema.');
             return;
@@ -489,7 +510,7 @@ function handleClientFormSubmit(e) {
         showAlertModal('Formato Inválido', 'Por favor, introduce una dirección de email válida.');
         return;
     }
-    
+
     const clientData = {
         name: name,
         taxIdType: form.querySelector('#client-tax-id-type').value,
@@ -516,7 +537,7 @@ function handleClientFormSubmit(e) {
 function handleClientsTableClick(e) {
     const editBtn = e.target.closest('.edit-client-btn');
     const deleteBtn = e.target.closest('.delete-client-btn');
-    
+
     if (editBtn) {
         const id = editBtn.dataset.id;
         const { clients } = getState();
@@ -534,7 +555,7 @@ function handleClientsTableClick(e) {
             form.querySelector('#client-phone-mobile').value = client.phoneMobile;
             form.querySelector('#client-email').value = client.email;
             form.querySelector('#client-industry').value = client.industry;
-            
+
             document.getElementById('client-form-title').textContent = 'Editar Cliente';
             document.getElementById('client-form-submit-text').textContent = 'Actualizar Cliente';
             document.getElementById('client-form-cancel-btn').classList.remove('hidden');
@@ -577,9 +598,12 @@ function handleDocumentSubmit(e, type) {
     withSpinner(() => {
         actions.addDocument(docData);
         form.reset();
-        document.getElementById(`${type.toLowerCase()}-date`).value = new Date().toISOString().slice(0, 10);
+        // Set default date again after reset
+        const dateInput = form.querySelector(`#${type.toLowerCase()}-date`);
+        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
     })();
 }
+
 
 function handleDocumentsTableClick(e) {
     const statusBtn = e.target.closest('.status-btn');
@@ -623,7 +647,7 @@ function handleClientSelectionForInvoice(e) {
         }
     } else {
         [nameInput, nifInput, addressInput, phoneInput].forEach(input => {
-            input.value = '';
+            if (input) input.value = ''; // Check if input exists before setting value
         });
     }
 }
@@ -631,7 +655,7 @@ function handleClientSelectionForInvoice(e) {
 function handleGenerateInvoice(e) {
     e.preventDefault();
     const form = e.target;
-    
+
     const items = [];
     let parsingError = false;
     form.querySelectorAll('.factura-item').forEach(itemEl => {
@@ -640,13 +664,13 @@ function handleGenerateInvoice(e) {
         const description = itemEl.querySelector('.item-description').value;
         const quantityRaw = itemEl.querySelector('.item-quantity').value;
         const priceRaw = itemEl.querySelector('.item-price').value;
-        
+
         const quantity = parseFloat(quantityRaw.replace(',', '.'));
         const price = parseFloat(priceRaw.replace(',', '.'));
 
         if (description && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0) {
             items.push({ description, quantity, price });
-        } else if (description || quantityRaw || priceRaw) { 
+        } else if (description || quantityRaw || priceRaw) {
             showAlertModal('Valor Inválido', `Por favor, revise la línea con descripción "${description}". La cantidad y el precio deben ser números válidos.`);
             parsingError = true;
         }
@@ -676,8 +700,8 @@ function handleGenerateInvoice(e) {
         number: form.querySelector('#factura-numero').value,
         client: form.querySelector('#factura-cliente').value,
         nif: form.querySelector('#factura-nif').value,
-        address: form.querySelector('#factura-cliente-direccion').value, 
-        phone: form.querySelector('#factura-cliente-telefono').value, 
+        address: form.querySelector('#factura-cliente-direccion').value,
+        phone: form.querySelector('#factura-cliente-telefono').value,
         amount: total,
         currency: form.querySelector('#factura-currency').value,
         status: 'Adeudada',
@@ -688,25 +712,32 @@ function handleGenerateInvoice(e) {
         total,
         ivaRate
     };
-    
+
     withSpinner(() => {
         actions.addDocument(newInvoice);
-        
+
         form.reset();
-        document.getElementById('factura-fecha').value = new Date().toISOString().slice(0, 10);
+        // Restore default date
+        const dateInput = form.querySelector('#factura-fecha');
+        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
         elements.facturaItemsContainer.innerHTML = '';
-        document.getElementById('factura-add-item-btn').click();
+        // Add one empty item line back
+        const addItemButton = document.getElementById('factura-add-item-btn');
+        if (addItemButton) addItemButton.click();
+        // Update totals display
+        updateInvoiceTotals();
 
         showAlertModal('Éxito', `La factura Nº ${escapeHTML(newInvoice.number)} ha sido creada.`);
         switchPage('facturacion', 'listado');
     })();
 }
 
+
 function handlePaymentDetailsSubmit(e) {
     e.preventDefault();
     const form = e.target;
     const invoiceId = form.querySelector('#payment-details-invoice-id').value;
-    
+
     const paymentData = {
         method: form.querySelector('#payment-method').value,
         date: form.querySelector('#payment-date').value,
@@ -772,9 +803,15 @@ function handleReportGeneration(e) {
             case 'monthly': filters.month = form.querySelector('#report-month').value; break;
             case 'annual': filters.year = form.querySelector('#report-year').value; break;
         }
+         // Validate date inputs for non-sociedades reports
+         if (!filters.date && !filters.week && !filters.month && !filters.year) {
+            showAlertModal('Filtro Requerido', 'Por favor, selecciona un período válido (fecha, semana, mes o año).');
+            return;
+        }
     }
     withSpinner(() => actions.generateReport(filters), 500)();
 }
+
 
 function handleIvaReportGeneration() {
     const month = elements.ivaMonthInput.value;
@@ -793,12 +830,17 @@ function handleCloseYear() {
         showAlertModal('Error', 'Debes seleccionar una fecha de inicio y de cierre.');
         return;
     }
+    if (new Date(startDate) >= new Date(endDate)) {
+        showAlertModal('Error', 'La fecha de inicio debe ser anterior a la fecha de cierre.');
+        return;
+    }
     const year = new Date(endDate).getFullYear();
     showConfirmationModal('Confirmar Cierre Anual', `Estás a punto de archivar todos los datos del ${startDate} al ${endDate} bajo el año ${year}. Esta acción no se puede deshacer. ¿Continuar?`, withSpinner(() => {
         actions.closeYear(startDate, endDate);
         showAlertModal('Éxito', `Se ha completado el cierre para el año ${year}.`);
     }, 1000));
 }
+
 
 function handleReportFilterChange() {
     const reportType = document.getElementById('report-type').value;
@@ -808,10 +850,20 @@ function handleReportFilterChange() {
     elements.defaultFiltersContainer.classList.toggle('hidden', isSociedades);
     elements.sociedadesFiltersContainer.classList.toggle('hidden', !isSociedades);
 
-    ['daily', 'weekly', 'monthly', 'annual'].forEach(p => {
-        const el = document.getElementById(`date-input-${p}`);
-        if (el) el.classList.toggle('hidden', p !== period);
-    });
+    // Only show relevant date input based on period for default filters
+    if (!isSociedades) {
+        ['daily', 'weekly', 'monthly', 'annual'].forEach(p => {
+            const el = document.getElementById(`date-input-${p}`);
+            if (el) el.classList.toggle('hidden', p !== period);
+        });
+        // Ensure default year is set for annual report
+        if (period === 'annual') {
+             const yearInput = document.getElementById('report-year');
+             if (yearInput && !yearInput.value) {
+                 yearInput.value = new Date().getFullYear();
+             }
+        }
+    }
 }
 
 function handleReportDownloadClick(e) {
@@ -832,6 +884,20 @@ function handleReportDownloadClick(e) {
         document.getElementById('report-download-options').classList.remove('show');
     }
 }
+
+// Close dropdown if clicked outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.dropdown')) {
+        const dropdowns = document.getElementsByClassName("dropdown-content");
+        for (let i = 0; i < dropdowns.length; i++) {
+            const openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains('show')) {
+                openDropdown.classList.remove('show');
+            }
+        }
+    }
+});
+
 
 function handleAddInvestmentAsset(e) {
     e.preventDefault();
@@ -891,9 +957,12 @@ function handleAddInvestment(e) {
     withSpinner(() => {
         actions.addInvestment(investmentData);
         form.reset();
-        document.getElementById('investment-date').value = new Date().toISOString().slice(0, 10);
+        // Restore default date
+        const dateInput = form.querySelector('#investment-date');
+        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
     })();
 }
+
 
 function handleInvestmentsTableClick(e) {
     const deleteBtn = e.target.closest('.delete-investment-btn');
@@ -905,34 +974,70 @@ function handleInvestmentsTableClick(e) {
     }
 }
 
-// --- Vinculación de Eventos (Event Binding) ---
+// --- Invoice Item Calculation ---
+function updateInvoiceTotals() {
+    const itemsContainer = elements.facturaItemsContainer;
+    if (!itemsContainer) return;
 
-export function bindEventListeners() {
+    let subtotal = 0;
+    itemsContainer.querySelectorAll('.factura-item').forEach(itemEl => {
+        const quantity = parseFloat(itemEl.querySelector('.item-quantity').value.replace(',', '.')) || 0;
+        const price = parseFloat(itemEl.querySelector('.item-price').value.replace(',', '.')) || 0;
+        subtotal += quantity * price;
+    });
+
+    const operationType = document.getElementById('factura-operation-type').value;
+    const ivaRate = operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
+    const iva = subtotal * ivaRate;
+    const total = subtotal + iva;
+    const currency = document.getElementById('factura-currency').value;
+    const symbol = currency === 'EUR' ? '€' : '$';
+
+    document.getElementById('factura-subtotal').textContent = `${subtotal.toFixed(2)} ${symbol}`;
+    document.getElementById('factura-iva-label').textContent = `IVA (${(ivaRate * 100).toFixed(0)}%):`;
+    document.getElementById('factura-iva').textContent = `${iva.toFixed(2)} ${symbol}`;
+    document.getElementById('factura-total').textContent = `${total.toFixed(2)} ${symbol}`;
+}
+
+
+// --- NUEVO: Vinculación de Eventos de Autenticación (se llama al cargar la página) ---
+export function bindAuthEventListeners() {
     // Auth events
-    elements.loginForm.addEventListener('submit', handleLoginSubmit);
-    elements.registerForm.addEventListener('submit', handleRegisterSubmit);
-    elements.logoutBtn.addEventListener('click', handleLogout);
-    elements.showRegisterViewBtn.addEventListener('click', (e) => {
+    if (elements.loginForm) elements.loginForm.addEventListener('submit', handleLoginSubmit);
+    if (elements.registerForm) elements.registerForm.addEventListener('submit', handleRegisterSubmit);
+    if (elements.showRegisterViewBtn) elements.showRegisterViewBtn.addEventListener('click', (e) => {
         e.preventDefault();
         showRegisterView();
     });
-    elements.showLoginViewBtn.addEventListener('click', (e) => {
+    if (elements.showLoginViewBtn) elements.showLoginViewBtn.addEventListener('click', (e) => {
         e.preventDefault();
         showLoginView();
     });
 
-    document.getElementById('toggle-login-password').addEventListener('click', handleTogglePassword);
-    document.getElementById('toggle-register-password').addEventListener('click', handleTogglePassword);
-    
-    // Mobile navigation
-    elements.sidebarOpenBtn.addEventListener('click', openSidebar);
-    elements.sidebarCloseBtn.addEventListener('click', closeSidebar);
-    elements.sidebarOverlay.addEventListener('click', closeSidebar);
+    // Password toggle buttons
+    const toggleLoginPassword = document.getElementById('toggle-login-password');
+    if (toggleLoginPassword) toggleLoginPassword.addEventListener('click', handleTogglePassword);
 
-    // Desktop navigation
-    elements.sidebarToggleDesktopBtn.addEventListener('click', () => {
+    const toggleRegisterPassword = document.getElementById('toggle-register-password');
+    if (toggleRegisterPassword) toggleRegisterPassword.addEventListener('click', handleTogglePassword);
+}
+
+
+// --- Vinculación de Eventos de la Aplicación (se llama DESPUÉS de iniciar sesión) ---
+export function bindEventListeners() {
+
+    // Logout (moved here as it's part of the main app UI now)
+    if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', handleLogout);
+
+    // Mobile navigation
+    if (elements.sidebarOpenBtn) elements.sidebarOpenBtn.addEventListener('click', openSidebar);
+    if (elements.sidebarCloseBtn) elements.sidebarCloseBtn.addEventListener('click', closeSidebar);
+    if (elements.sidebarOverlay) elements.sidebarOverlay.addEventListener('click', closeSidebar);
+
+    // Desktop navigation toggle
+    if (elements.sidebarToggleDesktopBtn) elements.sidebarToggleDesktopBtn.addEventListener('click', () => {
         const isCollapsed = elements.sidebar.classList.contains('w-20');
-        
+
         if (isCollapsed) {
             elements.sidebar.classList.remove('w-20');
             elements.sidebar.classList.add('w-64');
@@ -948,144 +1053,239 @@ export function bindEventListeners() {
         document.querySelectorAll('.nav-text').forEach(text => {
             text.classList.toggle('hidden');
         });
+         // Trigger chart resize after animation
+         setTimeout(() => {
+            Object.values(window.App.charts).forEach(chart => {
+                if (chart && typeof chart.resize === 'function') {
+                    chart.resize();
+                }
+            });
+        }, 350); // Slightly longer than the transition duration
     });
 
 
+    // Main navigation links
     elements.navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const pageId = link.id.replace('nav-', '');
-            switchPage(pageId);
-        });
+        // Remove previous listeners to prevent duplicates if bindEventListeners is called multiple times
+        link.replaceWith(link.cloneNode(true));
     });
+    // Re-select links and add listeners
+    document.querySelectorAll('.nav-link').forEach(link => {
+         if (link.id !== 'logout-btn') { // Don't re-bind logout here
+             link.addEventListener('click', (e) => {
+                 e.preventDefault();
+                 const pageId = link.id.replace('nav-', '');
+                 switchPage(pageId);
+             });
+         }
+    });
+    // Ensure logout still works
+     const logoutBtn = document.getElementById('logout-btn');
+     if(logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+
+
+    // --- Event Listeners for App Sections ---
 
     // Inicio Dashboard
-    document.getElementById('inicio-chart-currency').addEventListener('change', renderAll);
-    document.getElementById('quick-add-income').addEventListener('click', () => {
+    const inicioChartCurrency = document.getElementById('inicio-chart-currency');
+    if (inicioChartCurrency) inicioChartCurrency.addEventListener('change', renderAll);
+    const quickAddIncome = document.getElementById('quick-add-income');
+    if (quickAddIncome) quickAddIncome.addEventListener('click', () => {
         switchPage('cashflow');
-        document.getElementById('transaction-type').value = 'Ingreso';
-        populateCategories();
+        // Ensure form elements exist before setting values
+        const transactionTypeSelect = document.getElementById('transaction-type');
+        if (transactionTypeSelect) {
+            transactionTypeSelect.value = 'Ingreso';
+            populateCategories(); // Update categories based on the new type
+        }
     });
-    document.getElementById('quick-add-expense').addEventListener('click', () => {
+    const quickAddExpense = document.getElementById('quick-add-expense');
+    if (quickAddExpense) quickAddExpense.addEventListener('click', () => {
         switchPage('cashflow');
-        document.getElementById('transaction-type').value = 'Egreso';
-        populateCategories();
+        const transactionTypeSelect = document.getElementById('transaction-type');
+        if (transactionTypeSelect) {
+            transactionTypeSelect.value = 'Egreso';
+            populateCategories(); // Update categories based on the new type
+        }
     });
 
+    // Clients Page Chart
     const clientsChartCurrencySelector = document.getElementById('clients-chart-currency');
     if (clientsChartCurrencySelector) {
         clientsChartCurrencySelector.addEventListener('change', renderAll);
     }
 
-    elements.transactionForm.addEventListener('submit', handleTransactionFormSubmit);
-    elements.transactionsTableBody.addEventListener('click', handleTransactionsTableClick);
-    elements.transactionForm.querySelector('#transaction-type').addEventListener('change', populateCategories);
-    elements.transactionForm.querySelector('#transaction-account').addEventListener('change', updateCurrencySymbol);
-    elements.transactionForm.querySelector('#form-cancel-button').addEventListener('click', resetTransactionForm);
-    document.getElementById('cashflow-search').addEventListener('input', () => switchPage('cashflow'));
+    // Cash Flow Section
+    if (elements.transactionForm) {
+        elements.transactionForm.addEventListener('submit', handleTransactionFormSubmit);
+        const transactionTypeSelect = elements.transactionForm.querySelector('#transaction-type');
+        if (transactionTypeSelect) transactionTypeSelect.addEventListener('change', populateCategories);
+        const transactionAccountSelect = elements.transactionForm.querySelector('#transaction-account');
+        if (transactionAccountSelect) transactionAccountSelect.addEventListener('change', updateCurrencySymbol);
+        const cancelBtn = elements.transactionForm.querySelector('#form-cancel-button');
+        if (cancelBtn) cancelBtn.addEventListener('click', resetTransactionForm);
+    }
+    if (elements.transactionsTableBody) elements.transactionsTableBody.addEventListener('click', handleTransactionsTableClick);
+    const cashflowSearch = document.getElementById('cashflow-search');
+    if (cashflowSearch) cashflowSearch.addEventListener('input', () => renderAll()); // Use renderAll for consistency
 
-    elements.transferForm.addEventListener('submit', handleTransferFormSubmit);
-    ['transfer-from', 'transfer-to'].forEach(id => {
-        document.getElementById(id).addEventListener('change', updateTransferFormUI);
-    });
 
-    elements.proformaForm.addEventListener('submit', (e) => handleDocumentSubmit(e, 'Proforma'));
-    elements.proformasTableBody.addEventListener('click', handleDocumentsTableClick);
-    document.getElementById('proformas-search').addEventListener('input', () => switchPage('proformas'));
+    // Transfers
+    if (elements.transferForm) {
+        elements.transferForm.addEventListener('submit', handleTransferFormSubmit);
+        ['transfer-from', 'transfer-to'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', updateTransferFormUI);
+        });
+    }
 
-    elements.addAccountForm.addEventListener('submit', handleAddAccount);
-    elements.settingsAccountsList.addEventListener('click', handleSettingsAccountsListClick);
-    elements.updateBalanceForm.addEventListener('submit', handleUpdateBalance);
-    elements.addIncomeCategoryForm.addEventListener('submit', (e) => handleAddCategory(e, 'income'));
-    elements.addExpenseCategoryForm.addEventListener('submit', (e) => handleAddCategory(e, 'expense'));
-    elements.addOperationTypeForm.addEventListener('submit', (e) => handleAddCategory(e, 'operationType'));
-    elements.addTaxIdTypeForm.addEventListener('submit', (e) => handleAddCategory(e, 'taxIdType'));
-    elements.incomeCategoriesList.addEventListener('click', (e) => handleDeleteCategory(e, 'income', ESSENTIAL_INCOME_CATEGORIES));
-    elements.expenseCategoriesList.addEventListener('click', (e) => handleDeleteCategory(e, 'expense', ESSENTIAL_EXPENSE_CATEGORIES));
-    elements.operationTypesList.addEventListener('click', (e) => handleDeleteCategory(e, 'operationType', ESSENTIAL_OPERATION_TYPES));
-    elements.taxIdTypesList.addEventListener('click', (e) => handleDeleteCategory(e, 'taxIdType', ESSENTIAL_TAX_ID_TYPES));
-    
-    elements.addClientForm.addEventListener('submit', handleClientFormSubmit);
-    elements.clientsTableBody.addEventListener('click', handleClientsTableClick);
-    elements.addClientForm.querySelector('#client-form-cancel-btn').addEventListener('click', () => {
-        elements.addClientForm.reset();
-        document.getElementById('client-form-title').textContent = 'Agregar Nuevo Cliente';
-        document.getElementById('client-form-submit-text').textContent = 'Guardar Cliente';
-        document.getElementById('client-form-cancel-btn').classList.add('hidden');
-    });
+    // Proformas
+    if (elements.proformaForm) elements.proformaForm.addEventListener('submit', (e) => handleDocumentSubmit(e, 'Proforma'));
+    if (elements.proformasTableBody) elements.proformasTableBody.addEventListener('click', handleDocumentsTableClick);
+    const proformasSearch = document.getElementById('proformas-search');
+    if (proformasSearch) proformasSearch.addEventListener('input', () => renderAll());
 
-    document.getElementById('facturacion-tab-crear').addEventListener('click', () => {
+    // Settings
+    if (elements.addAccountForm) elements.addAccountForm.addEventListener('submit', handleAddAccount);
+    if (elements.settingsAccountsList) elements.settingsAccountsList.addEventListener('click', handleSettingsAccountsListClick);
+    if (elements.updateBalanceForm) elements.updateBalanceForm.addEventListener('submit', handleUpdateBalance);
+    if (elements.addIncomeCategoryForm) elements.addIncomeCategoryForm.addEventListener('submit', (e) => handleAddCategory(e, 'income'));
+    if (elements.addExpenseCategoryForm) elements.addExpenseCategoryForm.addEventListener('submit', (e) => handleAddCategory(e, 'expense'));
+    if (elements.addOperationTypeForm) elements.addOperationTypeForm.addEventListener('submit', (e) => handleAddCategory(e, 'operationType'));
+    if (elements.addTaxIdTypeForm) elements.addTaxIdTypeForm.addEventListener('submit', (e) => handleAddCategory(e, 'taxIdType'));
+    if (elements.incomeCategoriesList) elements.incomeCategoriesList.addEventListener('click', (e) => handleDeleteCategory(e, 'income', ESSENTIAL_INCOME_CATEGORIES));
+    if (elements.expenseCategoriesList) elements.expenseCategoriesList.addEventListener('click', (e) => handleDeleteCategory(e, 'expense', ESSENTIAL_EXPENSE_CATEGORIES));
+    if (elements.operationTypesList) elements.operationTypesList.addEventListener('click', (e) => handleDeleteCategory(e, 'operationType', ESSENTIAL_OPERATION_TYPES));
+    if (elements.taxIdTypesList) elements.taxIdTypesList.addEventListener('click', (e) => handleDeleteCategory(e, 'taxIdType', ESSENTIAL_TAX_ID_TYPES));
+
+    // Clients Section
+    if (elements.addClientForm) {
+        elements.addClientForm.addEventListener('submit', handleClientFormSubmit);
+        const cancelBtn = elements.addClientForm.querySelector('#client-form-cancel-btn');
+        if (cancelBtn) cancelBtn.addEventListener('click', () => {
+            elements.addClientForm.reset();
+             // Ensure hidden ID is cleared
+            const clientIdInput = elements.addClientForm.querySelector('#client-id');
+            if (clientIdInput) clientIdInput.value = '';
+            document.getElementById('client-form-title').textContent = 'Agregar Nuevo Cliente';
+            document.getElementById('client-form-submit-text').textContent = 'Guardar Cliente';
+            cancelBtn.classList.add('hidden');
+        });
+    }
+    if (elements.clientsTableBody) elements.clientsTableBody.addEventListener('click', handleClientsTableClick);
+
+    // Invoicing Section
+    const crearTab = document.getElementById('facturacion-tab-crear');
+    if (crearTab) crearTab.addEventListener('click', () => {
         switchPage('facturacion', 'crear');
         populateNextInvoiceNumber();
     });
-    document.getElementById('facturacion-tab-listado').addEventListener('click', () => switchPage('facturacion', 'listado'));
-    document.getElementById('facturacion-tab-config').addEventListener('click', () => switchPage('facturacion', 'config'));
-    elements.facturaAddItemBtn.addEventListener('click', () => {
+    const listadoTab = document.getElementById('facturacion-tab-listado');
+    if (listadoTab) listadoTab.addEventListener('click', () => switchPage('facturacion', 'listado'));
+    const configTab = document.getElementById('facturacion-tab-config');
+    if (configTab) configTab.addEventListener('click', () => switchPage('facturacion', 'config'));
+
+    if (elements.facturaAddItemBtn) elements.facturaAddItemBtn.addEventListener('click', () => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'grid grid-cols-12 gap-2 items-center factura-item';
+        // Added placeholders and ensured type="text" with inputmode for numbers
         itemDiv.innerHTML = `
-            <div class="col-span-6"><input type="text" class="form-input item-description" required></div>
-            <div class="col-span-2"><input type="text" inputmode="decimal" value="1" class="form-input item-quantity" required></div>
-            <div class="col-span-3"><input type="text" inputmode="decimal" placeholder="0.00" class="form-input item-price" required></div>
+            <div class="col-span-6"><input type="text" class="form-input item-description" placeholder="Descripción" required></div>
+            <div class="col-span-2"><input type="text" inputmode="decimal" value="1" class="form-input item-quantity text-right" required></div>
+            <div class="col-span-3"><input type="text" inputmode="decimal" placeholder="0.00" class="form-input item-price text-right" required></div>
             <div class="col-span-1 flex justify-center"><button type="button" class="remove-item-btn p-2 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
         elements.facturaItemsContainer.appendChild(itemDiv);
-        lucide.createIcons();
+        lucide.createIcons(); // Create icon for the new button
+         // Add listeners to new quantity/price inputs
+         itemDiv.querySelector('.item-quantity').addEventListener('input', updateInvoiceTotals);
+         itemDiv.querySelector('.item-price').addEventListener('input', updateInvoiceTotals);
+         updateInvoiceTotals(); // Recalculate totals
     });
-    elements.facturaItemsContainer.addEventListener('click', (e) => {
-        if (e.target.closest('.remove-item-btn')) {
-            e.target.closest('.factura-item').remove();
+
+    if (elements.facturaItemsContainer) elements.facturaItemsContainer.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.remove-item-btn');
+        if (removeBtn) {
+            removeBtn.closest('.factura-item').remove();
+            updateInvoiceTotals(); // Recalculate after removing
         }
     });
-    elements.facturaSelectCliente.addEventListener('change', handleClientSelectionForInvoice);
-    elements.nuevaFacturaForm.addEventListener('submit', handleGenerateInvoice);
-    document.getElementById('factura-fecha').addEventListener('change', populateNextInvoiceNumber);
-    elements.facturasTableBody.addEventListener('click', handleDocumentsTableClick);
-    document.getElementById('facturas-search').addEventListener('input', () => switchPage('facturacion', 'listado'));
-    elements.aeatConfigForm.addEventListener('submit', handleAeatConfigSave);
-    elements.aeatToggleContainer.addEventListener('click', (e) => {
+     // Add event listeners to initial quantity/price inputs if they exist on page load
+    elements.facturaItemsContainer.querySelectorAll('.item-quantity, .item-price').forEach(input => {
+        input.addEventListener('input', updateInvoiceTotals);
+    });
+     // Also trigger calculation when currency changes
+    const facturaCurrencySelect = document.getElementById('factura-currency');
+    if (facturaCurrencySelect) facturaCurrencySelect.addEventListener('change', updateInvoiceTotals);
+    const facturaOperationTypeSelect = document.getElementById('factura-operation-type');
+    if(facturaOperationTypeSelect) facturaOperationTypeSelect.addEventListener('change', updateInvoiceTotals);
+
+
+    if (elements.facturaSelectCliente) elements.facturaSelectCliente.addEventListener('change', handleClientSelectionForInvoice);
+    if (elements.nuevaFacturaForm) elements.nuevaFacturaForm.addEventListener('submit', handleGenerateInvoice);
+    const facturaFecha = document.getElementById('factura-fecha');
+    if (facturaFecha) facturaFecha.addEventListener('change', populateNextInvoiceNumber);
+    if (elements.facturasTableBody) elements.facturasTableBody.addEventListener('click', handleDocumentsTableClick);
+    const facturasSearch = document.getElementById('facturas-search');
+    if (facturasSearch) facturasSearch.addEventListener('input', () => renderAll());
+    if (elements.aeatConfigForm) elements.aeatConfigForm.addEventListener('submit', handleAeatConfigSave);
+    if (elements.aeatToggleContainer) elements.aeatToggleContainer.addEventListener('click', (e) => {
         if (e.target.closest('.aeat-toggle-btn')) {
             withSpinner(() => actions.toggleAeatModule(), 150)();
         }
     });
-    elements.fiscalParamsForm.addEventListener('submit', handleFiscalParamsSave);
+    if (elements.fiscalParamsForm) elements.fiscalParamsForm.addEventListener('submit', handleFiscalParamsSave);
 
-    elements.closeInvoiceViewerBtn.addEventListener('click', hideInvoiceViewer);
-    elements.printInvoiceBtn.addEventListener('click', printInvoice);
-    elements.pdfInvoiceBtn.addEventListener('click', downloadInvoiceAsPDF);
+    // Invoice Viewer Modal
+    if (elements.closeInvoiceViewerBtn) elements.closeInvoiceViewerBtn.addEventListener('click', hideInvoiceViewer);
+    if (elements.printInvoiceBtn) elements.printInvoiceBtn.addEventListener('click', printInvoice);
+    if (elements.pdfInvoiceBtn) elements.pdfInvoiceBtn.addEventListener('click', downloadInvoiceAsPDF);
 
-    elements.reportForm.addEventListener('submit', handleReportGeneration);
-    document.getElementById('report-type').addEventListener('change', handleReportFilterChange);
-    document.getElementById('report-period').addEventListener('change', handleReportFilterChange);
-    elements.reportDisplayArea.addEventListener('click', handleReportDownloadClick);
-
-    document.getElementById('close-year-btn').addEventListener('click', handleCloseYear);
-
-    elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
-    elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
-
-    elements.ivaGenerateReportBtn.addEventListener('click', handleIvaReportGeneration);
-
-    elements.addInvestmentAssetForm.addEventListener('submit', handleAddInvestmentAsset);
-    elements.investmentAssetsList.addEventListener('click', handleInvestmentAssetListClick);
-    elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
-    elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
-    
-    // User Management
-    if (elements.userManagementCard) {
-        elements.userManagementCard.addEventListener('click', (e) => {
-            if (e.target.closest('#refresh-users-btn')) {
-                withSpinner(actions.loadAndSetAllUsers, 500)();
-            }
-        });
+    // Reports Section
+    if (elements.reportForm) {
+        elements.reportForm.addEventListener('submit', handleReportGeneration);
+        const reportTypeSelect = document.getElementById('report-type');
+        if (reportTypeSelect) reportTypeSelect.addEventListener('change', handleReportFilterChange);
+        const reportPeriodSelect = document.getElementById('report-period');
+        if (reportPeriodSelect) reportPeriodSelect.addEventListener('change', handleReportFilterChange);
     }
+    if (elements.reportDisplayArea) elements.reportDisplayArea.addEventListener('click', handleReportDownloadClick);
+
+    // Year Close
+    const closeYearBtn = document.getElementById('close-year-btn');
+    if (closeYearBtn) closeYearBtn.addEventListener('click', handleCloseYear);
+
+    // Payment Details Modal
+    if (elements.paymentDetailsForm) elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
+    if (elements.paymentDetailsCancelBtn) elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
+
+    // IVA Section
+    if (elements.ivaGenerateReportBtn) elements.ivaGenerateReportBtn.addEventListener('click', handleIvaReportGeneration);
+
+    // Investments Section
+    if (elements.addInvestmentAssetForm) elements.addInvestmentAssetForm.addEventListener('submit', handleAddInvestmentAsset);
+    if (elements.investmentAssetsList) elements.investmentAssetsList.addEventListener('click', handleInvestmentAssetListClick);
+    if (elements.addInvestmentForm) elements.addInvestmentForm.addEventListener('submit', handleAddInvestment);
+    if (elements.investmentsTableBody) elements.investmentsTableBody.addEventListener('click', handleInvestmentsTableClick);
+
+    // User Management (inside Settings)
+    const refreshUsersBtn = document.getElementById('refresh-users-btn');
+     if (refreshUsersBtn) {
+         // Ensure only one listener is attached
+         const newRefreshBtn = refreshUsersBtn.cloneNode(true);
+         refreshUsersBtn.parentNode.replaceChild(newRefreshBtn, refreshUsersBtn);
+         newRefreshBtn.addEventListener('click', () => {
+             withSpinner(actions.loadAndSetAllUsers, 500)();
+         });
+     }
     if (elements.usersList) {
+        // Use event delegation on the list itself
+        const newUserList = elements.usersList.cloneNode(false); // Clone without children
+        elements.usersList.parentNode.replaceChild(newUserList, elements.usersList);
+        elements.usersList = newUserList; // Update reference
         elements.usersList.addEventListener('click', handleUserManagementClick);
     }
-    // Modal de Permisos
-    if(elements.permissionsModalCancelBtn) {
-        elements.permissionsModalCancelBtn.addEventListener('click', hidePermissionsModal);
-    }
-    if(elements.permissionsModalSaveBtn) {
-        elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
-    }
+    // Permissions Modal
+    if (elements.permissionsModalCancelBtn) elements.permissionsModalCancelBtn.addEventListener('click', hidePermissionsModal);
+    if (elements.permissionsModalSaveBtn) elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
+
 }
