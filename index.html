@@ -1230,24 +1230,8 @@
         <div class="spinner" role="status"></div>
     </div>
     
-    <!-- INICIO DE LA CORRECCIÓN DE ICONOS (MOVIDO) -->
     <script type="module" src="js/main.js?v=1.2"></script>
-    <!-- Mover la llamada a createIcons aquí, dentro de un listener DOMContentLoaded -->
-    <script>
-        document.addEventListener('DOMContentLoaded', (event) => {
-            if (typeof lucide !== 'undefined' && lucide.createIcons) {
-                try {
-                    lucide.createIcons();
-                    console.log("Lucide icons created successfully on DOMContentLoaded.");
-                } catch (error) {
-                    console.error("Error creating Lucide icons on DOMContentLoaded:", error);
-                }
-            } else {
-                 console.error("Lucide library not available on DOMContentLoaded.");
-            }
-        });
-    </script>
-    <!-- FIN DE LA CORRECCIÓN DE ICONOS (MOVIDO) -->
+    <!-- Ya no se necesita el bloque script aquí -->
 
 </body>
 </html>

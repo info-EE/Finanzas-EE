@@ -1,13 +1,10 @@
 // --- App Initialization ---
 // Importa las funciones necesarias de Firebase v9
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// --- INICIO DE LA CORRECCIÓN ---
-// Importamos 'getDefaultState' para acceder a la lista de admins por defecto.
-import { subscribe, initState, setState, getState, getDefaultState } from './store.js';
-// --- FIN DE LA CORRECCIÓN ---
+import { subscribe, initState, setState, getState, getDefaultState } from './store.js'; // Importar getDefaultState
 import { bindEventListeners } from './handlers.js';
 import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
@@ -26,8 +23,25 @@ const firebaseConfig = {
 
 // Función principal que se ejecuta al cargar la página
 function main() {
+    // --- INICIO DE LA CORRECCIÓN DE ICONOS ---
+    // Llamar a lucide.createIcons() aquí, al inicio de main()
+    // Esto asegura que se ejecuta después de que el DOM esté listo (por el DOMContentLoaded)
+    // y antes de que el resto del script intente usar los iconos.
+    try {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+            console.log("Lucide icons created successfully from main.js");
+        } else {
+            console.error("Lucide library not available in main.js");
+        }
+    } catch (error) {
+        console.error("Error creating Lucide icons from main.js:", error);
+    }
+    // --- FIN DE LA CORRECCIÓN DE ICONOS ---
+
     let db;
     let isAppInitialized = false; // Guardián de inicialización
+    const defaultAdmins = getDefaultState().settings.adminUids || []; // Obtener admins por defecto
 
     try {
         const app = initializeApp(firebaseConfig);
@@ -52,60 +66,67 @@ function main() {
         if (user) {
             if (isAppInitialized) return; // Si ya está inicializado, no hacer nada más.
 
-            // --- INICIO DE LA CORRECCIÓN DE LÓGICA DE ACCESO ---
-            // Obtenemos la lista de administradores por defecto para la comprobación inicial.
-            const defaultAdmins = getDefaultState().settings.adminUids || [];
             const isAdmin = defaultAdmins.includes(user.uid);
-            // --- FIN DE LA CORRECCIÓN ---
-
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile || !userProfile.email) {
-                await api.createUserProfile(user.uid, user.email, 'pendiente');
-                userProfile = await api.getUserProfile(user.uid);
+                 console.log("Creando perfil de usuario...");
+                 await api.createUserProfile(user.uid, user.email, isAdmin ? 'activo' : 'pendiente');
+                 userProfile = await api.getUserProfile(user.uid); // Recargar perfil después de crearlo
+                 console.log("Perfil creado:", userProfile);
             }
 
-            // --- CORRECCIÓN DE LÓGICA DE ACCESO ---
-            // Se permite el acceso si el perfil está 'activo' O si el usuario es un admin.
-            if (userProfile && (userProfile.status === 'activo' || isAdmin)) {
-                
-                // Si el admin entra y su status no es 'activo', lo actualizamos.
-                if (isAdmin && userProfile.status !== 'activo') {
-                    console.warn("Detectado admin con estado no activo. Actualizando a 'activo'.");
-                    // Usamos la función de la API para actualizar el estado en Firestore.
-                    await api.updateUserStatus(user.uid, 'activo');
+            // --- Lógica de Acceso Corregida ---
+            let canAccess = false;
+            if (isAdmin) {
+                console.log("Usuario administrador detectado.");
+                canAccess = true;
+                // Si es admin y su perfil no está 'activo', corregirlo
+                if (userProfile && userProfile.status !== 'activo') {
+                    console.log("Corrigiendo estado del administrador a 'activo'...");
+                    await api.updateUserPermissions(user.uid, { status: 'activo' });
+                    userProfile = await api.getUserProfile(user.uid); // Recargar perfil actualizado
                 }
-                
+            } else if (userProfile && userProfile.status === 'activo') {
+                 console.log("Usuario regular con estado 'activo' detectado.");
+                 canAccess = true;
+            }
+            // --- Fin de Lógica de Acceso Corregida ---
+
+            if (canAccess) {
                 api.setCurrentUser(user.uid);
                 await initState(); // Espera a que los datos iniciales se carguen.
                 
                 showApp();
                 bindEventListeners(); // Vincula los eventos DESPUÉS de cargar los datos.
 
-                // Esta comprobación ahora usa el estado (getState) que ya está inicializado.
-                if (getState().settings.adminUids.includes(user.uid)) {
+                // Siempre cargar usuarios si el usuario actual es admin
+                if (isAdmin) {
                     await actions.loadAndSetAllUsers();
+                    // Escuchar cambios en la lista de usuarios solo si es admin
+                    api.listenForAllUsersChanges((allUsers) => {
+                         setState({ allUsers });
+                    });
+                } else {
+                     setState({ allUsers: [] }); // Limpiar lista si no es admin
                 }
 
-                // Listener de datos con lógica de merge mejorada para proteger el estado.
+                // Listener de datos compartidos (siempre activo para usuarios con acceso)
                 api.listenForDataChanges((newData) => {
                     const currentState = getState();
-                    
                     const updatedState = { ...currentState, ...newData };
 
-                    // MUY IMPORTANTE: Realizar un merge profundo para settings para evitar que
-                    // una actualización parcial desde Firebase borre la configuración existente.
                     if (newData.settings) {
-                        // Si vienen nuevos settings, los fusionamos con los existentes.
                         updatedState.settings = { ...currentState.settings, ...newData.settings };
                     } else {
-                        // Si no vienen settings en la actualización, conservamos los que ya teníamos.
                         updatedState.settings = currentState.settings;
                     }
-
-                    // `allUsers` y `permissions` se gestionan localmente en la sesión del usuario,
-                    // por lo que no deben ser sobrescritos por el listener de datos compartidos.
-                    updatedState.allUsers = currentState.allUsers;
+                    
+                    // Asegurarse de que `allUsers` no se sobrescriba si no es admin
+                    if (!isAdmin) {
+                       updatedState.allUsers = currentState.allUsers;
+                    }
+                    // `permissions` siempre se calcula al inicio, no se toma del listener
                     updatedState.permissions = currentState.permissions;
 
                     setState(updatedState);
@@ -140,3 +161,4 @@ function main() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
+
