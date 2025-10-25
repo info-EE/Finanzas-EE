@@ -94,7 +94,7 @@ export const elements = {
     permissionsModalCancelBtn: document.getElementById('permissions-modal-cancel-btn'),
 };
 
-export const charts = {
+const charts = {
     accountsBalanceChartEUR: null,
     accountsBalanceChartUSD: null,
     annualFlowChart: null,
@@ -472,9 +472,7 @@ function renderSingleCurrencyChart(currency, totalBalance, canvasId, legendId, c
 
 function updateInicioKPIs() {
     const { transactions, accounts } = getState();
-    
-    console.log(\"updateInicioKPIs: Verificando datos...\", { transactions, accounts });
-// Añadir chequeos más robustos
+    // Añadir chequeos más robustos
     if(!transactions || !accounts || accounts.length === 0) {
         console.warn("updateInicioKPIs: Faltan datos (transactions o accounts)");
         // Poner KPIs a 0 o 'N/A' si faltan datos

@@ -2,7 +2,6 @@ import * as actions from './actions.js';
 import * as api from './api.js';
 import {
     elements,
-    charts,
     switchPage,
     populateCategories,
     updateCurrencySymbol,
@@ -31,7 +30,6 @@ import {
     showPermissionsModal,
     hidePermissionsModal,
     populateNextInvoiceNumber
-
 } from './ui.js';
 import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
@@ -1071,7 +1069,7 @@ export function bindEventListeners() {
         });
          // Trigger chart resize after animation
          setTimeout(() => {
-            Object.values(charts).forEach(chart => {
+            Object.values(window.App.charts).forEach(chart => {
                 if (chart && typeof chart.resize === 'function') {
                     chart.resize();
                 }
