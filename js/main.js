@@ -148,17 +148,20 @@ function main() {
 // 5. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
 
-// --- CORRECCIÓN: Ejecutar lucide.createIcons() una vez después de que el DOM esté listo ---
+// --- CORRECCIÓN: Ejecutar lucide.createIcons() con un pequeño retraso ---
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof lucide !== 'undefined' && lucide.createIcons) {
-        try {
-            lucide.createIcons();
-            console.log("Lucide icons created on DOMContentLoaded.");
-        } catch (error) {
-            console.error("Error creating Lucide icons on DOMContentLoaded:", error);
+    // Añadir un pequeño retraso
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            try {
+                lucide.createIcons();
+                console.log("Lucide icons created on DOMContentLoaded (with delay).");
+            } catch (error) {
+                console.error("Error creating Lucide icons on DOMContentLoaded (with delay):", error);
+            }
+        } else {
+            console.error("Lucide library not available on DOMContentLoaded (with delay).");
         }
-    } else {
-        console.error("Lucide library not available on DOMContentLoaded.");
-    }
+    }, 50); // 50 milisegundos de retraso
 });
 
