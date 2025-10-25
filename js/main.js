@@ -23,26 +23,11 @@ const firebaseConfig = {
 
 // Función principal que se ejecuta al cargar la página
 function main() {
-    // --- INICIO DE LA CORRECCIÓN DE ICONOS ---
-    // Llamar a lucide.createIcons() aquí, al inicio de main()
-    // Esto asegura que se ejecuta después de que el DOM esté listo (por el DOMContentLoaded)
-    // y antes de que el resto del script intente usar los iconos.
-    try {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            lucide.createIcons();
-            console.log("Lucide icons created successfully from main.js");
-        } else {
-            console.error("Lucide library not available in main.js");
-        }
-    } catch (error) {
-        console.error("Error creating Lucide icons from main.js:", error);
-    }
-    // --- FIN DE LA CORRECCIÓN DE ICONOS ---
-
     let db;
     let isAppInitialized = false; // Guardián de inicialización
     const defaultAdmins = getDefaultState().settings.adminUids || []; // Obtener admins por defecto
 
+    // 1. Inicializar Firebase
     try {
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -56,12 +41,27 @@ function main() {
         return;
     }
 
+    // --- CORRECCIÓN DE ICONOS MOVIDA AQUÍ ---
+    // Llamar a lucide.createIcons() DESPUÉS de inicializar Firebase,
+    // pero ANTES de configurar el listener de autenticación.
+    try {
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+            console.log("Lucide icons created successfully from main.js (after Firebase init)");
+        } else {
+            console.error("Lucide library not available in main.js (after Firebase init)");
+        }
+    } catch (error) {
+        console.error("Error creating Lucide icons from main.js (after Firebase init):", error);
+    }
+    // --- FIN DE LA CORRECCIÓN ---
+
+    // 2. Configurar Chart.js y el Store
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = '#e0e0e0';
-    
     subscribe(renderAll);
 
-    // Manejador de Autenticación
+    // 3. Configurar el Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
         if (user) {
             if (isAppInitialized) return; // Si ya está inicializado, no hacer nada más.
@@ -146,7 +146,7 @@ function main() {
         }
     });
 
-    // Valores por defecto para fechas
+    // 4. Valores por defecto para fechas (esto puede ir al final)
     const today = new Date().toISOString().slice(0, 10);
     ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date', 'investment-date'].forEach(id => {
         const el = document.getElementById(id);
@@ -160,5 +160,6 @@ function main() {
     });
 }
 
+// 5. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
 
