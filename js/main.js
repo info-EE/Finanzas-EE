@@ -5,7 +5,6 @@ import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 import { subscribe, initState, setState, getState, getDefaultState } from './store.js'; // Importar getDefaultState
-// *** CORRECCIÓN: Importar bindAuthEventListeners y mantener bindEventListeners ***
 import { bindAuthEventListeners, bindEventListeners } from './handlers.js';
 import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
 import * as api from './api.js';
@@ -22,8 +21,33 @@ const firebaseConfig = {
     measurementId: "G-KZPBK200QS"
 };
 
-// Función principal que se ejecuta al cargar la página
-function main() {
+// --- NUEVO: Función para crear iconos iniciales que devuelve una Promesa ---
+function createInitialIcons() {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                try {
+                    lucide.createIcons({
+                        nodes: document.querySelectorAll('i[data-lucide]')
+                    });
+                    console.log("Lucide icons created on DOMContentLoaded (with delay).");
+                    resolve(); // Resuelve la promesa indicando éxito
+                } catch (error) {
+                    console.error("Error creating Lucide icons on DOMContentLoaded (with delay):", error);
+                    reject(error); // Rechaza la promesa en caso de error
+                }
+            } else {
+                const errorMsg = "Lucide library not available on DOMContentLoaded (with delay).";
+                console.error(errorMsg);
+                reject(new Error(errorMsg)); // Rechaza si Lucide no está disponible
+            }
+        }, 50); // Mantenemos el retraso de 50ms
+    });
+}
+
+
+// --- MODIFICADO: Función principal ahora es async para usar await ---
+async function main() {
     let db;
     let isAppInitialized = false; // Guardián de inicialización
     const defaultState = getDefaultState(); // Obtener estado por defecto una vez
@@ -49,8 +73,15 @@ function main() {
     Chart.defaults.color = '#e0e0e0';
     subscribe(renderAll);
 
-    // *** NUEVO: Vincular eventos de autenticación INMEDIATAMENTE ***
-    bindAuthEventListeners();
+    // *** NUEVO: Esperar a que los iconos iniciales se creen ANTES de vincular eventos de autenticación ***
+    try {
+        await createInitialIcons(); // Espera a que la promesa se resuelva
+        bindAuthEventListeners(); // Vincula los eventos de autenticación DESPUÉS de crear los iconos
+    } catch (error) {
+        console.error("No se pudieron crear los iconos iniciales o vincular los eventos de autenticación:", error);
+        // Podrías mostrar un mensaje al usuario aquí si fallan los iconos
+    }
+
 
     // 3. Configurar el Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
@@ -61,34 +92,27 @@ function main() {
             const isAdmin = isAdminByUid || isAdminByEmail; // Es admin si cumple CUALQUIERA
 
             if (isAppInitialized) {
-                 // Si ya está inicializado y es el mismo usuario, no hacer nada más.
-                 // Si cambia de usuario (muy raro sin logout), recargar podría ser una opción,
-                 // pero por ahora, asumimos que el flujo normal es login -> logout.
-                 // Podríamos añadir una comprobación api.getCurrentUserId() !== user.uid si fuera necesario.
                  return;
             }
-
 
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile || !userProfile.email) {
                  console.log("Creando perfil de usuario...");
-                 // Asegurarse de pasar el estado correcto ('activo' si es admin por defecto, 'pendiente' si no)
                  await api.createUserProfile(user.uid, user.email, isAdmin ? 'activo' : 'pendiente');
-                 userProfile = await api.getUserProfile(user.uid); // Recargar perfil después de crearlo
+                 userProfile = await api.getUserProfile(user.uid);
                  console.log("Perfil creado:", userProfile);
             }
 
-            // --- Lógica de Acceso Corregida (simplificada) ---
+            // Lógica de Acceso
             let canAccess = false;
             if (isAdmin) {
                 console.log("Usuario administrador por defecto detectado (UID o Email).");
                 canAccess = true;
-                // Si es admin por defecto y su perfil no está 'activo', corregirlo
                 if (userProfile && userProfile.status !== 'activo') {
                     console.log("Corrigiendo estado del administrador por defecto a 'activo'...");
                     await api.updateUserPermissions(user.uid, { status: 'activo' });
-                    userProfile = await api.getUserProfile(user.uid); // Recargar perfil actualizado
+                    userProfile = await api.getUserProfile(user.uid);
                 }
             } else if (userProfile && userProfile.status === 'activo') {
                  console.log("Usuario regular con estado 'activo' detectado.");
@@ -96,65 +120,51 @@ function main() {
             } else {
                  console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userProfile ? userProfile.status : 'N/A'}`);
             }
-            // --- Fin de Lógica de Acceso Corregida ---
 
             if (canAccess) {
                 api.setCurrentUser(user.uid);
-                await initState(); // Espera a que los datos iniciales se carguen.
+                await initState();
 
                 showApp();
-                // *** CORRECCIÓN: Llamar a bindEventListeners DESPUÉS de mostrar la app y cargar datos ***
+                // Vincula el resto de los eventos de la aplicación aquí
                 bindEventListeners();
 
-                // Siempre cargar usuarios si el usuario actual TIENE permisos de admin (no solo por defecto)
-                const finalPermissions = getState().permissions; // Obtener permisos finales después de initState
+                const finalPermissions = getState().permissions;
                 const hasAdminPermissions = finalPermissions && finalPermissions.manage_users;
 
                 if (hasAdminPermissions) {
                     await actions.loadAndSetAllUsers();
-                    // Escuchar cambios en la lista de usuarios solo si tiene permisos
                     api.listenForAllUsersChanges((allUsers) => {
                          setState({ allUsers });
                     });
                 } else {
-                     setState({ allUsers: [] }); // Limpiar lista si no tiene permisos
+                     setState({ allUsers: [] });
                 }
 
-                // Listener de datos compartidos (siempre activo para usuarios con acceso)
                 api.listenForDataChanges((newData) => {
                     const currentState = getState();
-                     // Volver a comprobar permisos por si acaso cambiaron remotamente
                     const currentPermissions = currentState.permissions;
                     const canManageUsersNow = currentPermissions && currentPermissions.manage_users;
-
                     const updatedState = { ...currentState, ...newData };
-
-                    // Merge settings properly
                     if (newData.settings) {
                         updatedState.settings = { ...currentState.settings, ...newData.settings };
                     } else {
                         updatedState.settings = currentState.settings;
                     }
-
-                    // Asegurarse de que `allUsers` no se sobrescriba si no puede gestionar usuarios
                     if (!canManageUsersNow) {
-                       updatedState.allUsers = currentState.allUsers || []; // Ensure it's an array
+                       updatedState.allUsers = currentState.allUsers || [];
                     }
-                    // `permissions` siempre se calcula al inicio, no se toma del listener
                     updatedState.permissions = currentState.permissions;
-
                     setState(updatedState);
                 });
 
                 switchPage('inicio');
-                isAppInitialized = true; // Marca la app como inicializada.
+                isAppInitialized = true;
 
             } else {
-                 // Mostrar mensaje solo si el perfil existe y está pendiente
                 if (userProfile && userProfile.status === 'pendiente') {
                     showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
                 } else {
-                    // Mensaje genérico si no hay perfil o el estado es inesperado
                     showAuthError('No tienes permiso para acceder a esta aplicación.');
                 }
                 api.logoutUser();
@@ -162,17 +172,16 @@ function main() {
         } else {
             api.setCurrentUser(null);
             hideApp();
-            isAppInitialized = false; // Resetea el guardián al cerrar sesión.
+            isAppInitialized = false;
         }
     });
 
-    // 4. Valores por defecto para fechas (esto puede ir al final)
+    // 4. Valores por defecto para fechas
     const today = new Date().toISOString().slice(0, 10);
     ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date', 'investment-date'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = today;
     });
-
     const currentMonth = new Date().toISOString().slice(0, 7);
     ['report-month', 'iva-month'].forEach(id => {
         const monthInput = document.getElementById(id);
@@ -183,24 +192,5 @@ function main() {
 // 5. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
 
-// --- CORRECCIÓN: Ejecutar lucide.createIcons() con un pequeño retraso Y especificando los elementos ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Añadir un pequeño retraso
-    setTimeout(() => {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            try {
-                // *** INICIO DE LA MODIFICACIÓN ***
-                // Especificamos que solo procese los elementos <i> con el atributo data-lucide
-                lucide.createIcons({
-                    nodes: document.querySelectorAll('i[data-lucide]')
-                });
-                // *** FIN DE LA MODIFICACIÓN ***
-                console.log("Lucide icons created on DOMContentLoaded (with delay).");
-            } catch (error) {
-                console.error("Error creating Lucide icons on DOMContentLoaded (with delay):", error);
-            }
-        } else {
-            console.error("Lucide library not available on DOMContentLoaded (with delay).");
-        }
-    }, 50); // 50 milisegundos de retraso
-});
+// --- ELIMINADO: Ya no necesitamos el listener separado para crear iconos ---
+
