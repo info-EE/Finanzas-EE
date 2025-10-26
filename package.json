@@ -1,0 +1,24 @@
+{
+  "name": "sistema",
+  "version": "1.0.0",
+  "description": "Sistema web para gestion de finanzas.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/info-EE/Finanzas-EE.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/info-EE/Finanzas-EE/issues"
+  },
+  "homepage": "https://github.com/info-EE/Finanzas-EE#readme",
+  "devDependencies": {
+    "vite": "^7.1.12"
+  }
+}
