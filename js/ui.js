@@ -1016,11 +1016,7 @@ function renderInvestmentAssetsList() {
 }
 
 function renderUserManagement() {
-    const { allUsers, permissions } = getState();
-    const auth = getAuthInstance();
-    const currentUser = auth.currentUser;
-
-    if (!permissions.manage_users) {
+    const { allUsers, permissions, currentUser } = getState();    if (!permissions.manage_users) {
         elements.userManagementCard.classList.add('hidden');
         return;
     }
