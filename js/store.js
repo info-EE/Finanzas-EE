@@ -1,9 +1,9 @@
-import { 
-    loadCollection, 
-    loadSettings, 
-    saveSettings, 
-    getAuthInstance, 
-    getUserProfile 
+import {
+    loadCollection,
+    loadSettings,
+    saveSettings,
+    getAuthInstance,
+    getUserProfile
 } from './api.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 
@@ -47,10 +47,7 @@ export function getDefaultState() {
         transactions: [],
         documents: [],
         clients: [],
-        investmentAssets: [
-            // { id: crypto.randomUUID(), name: 'Bitcoin', category: 'Criptomoneda' },
-            // { id: crypto.randomUUID(), name: 'Acciones Apple (AAPL)', category: 'Acción' },
-        ],
+        investmentAssets: [],
         incomeCategories: [...ESSENTIAL_INCOME_CATEGORIES],
         expenseCategories: [...ESSENTIAL_EXPENSE_CATEGORIES],
         invoiceOperationTypes: [...ESSENTIAL_OPERATION_TYPES],
@@ -59,11 +56,12 @@ export function getDefaultState() {
         activeReport: { type: null, data: [], title: '', columns: [] },
         activeIvaReport: null,
         settings: {
-            adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'], 
+            adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'],
+            adminEmails: ['info@europaenvios.com'], // Añadir email por si acaso
             blockedUserIds: [],
             invoiceCounter: {
-                nextInvoiceNumber: 93,
-                lastInvoiceYear: new Date().getFullYear()
+                nextInvoiceNumber: 1, // Empezar en 1 por defecto
+                lastInvoiceYear: new Date().getFullYear() -1 // Año anterior para forzar reinicio
             },
             aeatModuleActive: false,
             aeatConfig: {
@@ -77,8 +75,9 @@ export function getDefaultState() {
             }
         },
         allUsers: [],
-        permissions: {}
-    };
+        permissions: {},
+        currentUser: null // <-- Estado inicial correcto
+    }; // <-- Llave de cierre correcta
 }
 
 
@@ -96,16 +95,19 @@ function notify() {
 }
 
 export function getState() {
+    // Devolver una copia profunda para evitar mutaciones accidentales
     return JSON.parse(JSON.stringify(state));
 }
 
 export function setState(newState) {
+    // Fusionar el nuevo estado con el existente
     state = { ...state, ...newState };
     notify();
 }
 
+// Función resetState corregida
 export function resetState() {
-    state = {};
+    state = {}; // Limpia todo el estado, incluyendo currentUser
     notify();
 }
 
@@ -115,10 +117,12 @@ export function resetState() {
 export async function initState() {
     const defaultState = getDefaultState();
     const auth = getAuthInstance();
-    const currentUser = auth.currentUser;
+    const currentUser = auth.currentUser; // Obtener usuario actual desde auth
 
-    let finalState = defaultState;
-    finalState.permissions = {}; // Inicia sin permisos
+    // Empezar siempre desde el estado por defecto limpio
+    let finalState = getDefaultState();
+    // Limpiar permisos por si acaso
+    finalState.permissions = {};
 
     try {
         if (currentUser) {
@@ -126,26 +130,33 @@ export async function initState() {
             const userProfile = await getUserProfile(currentUser.uid);
 
             // PASO 2: Determinar los permisos basados en el perfil.
-            if (defaultState.settings.adminUids.includes(currentUser.uid)) {
+            // Usar defaultState para las comprobaciones de admin
+            if (defaultState.settings.adminUids.includes(currentUser.uid) || defaultState.settings.adminEmails.includes(currentUser.email)) {
                 console.warn("Usuario administrador detectado. Concediendo todos los permisos.");
                 finalState.permissions = getAdminPermissions();
             } else if (userProfile && userProfile.status === 'activo') {
-                const hasDefinedPermissions = userProfile.permisos && Object.values(userProfile.permisos).some(p => p === true);
+                // Comprobar si el perfil tiene permisos definidos
+                const hasDefinedPermissions = userProfile.permisos && Object.keys(userProfile.permisos).length > 0 && Object.values(userProfile.permisos).some(p => p === true);
                 if (hasDefinedPermissions) {
-                    finalState.permissions = userProfile.permisos;
+                    // Si tiene permisos definidos, usarlos
+                    finalState.permissions = { ...getReadOnlyPermissions(), ...userProfile.permisos }; // Base de solo lectura + permisos específicos
                 } else {
-                    console.log(`Asignando permisos de solo lectura por defecto.`);
+                    // Si no tiene permisos definidos pero está activo, asignar solo lectura
+                    console.log(`Usuario activo sin permisos específicos. Asignando permisos de solo lectura por defecto.`);
                     finalState.permissions = getReadOnlyPermissions();
                 }
+            } else {
+                 console.log(`Usuario no administrador y no activo, o sin perfil. No se asignan permisos.`);
+                 // finalState.permissions ya está vacío {}
             }
-            
-            // PASO 3: Si el usuario tiene algún permiso (es decir, está activo), cargar los datos.
+
+            // PASO 3: Si el usuario tiene algún permiso (es decir, está activo o es admin), cargar los datos.
             const canReadData = Object.values(finalState.permissions).some(p => p === true);
 
             if (canReadData) {
                 // Carga los 'settings' primero
                 const loadedSettings = await loadSettings();
-                
+
                 // Carga el resto de los datos de sus propias colecciones
                 const loadedAccounts = await loadCollection('accounts');
                 const loadedTransactions = await loadCollection('transactions');
@@ -155,8 +166,17 @@ export async function initState() {
 
                 if (loadedSettings) {
                     // Si hay settings, los fusiona con los default
-                    finalState.settings = { ...defaultState.settings, ...loadedSettings };
-                    // Fusiona categorías para asegurar que las esenciales siempre estén
+                    // Asegurarse de que los arrays esenciales no se sobreescriban si están vacíos en Firestore
+                    finalState.settings = {
+                        ...defaultState.settings, // Base por defecto
+                        ...loadedSettings,        // Sobreescribir con lo cargado
+                        // Asegurar adminUids y adminEmails (no deben venir de Firestore)
+                        adminUids: defaultState.settings.adminUids,
+                        adminEmails: defaultState.settings.adminEmails,
+                        // Mantener blockedUserIds de Firestore si existe, si no, del default
+                        blockedUserIds: loadedSettings.blockedUserIds || defaultState.settings.blockedUserIds,
+                    };
+                    // Fusiona categorías para asegurar que las esenciales siempre estén presentes
                     finalState.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(loadedSettings.incomeCategories || [])])];
                     finalState.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(loadedSettings.expenseCategories || [])])];
                     finalState.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(loadedSettings.invoiceOperationTypes || [])])];
@@ -164,35 +184,46 @@ export async function initState() {
                 } else {
                     // Si no hay settings (primera vez o migración), guarda los settings por defecto
                     console.log("No se encontró estado remoto, guardando settings por defecto.");
-                    // Preparamos los settings para guardar (solo las categorías, no el objeto settings completo)
-                    const defaultSettingsToSave = {
-                        ...defaultState.settings,
-                        incomeCategories: defaultState.incomeCategories,
-                        expenseCategories: defaultState.expenseCategories,
-                        invoiceOperationTypes: defaultState.invoiceOperationTypes,
-                        taxIdTypes: defaultState.taxIdTypes
-                    };
-                    await saveSettings(defaultSettingsToSave);
+                    // Preparamos los settings para guardar (usando los defaults definidos arriba)
+                    await saveSettings(defaultState.settings);
+                    // Mantener las categorías por defecto en el estado local también
+                    finalState.incomeCategories = defaultState.incomeCategories;
+                    finalState.expenseCategories = defaultState.expenseCategories;
+                    finalState.invoiceOperationTypes = defaultState.invoiceOperationTypes;
+                    finalState.taxIdTypes = defaultState.taxIdTypes;
                 }
-                
+
                 // Asigna los datos cargados de las colecciones
                 finalState.accounts = loadedAccounts;
                 finalState.transactions = loadedTransactions;
                 finalState.documents = loadedDocuments;
                 finalState.clients = loadedClients;
-                // Manejo especial para 'investmentAssets': si no hay nada cargado, usa los del default
+                // Mantener los investmentAssets del default si no hay cargados
                 finalState.investmentAssets = loadedInvestmentAssets.length > 0 ? loadedInvestmentAssets : defaultState.investmentAssets;
 
+            } else {
+                console.log("El usuario no tiene permisos para leer datos. El estado permanecerá mayormente por defecto.");
+                // No se cargan datos, finalState ya tiene los valores por defecto (listas vacías, etc.)
             }
+        } else {
+             console.log("No hay usuario autenticado. Usando estado por defecto.");
+             // finalState ya es defaultState con permissions vacío
         }
-        
+
+        // Guardar también la información del usuario actual en el estado final
+        finalState.currentUser = currentUser ? { uid: currentUser.uid, email: currentUser.email } : null;
+
+        // Finalmente, actualiza el estado global
         state = finalState;
 
     } catch (error) {
         console.error("Falló la inicialización del estado por un error de carga:", error);
-        state = defaultState;
-        state.permissions = {}; 
+        // En caso de error catastrófico, resetear al estado por defecto seguro
+        state = getDefaultState(); // Asegura que el estado por defecto incluya currentUser: null
+        state.permissions = {};
     }
-    
+
+    // Notificar a los listeners que el estado ha sido inicializado/actualizado
     notify();
 }
+

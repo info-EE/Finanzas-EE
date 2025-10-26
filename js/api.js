@@ -18,8 +18,8 @@ import {
     increment   // <-- AÑADIDO EN FASE 2
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// Restauramos la importación de ui.js para recuperar los avisos
-import { updateConnectionStatus, showAuthError } from './ui.js';
+// --- ELIMINADO: Ya no importamos ui.js para romper la dependencia circular ---
+// import { updateConnectionStatus, showAuthError } from './ui.js';
 
 // Variables para almacenar las instancias de los servicios de Firebase
 let app;
@@ -203,7 +203,9 @@ export async function registerUser(email, password) {
         throw e;
     } catch (error) {
         console.error("Error en el registro:", error.code);
-        showAuthError(translateAuthError(error.code));
+        // --- ELIMINADO: showAuthError(translateAuthError(error.code)); ---
+        // El error será "lanzado" para que lo maneje handlers.js
+        throw error; 
     }
 }
 
@@ -212,7 +214,9 @@ export async function loginUser(email, password) {
         await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
         console.error("Error en el inicio de sesión:", error.code);
-        showAuthError(translateAuthError(error.code));
+        // --- ELIMINADO: showAuthError(translateAuthError(error.code)); ---
+        // El error será "lanzado" para que lo maneje handlers.js
+        throw error;
     }
 }
 
@@ -235,17 +239,17 @@ export async function logoutUser() {
  */
 export async function loadCollection(collectionName) {
     if (!currentUserId) return [];
-    updateConnectionStatus('loading', `Cargando ${collectionName}...`);
+    // --- ELIMINADO: updateConnectionStatus('loading', `Cargando ${collectionName}...`); ---
     try {
         const colRef = collection(db, 'usuarios', currentUserId, collectionName);
         const snapshot = await getDocs(colRef);
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         console.log(`Datos de '${collectionName}' cargados:`, data.length);
-        updateConnectionStatus('success', 'Sincronizado');
+        // --- ELIMINADO: updateConnectionStatus('success', 'Sincronizado'); ---
         return data;
     } catch (error) {
         console.error(`Error al cargar la colección ${collectionName}:`, error);
-        updateConnectionStatus('error', 'Error de carga');
+        // --- ELIMINADO: updateConnectionStatus('error', 'Error de carga'); ---
         return [];
     }
 }
@@ -256,22 +260,22 @@ export async function loadCollection(collectionName) {
  */
 export async function loadSettings() {
     if (!currentUserId) return null;
-    updateConnectionStatus('loading', 'Cargando configuración...');
+    // --- ELIMINADO: updateConnectionStatus('loading', 'Cargando configuración...'); ---
     try {
         const settingsDocRef = doc(db, 'usuarios', currentUserId, 'settings', 'appSettings');
         const docSnap = await getDoc(settingsDocRef);
         if (docSnap.exists()) {
             console.log("Configuración cargada.");
-            updateConnectionStatus('success', 'Sincronizado');
+            // --- ELIMINADO: updateConnectionStatus('success', 'Sincronizado'); ---
             return docSnap.data();
         } else {
             console.log("No se encontró documento de configuración.");
-            updateConnectionStatus('success', 'Listo');
+            // --- ELIMINADO: updateConnectionStatus('success', 'Listo'); ---
             return null; // No existe
         }
     } catch (error) {
         console.error("Error al cargar la configuración:", error);
-        updateConnectionStatus('error', 'Error de carga');
+        // --- ELIMINADO: updateConnectionStatus('error', 'Error de carga'); ---
         return null;
     }
 }
@@ -284,7 +288,7 @@ export async function loadSettings() {
  */
 export async function addDocToCollection(collectionName, data) {
     if (!currentUserId) throw new Error("Usuario no autenticado.");
-    updateConnectionStatus('loading', 'Guardando...');
+    // --- ELIMINADO: updateConnectionStatus('loading', 'Guardando...'); ---
     try {
         // Generamos un ID local para consistencia
         const newDocRef = doc(collection(db, 'usuarios', currentUserId, collectionName));
@@ -293,11 +297,11 @@ export async function addDocToCollection(collectionName, data) {
         await setDoc(newDocRef, dataWithId); // Usamos setDoc con el ID pre-generado
         
         console.log(`Documento añadido a '${collectionName}' con ID: ${newDocRef.id}`);
-        setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000);
+        // --- ELIMINADO: setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000); ---
         return dataWithId; // Devolvemos los datos con el ID
     } catch (error) {
         console.error(`Error al añadir documento a ${collectionName}:`, error);
-        updateConnectionStatus('error', 'Error al guardar');
+        // --- ELIMINADO: updateConnectionStatus('error', 'Error al guardar'); ---
         throw error;
     }
 }
@@ -310,15 +314,15 @@ export async function addDocToCollection(collectionName, data) {
  */
 export async function updateDocInCollection(collectionName, docId, updates) {
     if (!currentUserId) throw new Error("Usuario no autenticado.");
-    updateConnectionStatus('loading', 'Actualizando...');
+    // --- ELIMINADO: updateConnectionStatus('loading', 'Actualizando...'); ---
     try {
         const docRef = doc(db, 'usuarios', currentUserId, collectionName, docId);
         await updateDoc(docRef, updates);
         console.log(`Documento '${docId}' en '${collectionName}' actualizado.`);
-        setTimeout(() => updateConnectionStatus('success', 'Actualizado'), 1000);
+        // --- ELIMINADO: setTimeout(() => updateConnectionStatus('success', 'Actualizado'), 1000); ---
     } catch (error) {
         console.error(`Error al actualizar documento en ${collectionName}:`, error);
-        updateConnectionStatus('error', 'Error al actualizar');
+        // --- ELIMINADO: updateConnectionStatus('error', 'Error al actualizar'); ---
         throw error;
     }
 }
@@ -330,15 +334,15 @@ export async function updateDocInCollection(collectionName, docId, updates) {
  */
 export async function deleteDocFromCollection(collectionName, docId) {
     if (!currentUserId) throw new Error("Usuario no autenticado.");
-    updateConnectionStatus('loading', 'Eliminando...');
+    // --- ELIMINADO: updateConnectionStatus('loading', 'Eliminando...'); ---
     try {
         const docRef = doc(db, 'usuarios', currentUserId, collectionName, docId);
         await deleteDoc(docRef);
         console.log(`Documento '${docId}' eliminado de '${collectionName}'.`);
-        setTimeout(() => updateConnectionStatus('success', 'Eliminado'), 1000);
+        // --- ELIMINADO: setTimeout(() => updateConnectionStatus('success', 'Eliminado'), 1000); ---
     } catch (error) {
         console.error(`Error al eliminar documento de ${collectionName}:`, error);
-        updateConnectionStatus('error', 'Error al eliminar');
+        // --- ELIMINADO: updateConnectionStatus('error', 'Error al eliminar'); ---
         throw error;
     }
 }
@@ -349,15 +353,15 @@ export async function deleteDocFromCollection(collectionName, docId) {
  */
 export async function saveSettings(settings) {
     if (!currentUserId) throw new Error("Usuario no autenticado.");
-    updateConnectionStatus('loading', 'Guardando config...');
+    // --- ELIMINADO: updateConnectionStatus('loading', 'Guardando config...'); ---
     try {
         const settingsDocRef = doc(db, 'usuarios', currentUserId, 'settings', 'appSettings');
         await setDoc(settingsDocRef, settings, { merge: true });
         console.log("Configuración guardada.");
-        setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000);
+        // --- ELIMINADO: setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000); ---
     } catch (error) {
         console.error("Error al guardar la configuración:", error);
-        updateConnectionStatus('error', 'Error al guardar');
+        // --- ELIMINADO: updateConnectionStatus('error', 'Error al guardar'); ---
         throw error;
     }
 }
@@ -403,11 +407,11 @@ export function listenForCollectionChanges(collectionName, onUpdate) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         console.log(`Actualización en tiempo real para '${collectionName}':`, data.length);
-        updateConnectionStatus('success', 'Sincronizado');
+        // --- ELIMINADO: updateConnectionStatus('success', 'Sincronizado'); ---
         onUpdate(data);
     }, (error) => {
         console.error(`Error en listener de ${collectionName}:`, error);
-        updateConnectionStatus('error', 'Desconectado');
+        // --- ELIMINADO: updateConnectionStatus('error', 'Desconectado'); ---
     });
     
     dataListeners.push(unsubscribe); // Guardar para limpiar después
@@ -425,12 +429,12 @@ export function listenForSettingsChanges(onUpdate) {
     const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
         if (docSnap.exists()) {
             console.log("Actualización en tiempo real para 'settings'.");
-            updateConnectionStatus('success', 'Sincronizado');
+            // --- ELIMINADO: updateConnectionStatus('success', 'Sincronizado'); ---
             onUpdate(docSnap.data());
         }
     }, (error) => {
         console.error("Error en listener de settings:", error);
-        updateConnectionStatus('error', 'Desconectado');
+        // --- ELIMINADO: updateConnectionStatus('error', 'Desconectado'); ---
     });
     
     dataListeners.push(unsubscribe); // Guardar para limpiar después
@@ -444,4 +448,3 @@ export function clearAllListeners() {
     dataListeners.forEach(unsubscribe => unsubscribe());
     dataListeners = [];
 }
-

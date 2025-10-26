@@ -30,7 +30,8 @@ import {
     showPermissionsModal,
     hidePermissionsModal,
     populateNextInvoiceNumber
-} from './ui.js';
+,
+    showAuthError } from './ui.js';
 import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
@@ -71,12 +72,35 @@ function withSpinner(action, delay = 300) {
             return await action(...args); // Devolvemos el resultado de la acción
         } catch (e) {
             console.error("Error during action:", e);
-            showAlertModal('Error', 'Ocurrió un error inesperado durante la operación.');
-        } finally {
+            throw e;
+} finally {
             hideSpinner();
         }
     };
 }
+
+// --- NUEVO: Función para traducir errores de Auth ---
+// (Copiada de api.js para romper la dependencia circular)
+function translateAuthError(errorCode) {
+    switch (errorCode) {
+        case 'auth/email-already-in-use':
+            return 'Este correo electrónico ya está registrado.';
+        case 'auth/invalid-email':
+            return 'El formato del correo electrónico no es válido.';
+        case 'auth/weak-password':
+            return 'La contraseña debe tener al menos 6 caracteres.';
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            return 'El correo o la contraseña son incorrectos.';
+        case 'auth/registration-pending': // Error customizado
+            return 'Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.';
+        default:
+            console.error("Error de autenticación no traducido:", errorCode); // Añadimos un log
+            return 'Ha ocurrido un error. Inténtalo de nuevo más tarde.';
+    }
+}
+
 
 
 // --- Auth Handlers ---
@@ -85,9 +109,18 @@ function handleLoginSubmit(e) {
     clearAuthError();
     const email = elements.loginForm.querySelector('#login-email').value;
     const password = elements.loginForm.querySelector('#login-password').value;
+    
+    // Modificamos la función que pasamos a withSpinner
     withSpinner(async () => {
-        await api.loginUser(email, password);
+        try {
+            await api.loginUser(email, password);
+            // El éxito es manejado por el onAuthStateChanged en main.js
+        } catch (error) {
+            // Atrapamos el error que 'api.js' lanzó
+            showAuthError(translateAuthError(error.code));
+        }
     })();
+
 }
 
 function handleRegisterSubmit(e) {
@@ -95,9 +128,18 @@ function handleRegisterSubmit(e) {
     clearAuthError();
     const email = elements.registerForm.querySelector('#register-email').value;
     const password = elements.registerForm.querySelector('#register-password').value;
+     
+     // Modificamos la función que pasamos a withSpinner
      withSpinner(async () => {
-        await api.registerUser(email, password);
+        try {
+            await api.registerUser(email, password);
+             // Si el registro fue exitoso pero pendiente, el error 'auth/registration-pending' será atrapado
+        } catch (error) {
+            // Atrapamos el error que 'api.js' lanzó (incluido el 'auth/registration-pending')
+            showAuthError(translateAuthError(error.code));
+        }
     })();
+
 }
 
 function handleLogout() {
@@ -166,6 +208,10 @@ function handlePermissionsSave() {
             hidePermissionsModal();
         } else {
             showAlertModal('Error', 'No se pudieron guardar los cambios. Inténtalo de nuevo.');
+            api.setCurrentUser(null);
+            setState({ currentUser: null }); // <-- AÑADIDO
+            hideApp();
+            updateConnectionStatus('success', 'Desconectado'); // <-- AÑADIDO
         }
     })();
 }

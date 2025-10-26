@@ -1,9 +1,6 @@
 import { getState } from './store.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
 import { CHART_COLORS, ESSENTIAL_TAX_ID_TYPES } from './config.js';
-import { getAuthInstance } from './api.js';
-
-
 // --- Almacenamiento de Referencias a Elementos del DOM y Gráficos ---
 
 export const elements = {

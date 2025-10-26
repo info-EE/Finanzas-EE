@@ -1,12 +1,12 @@
 // --- App Initialization ---
 // Importa las funciones necesarias de Firebase v9
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"; // Se quitan imports no usados aquí
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-import { subscribe, initState, setState, getState, getDefaultState } from './store.js'; // Importar getDefaultState
+import { subscribe, initState, setState, getState, getDefaultState } from './store.js';
 import { bindAuthEventListeners, bindEventListeners } from './handlers.js';
-import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus, showAuthError } from './ui.js';
+import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus } from './ui.js';
 import * as api from './api.js';
 import * as actions from './actions.js';
 
@@ -21,7 +21,7 @@ const firebaseConfig = {
     measurementId: "G-KZPBK200QS"
 };
 
-// --- NUEVO: Función para crear iconos iniciales que devuelve una Promesa ---
+// --- Función para crear iconos iniciales ---
 function createInitialIcons() {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
@@ -31,28 +31,27 @@ function createInitialIcons() {
                         nodes: document.querySelectorAll('i[data-lucide]')
                     });
                     console.log("Lucide icons created on DOMContentLoaded (with delay).");
-                    resolve(); // Resuelve la promesa indicando éxito
+                    resolve();
                 } catch (error) {
                     console.error("Error creating Lucide icons on DOMContentLoaded (with delay):", error);
-                    reject(error); // Rechaza la promesa en caso de error
+                    reject(error);
                 }
             } else {
                 const errorMsg = "Lucide library not available on DOMContentLoaded (with delay).";
                 console.error(errorMsg);
-                reject(new Error(errorMsg)); // Rechaza si Lucide no está disponible
+                reject(new Error(errorMsg));
             }
-        }, 50); // Mantenemos el retraso de 50ms
+        }, 50);
     });
 }
 
-
-// --- MODIFICADO: Función principal ahora es async para usar await ---
+// --- Función principal async ---
 async function main() {
     let db;
-    let isAppInitialized = false; // Guardián de inicialización
-    const defaultState = getDefaultState(); // Obtener estado por defecto una vez
+    let isAppInitialized = false;
+    const defaultState = getDefaultState();
     const defaultAdminsByUid = defaultState.settings.adminUids || [];
-    const defaultAdminsByEmail = defaultState.settings.adminEmails || []; // Usar emails del estado por defecto
+    const defaultAdminsByEmail = defaultState.settings.adminEmails || [];
 
     // 1. Inicializar Firebase
     try {
@@ -60,10 +59,10 @@ async function main() {
         const auth = getAuth(app);
         db = getFirestore(app);
         api.initFirebaseServices(app, auth, db);
-        updateConnectionStatus('success', 'Conectado');
+        updateConnectionStatus('success', 'Conectado'); // <-- AÑADIDO
     } catch (error) {
         console.error("Error CRÍTICO al inicializar Firebase:", error);
-        updateConnectionStatus('error', 'Error de Conexión');
+        updateConnectionStatus('error', 'Error de Conexión'); // <-- AÑADIDO
         document.body.innerHTML = `<div style="color: white; text-align: center; padding: 50px; font-family: sans-serif;"><h1>Error Crítico de Conexión</h1><p>No se pudo conectar con los servicios de la base de datos. Por favor, intente refrescar la página.</p></div>`;
         return;
     }
@@ -73,41 +72,34 @@ async function main() {
     Chart.defaults.color = '#e0e0e0';
     subscribe(renderAll);
 
-    // *** NUEVO: Esperar a que los iconos iniciales se creen ANTES de vincular eventos de autenticación ***
+    // 3. Crear iconos y vincular eventos de autenticación
     try {
-        await createInitialIcons(); // Espera a que la promesa se resuelva
-        bindAuthEventListeners(); // Vincula los eventos de autenticación DESPUÉS de crear los iconos
+        await createInitialIcons();
+        bindAuthEventListeners();
     } catch (error) {
         console.error("No se pudieron crear los iconos iniciales o vincular los eventos de autenticación:", error);
-        // Podrías mostrar un mensaje al usuario aquí si fallan los iconos
     }
 
-
-    // 3. Configurar el Manejador de Autenticación
+    // 4. Configurar el Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
         if (user) {
-            // Comprobar si el UID o el EMAIL están en las listas de administradores por defecto
+            updateConnectionStatus('loading', 'Autenticando...'); // <-- AÑADIDO
+            api.setCurrentUser(user.uid); // Mover aquí para tener el UID disponible
+            setState({ currentUser: { uid: user.uid, email: user.email } }); // <-- AÑADIDO: Guardar usuario en el estado
+
             const isAdminByUid = defaultAdminsByUid.includes(user.uid);
             const isAdminByEmail = defaultAdminsByEmail.includes(user.email);
-            const isAdmin = isAdminByUid || isAdminByEmail; // Es admin si cumple CUALQUIERA
-
-            // --- INICIO REFACTOR (FASE 1) ---
-            // Se quita el guardián isAppInitialized para permitir re-sincronización si cambia el usuario
-            // if (isAppInitialized) {
-            //      return;
-            // }
-            // --- FIN REFACTOR (FASE 1) ---
+            const isAdmin = isAdminByUid || isAdminByEmail;
 
             let userProfile = await api.getUserProfile(user.uid);
 
             if (!userProfile || !userProfile.email) {
-                 console.log("Creando perfil de usuario...");
-                 await api.createUserProfile(user.uid, user.email, isAdmin ? 'activo' : 'pendiente');
-                 userProfile = await api.getUserProfile(user.uid);
-                 console.log("Perfil creado:", userProfile);
+                console.log("Creando perfil de usuario...");
+                await api.createUserProfile(user.uid, user.email, isAdmin ? 'activo' : 'pendiente');
+                userProfile = await api.getUserProfile(user.uid);
+                console.log("Perfil creado:", userProfile);
             }
 
-            // Lógica de Acceso
             let canAccess = false;
             if (isAdmin) {
                 console.log("Usuario administrador por defecto detectado (UID o Email).");
@@ -115,110 +107,92 @@ async function main() {
                 if (userProfile && userProfile.status !== 'activo') {
                     console.log("Corrigiendo estado del administrador por defecto a 'activo'...");
                     await api.updateUserPermissions(user.uid, { status: 'activo' });
-                    userProfile = await api.getUserProfile(user.uid);
+                    userProfile = await api.getUserProfile(user.uid); // Recargar perfil actualizado
                 }
             } else if (userProfile && userProfile.status === 'activo') {
-                 console.log("Usuario regular con estado 'activo' detectado.");
-                 canAccess = true;
+                console.log("Usuario regular con estado 'activo' detectado.");
+                canAccess = true;
             } else {
-                 console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userProfile ? userProfile.status : 'N/A'}`);
+                console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userProfile ? userProfile.status : 'N/A'}`);
             }
 
             if (canAccess) {
-                api.setCurrentUser(user.uid);
-                await initState(); // Carga los datos iniciales (una vez)
+                if (!isAppInitialized) {
+                    await initState(); // Carga los datos iniciales y permisos (una vez)
 
-                showApp();
-                // Vincula el resto de los eventos de la aplicación aquí
-                bindEventListeners();
+                    showApp();
+                    bindEventListeners(); // Vincula el resto de los eventos
 
-                const finalPermissions = getState().permissions;
-                const hasAdminPermissions = finalPermissions && finalPermissions.manage_users;
+                    const finalPermissions = getState().permissions;
+                    const hasAdminPermissions = finalPermissions && finalPermissions.manage_users;
 
-                if (hasAdminPermissions) {
-                    await actions.loadAndSetAllUsers(); // Carga inicial
-                    api.listenForAllUsersChanges((allUsers) => { // Listener
-                         setState({ allUsers });
-                    });
-                } else {
-                     setState({ allUsers: [] });
-                }
-
-                // --- INICIO REFACTOR (FASE 1) ---
-                // Configurar listeners individuales para cada colección
-                api.listenForCollectionChanges('accounts', (updatedAccounts) => {
-                    setState({ accounts: updatedAccounts });
-                });
-                api.listenForCollectionChanges('transactions', (updatedTransactions) => {
-                    // Importante: Recalcular balances cuando cambian las transacciones
-                    // Esta lógica podría moverse a una función helper si se vuelve compleja
-                    let { accounts } = getState();
-                    if (accounts && accounts.length > 0) {
-                        const recalculatedAccounts = accounts.map(acc => {
-                            let newBalance = 0;
-                            // Busca la transacción de saldo inicial (si existe)
-                            const initialTx = updatedTransactions.find(t => t.account === acc.name && t.isInitialBalance);
-                            if (initialTx) {
-                                newBalance = initialTx.amount;
-                            }
-                            // Aplica el resto de transacciones
-                            updatedTransactions
-                                .filter(t => t.account === acc.name && !t.isInitialBalance)
-                                .forEach(t => {
-                                    if (t.type === 'Ingreso') newBalance += t.amount;
-                                    else newBalance -= (t.amount + (t.iva || 0));
-                                });
-                             // Redondear al final
-                            return { ...acc, balance: Math.round(newBalance * 100) / 100 };
+                    if (hasAdminPermissions) {
+                        await actions.loadAndSetAllUsers(); // Carga inicial
+                        api.listenForAllUsersChanges((allUsers) => { // Listener para usuarios
+                             setState({ allUsers });
                         });
-                        setState({ transactions: updatedTransactions, accounts: recalculatedAccounts });
                     } else {
-                        setState({ transactions: updatedTransactions }); // Solo actualiza transacciones si no hay cuentas
+                         setState({ allUsers: [] });
                     }
-                });
-                api.listenForCollectionChanges('documents', (updatedDocuments) => {
-                    setState({ documents: updatedDocuments });
-                });
-                api.listenForCollectionChanges('clients', (updatedClients) => {
-                    setState({ clients: updatedClients });
-                });
-                api.listenForCollectionChanges('investmentAssets', (updatedAssets) => {
-                    setState({ investmentAssets: updatedAssets });
-                });
-                api.listenForSettingsChanges((updatedSettings) => {
-                    // Fusionar con settings existentes para no perder datos volátiles
-                    const currentState = getState();
-                    const mergedSettings = { ...currentState.settings, ...updatedSettings };
-                    
-                    // Asegurar que las categorías esenciales siempre estén presentes
-                    mergedSettings.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(updatedSettings?.incomeCategories || [])])];
-                    mergedSettings.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(updatedSettings?.expenseCategories || [])])];
-                    mergedSettings.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(updatedSettings?.invoiceOperationTypes || [])])];
-                    mergedSettings.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(updatedSettings?.taxIdTypes || [])])];
-                    
-                    setState({ settings: mergedSettings });
-                });
-                // --- FIN REFACTOR (FASE 1) ---
 
-                switchPage('inicio');
-                isAppInitialized = true; // Marcamos como inicializado DESPUÉS de configurar listeners
+                    // Configurar listeners de datos (solo la primera vez)
+                    api.listenForCollectionChanges('accounts', (updatedAccounts) => {
+                        setState({ accounts: updatedAccounts });
+                    });
+                    api.listenForCollectionChanges('transactions', (updatedTransactions) => {
+                        setState({ transactions: updatedTransactions });
+                    });
+                    api.listenForCollectionChanges('documents', (updatedDocuments) => {
+                        setState({ documents: updatedDocuments });
+                    });
+                    api.listenForCollectionChanges('clients', (updatedClients) => {
+                        setState({ clients: updatedClients });
+                    });
+                    api.listenForCollectionChanges('investmentAssets', (updatedAssets) => {
+                        setState({ investmentAssets: updatedAssets });
+                    });
+                    api.listenForSettingsChanges((updatedSettings) => {
+                        const currentState = getState();
+                        const mergedSettings = { ...currentState.settings, ...updatedSettings };
+
+                        mergedSettings.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(updatedSettings?.incomeCategories || [])])];
+                        mergedSettings.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(updatedSettings?.expenseCategories || [])])];
+                        mergedSettings.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(updatedSettings?.invoiceOperationTypes || [])])];
+                        mergedSettings.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(updatedSettings?.taxIdTypes || [])])];
+
+                        setState({ settings: mergedSettings });
+                    });
+
+                    switchPage('inicio');
+                    isAppInitialized = true; // Marcamos como inicializado
+                    updateConnectionStatus('success', 'Sincronizado'); // <-- AÑADIDO
+                } else {
+                     // Si ya estaba inicializado (cambio de usuario?), recargar datos podría ser necesario
+                     // Por ahora, solo actualizamos estado de conexión
+                     updateConnectionStatus('success', 'Sincronizado'); // <-- AÑADIDO
+                }
 
             } else {
-                if (userProfile && userProfile.status === 'pendiente') {
-                    showAuthError('Tu cuenta está pendiente de aprobación por un administrador.');
-                } else {
-                    showAuthError('No tienes permiso para acceder a esta aplicación.');
+                // Si no puede acceder, muestra el error apropiado (handlers.js se encarga de esto)
+                // Y desloguea
+                try {
+                    await api.logoutUser();
+                } catch (logoutError) {
+                    console.error("Error al intentar desloguear usuario sin acceso:", logoutError);
                 }
-                api.logoutUser(); // Desloguea si no tiene acceso
+                // hideApp() se llamará automáticamente por onAuthStateChanged al cambiar a null
             }
         } else {
+            // Usuario deslogueado
             api.setCurrentUser(null);
+            setState({ currentUser: null }); // <-- AÑADIDO
             hideApp();
             isAppInitialized = false; // Resetear al cerrar sesión
+            updateConnectionStatus('success', 'Desconectado'); // <-- AÑADIDO
         }
     });
 
-    // 4. Valores por defecto para fechas
+    // 5. Valores por defecto para fechas
     const today = new Date().toISOString().slice(0, 10);
     ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date', 'investment-date'].forEach(id => {
         const el = document.getElementById(id);
@@ -227,11 +201,10 @@ async function main() {
     const currentMonth = new Date().toISOString().slice(0, 7);
     ['report-month', 'iva-month'].forEach(id => {
         const monthInput = document.getElementById(id);
-        if(monthInput) monthInput.value = currentMonth;
+        if (monthInput) monthInput.value = currentMonth;
     });
 }
 
-// 5. Esperar a que el DOM esté listo para ejecutar main
+// 6. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
 
-// --- ELIMINADO: Ya no necesitamos el listener separado para crear iconos ---
