@@ -1233,9 +1233,13 @@
       Se ha cambiado la ruta del script de absoluta (src="/js/main.js") a relativa (src="js/main.js").
       Esto soluciona el error de tipo MIME, ya que el servidor ahora encontrará
       el archivo correctamente en lugar de servir index.html.
+
+      SEGUNDA SOLUCIÓN (CACHE BUSTING):
+      Se añade un parámetro '?v=2' para forzar la recarga del script.
     -->
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=2"></script> 
     <!-- Ya no se necesita el bloque script aquí -->
 
 </body>
 </html>
+
