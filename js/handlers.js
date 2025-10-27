@@ -1112,24 +1112,7 @@ export function bindEventListeners() {
 
         document.querySelectorAll('.nav-text').forEach(text => {
             text.classList.toggle('hidden');
-        
-
-        setTimeout(() => {
-            // --- MODIFICACIÓN INICIO ---
-            // Acceder a charts a través de window o verificar si existe globalmente
-            const globalCharts = window.App?.charts || window.charts || charts; // Intentar acceder globalmente
-            if (globalCharts && typeof globalCharts === 'object') {
-                 Object.values(globalCharts).forEach(chart => {
-                    if (chart && typeof chart.resize === 'function') {
-                        chart.resize();
-                    }
-                 });
-             } else {
-                 console.warn("No se pudo encontrar el objeto 'charts' globalmente para redimensionar.");
-             }
-            // --- MODIFICACIÓN FIN ---
-        }, 350); // Slightly longer than the transition duration
-});
+        });
          // Trigger chart resize after animation
          setTimeout(() => {
             Object.values(window.App.charts).forEach(chart => {
