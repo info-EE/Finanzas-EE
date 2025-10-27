@@ -57,11 +57,11 @@ export function getDefaultState() {
         activeIvaReport: null,
         settings: {
             adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'],
-            adminEmails: ['info@europaenvios.com'], // Añadir email por si acaso
+            adminEmails: ['info@europaenvios.com'],
             blockedUserIds: [],
             invoiceCounter: {
-                nextInvoiceNumber: 1, // Empezar en 1 por defecto
-                lastInvoiceYear: new Date().getFullYear() -1 // Año anterior para forzar reinicio
+                nextInvoiceNumber: 1,
+                lastInvoiceYear: new Date().getFullYear() -1
             },
             aeatModuleActive: false,
             aeatConfig: {
@@ -76,8 +76,8 @@ export function getDefaultState() {
         },
         allUsers: [],
         permissions: {},
-        currentUser: null // <-- Estado inicial correcto
-    }; // <-- Llave de cierre correcta
+        currentUser: null
+    };
 }
 
 
@@ -89,141 +89,138 @@ export function subscribe(listener) {
 }
 
 function notify() {
+    console.log('[Store] Notifying listeners...'); // Log para depuración
     for (const listener of listeners) {
         listener();
     }
 }
 
 export function getState() {
-    // Devolver una copia profunda para evitar mutaciones accidentales
     return JSON.parse(JSON.stringify(state));
 }
 
 export function setState(newState) {
-    // Fusionar el nuevo estado con el existente
+    console.log('[Store] Updating state with:', newState); // Log para depuración
     state = { ...state, ...newState };
-    notify();
+    // CORRECCIÓN PROBLEMA 3: Asegurarse de notificar DESPUÉS de actualizar el estado
+    // notify(); // <--- Quitar de aquí
 }
 
-// Función resetState corregida
 export function resetState() {
-    state = {}; // Limpia todo el estado, incluyendo currentUser
+    state = {};
     notify();
 }
 
-
-// --- REFACTORIZADO (FASE 1) ---
-// Esta función ahora carga los datos desde colecciones separadas.
 export async function initState() {
+    console.log('[Store] Initializing state...'); // Log para depuración
     const defaultState = getDefaultState();
     const auth = getAuthInstance();
-    const currentUser = auth.currentUser; // Obtener usuario actual desde auth
+    const currentUser = auth.currentUser;
 
-    // Empezar siempre desde el estado por defecto limpio
     let finalState = getDefaultState();
-    // Limpiar permisos por si acaso
     finalState.permissions = {};
 
     try {
         if (currentUser) {
-            // PASO 1: Cargar el perfil del usuario ANTES que nada.
+            console.log(`[Store] User ${currentUser.email} authenticated. Loading profile...`);
             const userProfile = await getUserProfile(currentUser.uid);
+            console.log('[Store] User profile loaded:', userProfile);
 
-            // PASO 2: Determinar los permisos basados en el perfil.
-            // Usar defaultState para las comprobaciones de admin
             if (defaultState.settings.adminUids.includes(currentUser.uid) || defaultState.settings.adminEmails.includes(currentUser.email)) {
-                console.warn("Usuario administrador detectado. Concediendo todos los permisos.");
+                console.warn("[Store] Admin user detected. Granting all permissions.");
                 finalState.permissions = getAdminPermissions();
             } else if (userProfile && userProfile.status === 'activo') {
-                // Comprobar si el perfil tiene permisos definidos
                 const hasDefinedPermissions = userProfile.permisos && Object.keys(userProfile.permisos).length > 0 && Object.values(userProfile.permisos).some(p => p === true);
                 if (hasDefinedPermissions) {
-                    // Si tiene permisos definidos, usarlos
-                    finalState.permissions = { ...getReadOnlyPermissions(), ...userProfile.permisos }; // Base de solo lectura + permisos específicos
+                    console.log("[Store] Active user with specific permissions found.");
+                    finalState.permissions = { ...getReadOnlyPermissions(), ...userProfile.permisos };
                 } else {
-                    // Si no tiene permisos definidos pero está activo, asignar solo lectura
-                    console.log(`Usuario activo sin permisos específicos. Asignando permisos de solo lectura por defecto.`);
+                    console.log(`[Store] Active user without specific permissions. Assigning default read-only permissions.`);
                     finalState.permissions = getReadOnlyPermissions();
                 }
             } else {
-                 console.log(`Usuario no administrador y no activo, o sin perfil. No se asignan permisos.`);
-                 // finalState.permissions ya está vacío {}
+                 console.log(`[Store] User not admin, not active, or profile missing. No permissions assigned.`);
             }
 
-            // PASO 3: Si el usuario tiene algún permiso (es decir, está activo o es admin), cargar los datos.
             const canReadData = Object.values(finalState.permissions).some(p => p === true);
+            console.log(`[Store] User can read data: ${canReadData}`);
 
             if (canReadData) {
-                // Carga los 'settings' primero
+                console.log("[Store] Loading settings...");
                 const loadedSettings = await loadSettings();
+                console.log("[Store] Settings loaded:", loadedSettings);
 
-                // Carga el resto de los datos de sus propias colecciones
-                const loadedAccounts = await loadCollection('accounts');
-                const loadedTransactions = await loadCollection('transactions');
-                const loadedDocuments = await loadCollection('documents');
-                const loadedClients = await loadCollection('clients');
-                const loadedInvestmentAssets = await loadCollection('investmentAssets');
+                console.log("[Store] Loading collections...");
+                const [loadedAccounts, loadedTransactions, loadedDocuments, loadedClients, loadedInvestmentAssets] = await Promise.all([
+                    loadCollection('accounts'),
+                    loadCollection('transactions'),
+                    loadCollection('documents'),
+                    loadCollection('clients'),
+                    loadCollection('investmentAssets')
+                ]);
+                // Logs para depuración Problema 3
+                console.log("[Store] Accounts loaded:", loadedAccounts);
+                console.log("[Store] Transactions loaded:", loadedTransactions);
+                console.log("[Store] Documents loaded:", loadedDocuments);
+                console.log("[Store] Clients loaded:", loadedClients);
+                console.log("[Store] Investment Assets loaded:", loadedInvestmentAssets);
+
 
                 if (loadedSettings) {
-                    // Si hay settings, los fusiona con los default
-                    // Asegurarse de que los arrays esenciales no se sobreescriban si están vacíos en Firestore
                     finalState.settings = {
-                        ...defaultState.settings, // Base por defecto
-                        ...loadedSettings,        // Sobreescribir con lo cargado
-                        // Asegurar adminUids y adminEmails (no deben venir de Firestore)
+                        ...defaultState.settings,
+                        ...loadedSettings,
                         adminUids: defaultState.settings.adminUids,
                         adminEmails: defaultState.settings.adminEmails,
-                        // Mantener blockedUserIds de Firestore si existe, si no, del default
                         blockedUserIds: loadedSettings.blockedUserIds || defaultState.settings.blockedUserIds,
                     };
-                    // Fusiona categorías para asegurar que las esenciales siempre estén presentes
                     finalState.incomeCategories = [...new Set([...defaultState.incomeCategories, ...(loadedSettings.incomeCategories || [])])];
                     finalState.expenseCategories = [...new Set([...defaultState.expenseCategories, ...(loadedSettings.expenseCategories || [])])];
                     finalState.invoiceOperationTypes = [...new Set([...defaultState.invoiceOperationTypes, ...(loadedSettings.invoiceOperationTypes || [])])];
                     finalState.taxIdTypes = [...new Set([...defaultState.taxIdTypes, ...(loadedSettings.taxIdTypes || [])])];
+                    console.log("[Store] Merged settings with loaded data.");
                 } else {
-                    // Si no hay settings (primera vez o migración), guarda los settings por defecto
-                    console.log("No se encontró estado remoto, guardando settings por defecto.");
-                    // Preparamos los settings para guardar (usando los defaults definidos arriba)
+                    console.log("[Store] No remote settings found, saving default settings...");
                     await saveSettings(defaultState.settings);
-                    // Mantener las categorías por defecto en el estado local también
                     finalState.incomeCategories = defaultState.incomeCategories;
                     finalState.expenseCategories = defaultState.expenseCategories;
                     finalState.invoiceOperationTypes = defaultState.invoiceOperationTypes;
                     finalState.taxIdTypes = defaultState.taxIdTypes;
                 }
 
-                // Asigna los datos cargados de las colecciones
                 finalState.accounts = loadedAccounts;
                 finalState.transactions = loadedTransactions;
                 finalState.documents = loadedDocuments;
                 finalState.clients = loadedClients;
-                // Mantener los investmentAssets del default si no hay cargados
                 finalState.investmentAssets = loadedInvestmentAssets.length > 0 ? loadedInvestmentAssets : defaultState.investmentAssets;
+                 console.log("[Store] Collections assigned to final state.");
 
             } else {
-                console.log("El usuario no tiene permisos para leer datos. El estado permanecerá mayormente por defecto.");
-                // No se cargan datos, finalState ya tiene los valores por defecto (listas vacías, etc.)
+                console.log("[Store] User lacks permissions to read data. State will remain mostly default.");
             }
         } else {
-             console.log("No hay usuario autenticado. Usando estado por defecto.");
-             // finalState ya es defaultState con permissions vacío
+             console.log("[Store] No authenticated user. Using default state.");
         }
 
-        // Guardar también la información del usuario actual en el estado final
         finalState.currentUser = currentUser ? { uid: currentUser.uid, email: currentUser.email } : null;
+        console.log("[Store] Final state before setting:", finalState);
 
-        // Finalmente, actualiza el estado global
+        // Actualiza el estado global UNA VEZ al final
         state = finalState;
 
+        // CORRECCIÓN PROBLEMA 3: Notificar DESPUÉS de que TODO el estado esté listo
+        notify();
+        console.log("[Store] State initialization complete and listeners notified.");
+
+
     } catch (error) {
-        console.error("Falló la inicialización del estado por un error de carga:", error);
-        // En caso de error catastrófico, resetear al estado por defecto seguro
-        state = getDefaultState(); // Asegura que el estado por defecto incluya currentUser: null
+        console.error("[Store] State initialization failed due to loading error:", error);
+        state = getDefaultState();
         state.permissions = {};
+        // Notificar incluso en caso de error para que la UI se actualice (aunque sea a un estado vacío)
+        notify();
     }
 
-    // Notificar a los listeners que el estado ha sido inicializado/actualizado
-    notify();
+    // Ya no es necesario notificar aquí, se hace al final del try o en catch
+    // notify();
 }
-

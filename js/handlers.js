@@ -29,9 +29,10 @@ import {
     closeSidebar,
     showPermissionsModal,
     hidePermissionsModal,
-    populateNextInvoiceNumber
-,
-    showAuthError } from './ui.js';
+    populateNextInvoiceNumber,
+    showAuthError,
+    resizeCharts // <-- Importar la nueva función
+} from './ui.js';
 import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
@@ -109,7 +110,7 @@ function handleLoginSubmit(e) {
     clearAuthError();
     const email = elements.loginForm.querySelector('#login-email').value;
     const password = elements.loginForm.querySelector('#login-password').value;
-    
+
     // Modificamos la función que pasamos a withSpinner
     withSpinner(async () => {
         try {
@@ -128,7 +129,7 @@ function handleRegisterSubmit(e) {
     clearAuthError();
     const email = elements.registerForm.querySelector('#register-email').value;
     const password = elements.registerForm.querySelector('#register-password').value;
-     
+
      // Modificamos la función que pasamos a withSpinner
      withSpinner(async () => {
         try {
@@ -209,9 +210,9 @@ function handlePermissionsSave() {
         } else {
             showAlertModal('Error', 'No se pudieron guardar los cambios. Inténtalo de nuevo.');
             api.setCurrentUser(null);
-            setState({ currentUser: null }); // <-- AÑADIDO
+            setState({ currentUser: null });
             hideApp();
-            updateConnectionStatus('success', 'Desconectado'); // <-- AÑADIDO
+            updateConnectionStatus('success', 'Desconectado');
         }
     })();
 }
@@ -384,7 +385,8 @@ function handleTransactionsTableClick(e) {
             const { transactions } = getState();
             const transactionToDelete = transactions.find(t => t.id === id);
             if (transactionToDelete) {
-                actions.deleteTransaction(id, transactionToDelete.accountId); // Pasar ambos IDs
+                // CORRECCIÓN: La función deleteTransaction ahora solo necesita el ID de la transacción.
+                actions.deleteTransaction(id);
             }
         }));
     }
@@ -431,10 +433,10 @@ function handleAddAccount(e) {
 function handleSettingsAccountsListClick(e) {
     const deleteBtn = e.target.closest('.delete-account-btn');
     if (deleteBtn) {
-        const accountId = deleteBtn.dataset.id; // <-- CAMBIO
-        const accountName = deleteBtn.dataset.name; // Mantenemos el nombre para el modal
-        showConfirmationModal('Eliminar Cuenta', `¿Seguro que quieres eliminar la cuenta "${escapeHTML(accountName)}"? Se eliminarán todas sus transacciones.`, withSpinner(() => {
-            actions.deleteAccount(accountId); // <-- CAMBIO
+        const accountId = deleteBtn.dataset.id;
+        const accountName = deleteBtn.dataset.name;
+        showConfirmationModal('Eliminar Cuenta', `¿Seguro que quieres eliminar la cuenta "${escapeHTML(accountName)}"? Esta acción no se puede deshacer y puede causar inconsistencias si hay transacciones asociadas.`, withSpinner(() => {
+            actions.deleteAccount(accountId);
         }));
     }
 }
@@ -476,7 +478,7 @@ function handleTransferFormSubmit(e) {
 
     const { accounts } = getState();
     const fromAccount = accounts.find(a => a.name === fromAccountName);
-    const toAccount = accounts.find(a => a.name === toAccountName); // Find the 'to' account
+    const toAccount = accounts.find(a => a.name === toAccountName);
     let receivedAmount = amount; // Default: same amount
 
     // Check if currencies are different
@@ -804,8 +806,8 @@ function handlePaymentDetailsSubmit(e) {
         reference: form.querySelector('#payment-reference').value,
     };
 
-    withSpinner(() => {
-        const updatedInvoice = actions.savePaymentDetails(invoiceId, paymentData);
+    withSpinner(async () => { // Marcar como async para usar await
+        const updatedInvoice = await actions.savePaymentDetails(invoiceId, paymentData); // Usar await
         if (updatedInvoice) {
             hidePaymentDetailsModal();
             showReceiptViewer(updatedInvoice);
@@ -1095,34 +1097,33 @@ export function bindEventListeners() {
     if (elements.sidebarOverlay) elements.sidebarOverlay.addEventListener('click', closeSidebar);
 
     // Desktop navigation toggle
-    if (elements.sidebarToggleDesktopBtn) elements.sidebarToggleDesktopBtn.addEventListener('click', () => {
-        const isCollapsed = elements.sidebar.classList.contains('w-20');
+    if (elements.sidebarToggleDesktopBtn) {
+        elements.sidebarToggleDesktopBtn.addEventListener('click', () => {
+            const isCollapsed = elements.sidebar.classList.contains('w-20');
 
-        if (isCollapsed) {
-            elements.sidebar.classList.remove('w-20');
-            elements.sidebar.classList.add('w-64');
-            elements.mainContent.classList.remove('md:ml-20');
-            elements.mainContent.classList.add('md:ml-64');
-        } else {
-            elements.sidebar.classList.remove('w-64');
-            elements.sidebar.classList.add('w-20');
-            elements.mainContent.classList.remove('md:ml-64');
-            elements.mainContent.classList.add('md:ml-20');
-        }
+            if (isCollapsed) {
+                elements.sidebar.classList.remove('w-20');
+                elements.sidebar.classList.add('w-64');
+                elements.mainContent.classList.remove('md:ml-20');
+                elements.mainContent.classList.add('md:ml-64');
+            } else {
+                elements.sidebar.classList.remove('w-64');
+                elements.sidebar.classList.add('w-20');
+                elements.mainContent.classList.remove('md:ml-64');
+                elements.mainContent.classList.add('md:ml-20');
+            }
 
-        document.querySelectorAll('.nav-text').forEach(text => {
-            text.classList.toggle('hidden');
-        });
-         // Trigger chart resize after animation
-         setTimeout(() => {
-            Object.values(window.App.charts).forEach(chart => {
-                if (chart && typeof chart.resize === 'function') {
-                    chart.resize();
-                }
+            document.querySelectorAll('.nav-text').forEach(text => {
+                text.classList.toggle('hidden');
             });
-        }, 350); // Slightly longer than the transition duration
-    });
 
+            // Trigger chart resize after animation
+            setTimeout(() => {
+                // CORRECCIÓN PARA PROBLEMA 1: Llamar a la función exportada desde ui.js
+                resizeCharts();
+            }, 350); // Slightly longer than the transition duration
+        });
+    }
 
     // Main navigation links
     elements.navLinks.forEach(link => {
@@ -1349,4 +1350,3 @@ export function bindEventListeners() {
     if (elements.permissionsModalSaveBtn) elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
 
 }
-
