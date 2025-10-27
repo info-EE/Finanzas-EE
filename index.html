@@ -1,20 +1,1239 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba Carga JS</title>
-    <!-- NO se incluyen CSS ni scripts externos -->
-</head>
-<body style="background-color: #111; color: white;">
-
-    <h1>Prueba de Carga de Módulo JavaScript</h1>
-    <p>Revisa la consola del navegador.</p>
-
-    <!-- Único script: intentar cargar main.js (versión simplificada) -->
-    <script type="module" src="js/main.js?v=3"></script> 
-    <!-- Incrementé a v=3 por si acaso -->
-
-</body>
-</html>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>La Maquina Logistica SL</title>
+        
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <!-- Se mantiene la versión de unpkg y el data-stop-auto-replace -->
+        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" data-stop-auto-replace="true"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body class="flex min-h-screen bg-black text-gray-200">
+    
+        <!-- Auth Overlay -->
+        <div id="auth-container" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90">
+            <div class="card w-full max-w-sm p-8">
+                <!-- Login Form -->
+                <div id="login-view">
+                    <h2 class="text-2xl font-bold text-center text-white mb-6">Iniciar Sesión</h2>
+                    <form id="login-form" class="space-y-4">
+                        <div>
+                            <label for="login-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                            <input type="email" id="login-email" class="form-input" required autocomplete="email">
+                        </div>
+                        <div>
+                            <label for="login-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
+                            <div class="relative">
+                                <input type="password" id="login-password" class="form-input pr-10" required autocomplete="current-password">
+                                <button type="button" id="toggle-login-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                            Ingresar
+                        </button>
+                    </form>
+                    <p class="text-center text-sm text-gray-400 mt-4">
+                        ¿No tienes una cuenta? <a href="#" id="show-register-view" class="font-medium text-blue-400 hover:underline">Regístrate</a>
+                    </p>
+                </div>
+    
+                <!-- Register Form -->
+                <div id="register-view" class="hidden">
+                    <h2 class="text-2xl font-bold text-center text-white mb-6">Crear Cuenta</h2>
+                    <form id="register-form" class="space-y-4">
+                        <div>
+                            <label for="register-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                            <input type="email" id="register-email" class="form-input" required autocomplete="email">
+                        </div>
+                        <div>
+                            <label for="register-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
+                            <div class="relative">
+                                <input type="password" id="register-password" class="form-input pr-10" required autocomplete="new-password">
+                                <button type="button" id="toggle-register-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                            Registrarse
+                        </button>
+                    </form>
+                    <p class="text-center text-sm text-gray-400 mt-4">
+                        ¿Ya tienes una cuenta? <a href="#" id="show-login-view" class="font-medium text-blue-400 hover:underline">Inicia Sesión</a>
+                    </p>
+                </div>
+                 <div id="auth-error" class="mt-4 text-center text-sm text-red-400"></div>
+            </div>
+        </div>
+    
+        <!-- Sidebar Overlay (for mobile) -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden"></div>
+    
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 bg-black/50 p-4 flex-col h-full
+                               transform -translate-x-full md:translate-x-0
+                               w-64
+                               transition-all duration-300 ease-in-out z-40 flex">
+    
+            <!-- Close button (mobile) -->
+            <button id="sidebar-close-btn" class="md:hidden absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+    
+            <!-- Logo / Desktop Toggle -->
+            <div id="sidebar-toggle-desktop" class="hidden md:flex items-center justify-center gap-3 mb-10 cursor-pointer">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <!-- *** CORRECCIÓN INTELIGENTE: Reemplazado SVG problemático por icono Lucide *** -->
+                    <i data-lucide="package" class="flex-shrink-0 text-blue-500 w-6 h-6"></i>
+                    <span class="text-xl font-bold text-white whitespace-nowrap nav-text">Finanzas EE</span>
+                </div>
+            </div>
+            
+            <!-- Mobile Header (Logo only) -->
+            <div class="flex md:hidden items-center justify-center gap-3 mb-10">
+                 <!-- *** CORRECCIÓN INTELIGENTE: Reemplazado SVG problemático por icono Lucide *** -->
+                 <i data-lucide="package" class="flex-shrink-0 text-blue-500 w-6 h-6"></i>
+                 <span class="text-xl font-bold text-white whitespace-nowrap">Finanzas EE</span>
+            </div>
+    
+            <nav class="flex flex-col gap-2 flex-grow">
+                <a href="#" id="nav-inicio" class="nav-link active flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="layout-dashboard"></i> <span class="nav-text">Inicio</span>
+                </a>
+                <a href="#" id="nav-cashflow" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="arrow-left-right"></i> <span class="nav-text">Cash Flow</span>
+                </a>
+                <a href="#" id="nav-iva" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="percent-circle"></i> <span class="nav-text">Control IVA</span>
+                </a>
+                <a href="#" id="nav-cuentas" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="landmark"></i> <span class="nav-text">Cuentas & Bancos</span>
+                </a>
+                <a href="#" id="nav-proformas" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="file-check-2"></i> <span class="nav-text">Proformas</span>
+                </a>
+                <a href="#" id="nav-reportes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="file-line-chart"></i> <span class="nav-text">Reportes</span>
+                </a>
+                <a href="#" id="nav-archivos" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="archive"></i> <span class="nav-text">Archivos</span>
+                </a>
+                <a href="#" id="nav-ajustes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="settings"></i> <span class="nav-text">Ajustes</span>
+                </a>
+                <hr class="border-gray-700 my-2">
+                <a href="#" id="nav-facturacion" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="file-text"></i> <span class="nav-text">Facturación</span>
+                </a>
+                <a href="#" id="nav-inversiones" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="trending-up"></i> <span class="nav-text">Inversiones</span>
+                </a>
+                <a href="#" id="nav-clientes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="contact"></i> <span class="nav-text">Clientes</span>
+                </a>
+            </nav>
+    
+            <!-- Logout Button -->
+            <a href="#" id="logout-btn" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg mt-4 text-red-400 hover:bg-red-500/10 hover:border-red-500">
+                <i data-lucide="log-out"></i> <span class="nav-text">Cerrar Sesión</span>
+            </a>
+    
+            <!-- Connection Status Indicator -->
+            <div id="connection-status" class="mt-auto p-2 flex items-center justify-center gap-2 text-xs text-gray-400 opacity-0 transition-opacity duration-300">
+                <span id="status-icon"></span>
+                <span id="status-text" class="nav-text"></span>
+            </div>
+        </aside>
+    
+        <main id="main-content" class="flex-1 md:ml-64 p-4 md:p-8 main-content transition-all duration-300 ease-in-out">
+            
+            <header class="md:hidden flex justify-between items-center mb-6">
+                 <button id="sidebar-open-btn" class="text-gray-300 hover:text-white">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                 </button>
+                 <h1 class="text-xl font-bold text-white">Finanzas EE</h1>
+                 <div></div> <!-- Spacer -->
+            </header>
+    
+            <div id="page-inicio" class="page-content">
+                <div class="hidden md:flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold text-white uppercase tracking-wider">Centro de Mando</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="quick-add-income" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Ingreso
+                        </button>
+                        <button id="quick-add-expense" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                            <i data-lucide="minus-circle" class="w-4 h-4"></i> Egreso
+                        </button>
+                    </div>
+                </div>
+    
+                <!-- KPIs Mensuales -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="card p-4 rounded-xl">
+                        <p class="text-sm text-gray-400">Ingresos (Mes Actual)</p>
+                        <p id="kpi-monthly-income" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    </div>
+                    <div class="card p-4 rounded-xl">
+                        <p class="text-sm text-gray-400">Egresos (Mes Actual)</p>
+                        <p id="kpi-monthly-expense" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    </div>
+                    <div class="card p-4 rounded-xl">
+                        <p class="text-sm text-gray-400">Beneficio Neto (Mes Actual)</p>
+                        <p id="kpi-monthly-profit" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    </div>
+                    <div class="card p-4 rounded-xl">
+                        <p class="text-sm text-gray-400">Saldo Total Disponible</p>
+                        <p id="kpi-total-balance" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    </div>
+                </div>
+    
+                <!-- Layout Principal -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Columna Izquierda -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="card p-6 rounded-xl">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                                <h3 class="font-semibold">Flujo de Caja Anual</h3>
+                                <div>
+                                    <label for="inicio-chart-currency" class="text-sm text-gray-400 mr-2">Moneda:</label>
+                                    <select id="inicio-chart-currency" class="form-input !p-2 !w-auto !text-sm bg-gray-900">
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="USD">USD ($)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="h-80"><canvas id="annualFlowChart"></canvas></div>
+                        </div>
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
+                            <div id="recent-transactions-container" class="overflow-x-auto">
+                                <!-- Contenido se generará dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+    
+                    <!-- Columna Derecha -->
+                    <div class="space-y-6">
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Distribución de Gastos (Mes)</h3>
+                            <div class="h-64"><canvas id="expenseDistributionChart"></canvas></div>
+                        </div>
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Saldos Principales</h3>
+                            <div id="main-balances-container" class="space-y-3">
+                                <!-- Contenido se generará dinámicamente -->
+                            </div>
+                        </div>
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Facturas Pendientes</h3>
+                            <div id="pending-invoices-container">
+                                <!-- Contenido se generará dinámicamente -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+    
+            <div id="page-cashflow" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Flujo de Caja (Cash Flow)</h2>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6 rounded-xl">
+                        <h3 id="form-title" class="font-semibold mb-4 text-lg">Agregar Nuevo Movimiento</h3>
+                        <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <input type="hidden" id="transaction-id">
+                            <div>
+                                <label for="transaction-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                                <input type="date" id="transaction-date" class="form-input" required>
+                            </div>
+                            <div class="lg:col-span-2">
+                                <label for="transaction-description" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
+                                <input type="text" id="transaction-description" class="form-input" placeholder="Ej: Pago de suscripción" required>
+                            </div>
+                            <div>
+                                <label for="transaction-type" class="block text-sm font-medium text-gray-400 mb-1">Tipo</label>
+                                <select id="transaction-type" class="form-input" required>
+                                    <option value="Ingreso">Ingreso</option>
+                                    <option value="Egreso">Egreso</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="transaction-part" class="block text-sm font-medium text-gray-400 mb-1">Parte</label>
+                                <select id="transaction-part" class="form-input" required>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="transaction-account" class="block text-sm font-medium text-gray-400 mb-1">Cuenta / Banco</label>
+                                <select id="transaction-account" class="form-input" required>
+                                    </select>
+                            </div>
+                            <div>
+                                <label for="transaction-category" class="block text-sm font-medium text-gray-400 mb-1">Categoría</label>
+                                <select id="transaction-category" class="form-input" required></select>
+                            </div>
+                            <div id="transaction-iva-container" class="hidden">
+                               <label for="transaction-iva" class="block text-sm font-medium text-gray-400 mb-1">Monto IVA (Opcional)</label>
+                                <div class="relative">
+                                    <span id="iva-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                    <input type="number" id="transaction-iva" class="form-input pl-8" placeholder="21.00" step="0.01">
+                                </div>
+                            </div>
+                            <div>
+                               <label for="transaction-amount" class="block text-sm font-medium text-gray-400 mb-1">Monto</label>
+                                <div class="relative">
+                                    <span id="amount-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                    <input type="number" id="transaction-amount" class="form-input pl-8" placeholder="250.00" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="flex items-end gap-2 lg:col-span-2">
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i data-lucide="save" class="w-4 h-4"></i><span id="form-submit-button-text">Guardar</span>
+                                </button>
+                                <button type="button" id="form-cancel-button" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors hidden">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+    
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4 text-lg">Transferencia entre Cuentas</h3>
+                        <form id="transfer-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label for="transfer-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                                <input type="date" id="transfer-date" class="form-input" required>
+                            </div>
+                            <div>
+                                <label for="transfer-from" class="block text-sm font-medium text-gray-400 mb-1">Cuenta Origen</label>
+                                <select id="transfer-from" class="form-input" required></select>
+                            </div>
+                            <div>
+                                <label for="transfer-to" class="block text-sm font-medium text-gray-400 mb-1">Cuenta Destino</label>
+                                <select id="transfer-to" class="form-input" required></select>
+                            </div>
+                            <div>
+                                <label for="transfer-amount" class="block text-sm font-medium text-gray-400 mb-1">Monto a Enviar</label>
+                                <div class="relative">
+                                    <span id="transfer-amount-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                    <input type="number" id="transfer-amount" class="form-input pl-8" placeholder="1000.00" step="0.01" required>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="transfer-fee-source" class="block text-sm font-medium text-gray-400 mb-1">Comisión Origen (Opcional)</label>
+                                <div class="relative">
+                                    <span id="transfer-fee-source-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                    <input type="number" id="transfer-fee-source" class="form-input pl-8" placeholder="5.00" step="0.01">
+                                </div>
+                            </div>
+                            <div>
+                                <label id="transfer-extra-label" for="transfer-extra-field" class="block text-sm font-medium text-gray-400 mb-1">Comisión Destino (Opcional)</label>
+                                <div class="relative">
+                                    <span id="transfer-extra-currency-symbol" class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">$</span>
+                                    <input type="number" id="transfer-extra-field" class="form-input pl-8" placeholder="1.00" step="0.01">
+                                </div>
+                            </div>
+                            <div class="md:col-span-2 lg:col-span-3">
+                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i data-lucide="arrow-right-left" class="w-4 h-4"></i> Realizar Transferencia
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+    
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
+                        <div class="mb-4">
+                            <input type="text" id="cashflow-search" class="form-input" placeholder="Buscar por descripción, cuenta o categoría...">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left min-w-[700px]">
+                                <thead>
+                                    <tr class="text-gray-400 border-b border-gray-700">
+                                        <th class="py-2 px-3">Fecha</th>
+                                        <th class="py-2 px-3">Descripción</th>
+                                        <th class="py-2 px-3">Cuenta</th>
+                                        <th class="py-2 px-3">Categoría</th>
+                                        <th class="py-2 px-3">Parte</th>
+                                        <th class="py-2 px-3 text-right">IVA</th>
+                                        <th class="py-2 px-3 text-right">Monto</th>
+                                        <th class="py-2 px-3 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactions-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="page-iva" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Control Mensual de IVA</h2>
+                <div class="card p-6 rounded-xl mb-6">
+                    <div class="flex items-end gap-4">
+                        <div>
+                            <label for="iva-month" class="block text-sm font-medium text-gray-400 mb-1">Seleccionar Mes</label>
+                            <input type="month" id="iva-month" class="form-input">
+                        </div>
+                        <button id="iva-generate-report-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Generar</button>
+                    </div>
+                </div>
+            
+                <div id="iva-report-display">
+                    <!-- El contenido del reporte de IVA se generará aquí -->
+                </div>
+            </div>
+    
+    
+            <div id="page-cuentas" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Cuentas y Bancos</h2>
+                <div id="accounts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    </div>
+                <div class="card p-6 rounded-xl mt-6">
+                    <h3 class="font-semibold mb-4">Distribución de Saldos</h3>
+                    <div id="balance-totals" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border-b border-gray-700 pb-4">
+                        </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        <div id="eur-chart-container" class="hidden">
+                            <h4 class="font-semibold text-center mb-2">Distribución de Saldos en Euros (€)</h4>
+                            <div class="flex flex-col-reverse md:flex-row gap-6 items-center">
+                                <div id="balance-legend-eur" class="w-full md:w-1/2 lg:w-2/3"></div>
+                                <div class="w-full md:w-1_2 lg:w-1_3 h-40">
+                                    <canvas id="accountsBalanceChartEUR"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="usd-chart-container" class="hidden">
+                            <h4 class="font-semibold text-center mb-2">Distribución de Saldos en Dólares ($)</h4>
+                            <div class="flex flex-col-reverse md:flex-row gap-6 items-center">
+                                <div id="balance-legend-usd" class="w-full md:w-1/2 lg:w-2/3"></div>
+                                <div class="w-full md:w-1_2 lg:w-1_3 h-40">
+                                    <canvas id="accountsBalanceChartUSD"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="page-proformas" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Proformas</h2>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4 text-lg">Agregar Nueva Proforma</h3>
+                        <form id="proforma-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label for="proforma-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                                <input type="date" id="proforma-date" class="form-input" required>
+                            </div>
+                            <div>
+                                <label for="proforma-number" class="block text-sm font-medium text-gray-400 mb-1">N° de Proforma</label>
+                                <input type="text" id="proforma-number" class="form-input" placeholder="Ej: P-2024-001" required>
+                            </div>
+                            <div>
+                                <label for="proforma-client" class="block text-sm font-medium text-gray-400 mb-1">Cliente</label>
+                                <input type="text" id="proforma-client" class="form-input" placeholder="Nombre del Cliente" required>
+                            </div>
+                            <div class="lg:col-span-2">
+                               <label for="proforma-amount" class="block text-sm font-medium text-gray-400 mb-1">Monto</label>
+                               <div class="flex gap-2">
+                                    <input type="number" id="proforma-amount" class="form-input" placeholder="1500.00" step="0.01" required>
+                                    <select id="proforma-currency" class="form-input w-24">
+                                        <option value="EUR">€</option>
+                                        <option value="USD">$</option>
+                                    </select>
+                               </div>
+                            </div>
+                            <div class="lg:col-span-1 flex items-end">
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Agregar Proforma
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Listado de Proformas</h3>
+                        <div class="mb-4">
+                            <input type="text" id="proformas-search" class="form-input" placeholder="Buscar por N° de proforma o cliente...">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left min-w-[600px]">
+                                <thead>
+                                    <tr class="text-gray-400 border-b border-gray-700">
+                                        <th class="py-2 px-3">Fecha</th>
+                                        <th class="py-2 px-3">N° Proforma</th>
+                                        <th class="py-2 px-3">Cliente</th>
+                                        <th class="py-2 px-3 text-right">Monto</th>
+                                        <th class="py-2 px-3 text-center">Estado</th>
+                                        <th class="py-2 px-3 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="proformas-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="page-reportes" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Centro de Reportes</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 rounded-xl lg:col-span-1">
+                        <h3 class="font-semibold mb-4">Generar Nuevo Reporte</h3>
+                        <form id="report-form" class="space-y-4">
+                            <div>
+                                <label for="report-type" class="block text-sm font-medium text-gray-400 mb-1">Tipo de Reporte</label>
+                                <select id="report-type" class="form-input">
+                                    <option value="movimientos">Movimientos de Cuentas</option>
+                                    <option value="documentos">Proformas y Facturas</option>
+                                    <option value="inversiones">Inversiones</option>
+                                    <option value="sociedades">Cálculo Imp. Sociedades (Trimestral)</option>
+                                </select>
+                            </div>
+                            
+                            <div id="report-filters" class="space-y-4">
+                                <!-- Filtros para reportes estándar -->
+                                <div id="default-filters-container" class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="report-period" class="block text-sm font-medium text-gray-400 mb-1">Período</label>
+                                            <select id="report-period" class="form-input">
+                                                <option value="daily">Diario</option>
+                                                <option value="weekly">Semanal</option>
+                                                <option value="monthly" selected>Mensual</option>
+                                                <option value="annual">Anual</option>
+                                            </select>
+                                        </div>
+                                        <!-- Contenedor para los inputs de fecha que se mostrarán/ocultarán -->
+                                        <div id="date-inputs-container">
+                                            <div id="date-input-daily" class="hidden">
+                                                <label for="report-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                                                <input type="date" id="report-date" class="form-input">
+                                            </div>
+                                            <div id="date-input-weekly" class="hidden">
+                                                <label for="report-week" class="block text-sm font-medium text-gray-400 mb-1">Semana</label>
+                                                <input type="week" id="report-week" class="form-input">
+                                            </div>
+                                            <div id="date-input-monthly">
+                                                <label for="report-month" class="block text-sm font-medium text-gray-400 mb-1">Mes</label>
+                                                <input type="month" id="report-month" class="form-input">
+                                            </div>
+                                            <div id="date-input-annual" class="hidden">
+                                                <label for="report-year" class="block text-sm font-medium text-gray-400 mb-1">Año</label>
+                                                <input type="number" id="report-year" class="form-input" placeholder="Ej: 2024">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="report-account" class="block text-sm font-medium text-gray-400 mb-1">Cuenta</label>
+                                            <select id="report-account" class="form-input"></select>
+                                        </div>
+                                        <div>
+                                            <label for="report-part" class="block text-sm font-medium text-gray-400 mb-1">Parte</label>
+                                            <select id="report-part" class="form-input">
+                                                <option value="all">Ambas (A y B)</option>
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+    
+                                <!-- Filtros para reporte de Sociedades -->
+                                <div id="sociedades-filters-container" class="hidden space-y-4">
+                                    <div>
+                                        <label for="report-year-sociedades" class="block text-sm font-medium text-gray-400 mb-1">Año Fiscal</label>
+                                        <select id="report-year-sociedades" class="form-input"></select>
+                                    </div>
+                                    <div>
+                                        <label for="report-periodo-sociedades" class="block text-sm font-medium text-gray-400 mb-1">Período de Pago</label>
+                                        <select id="report-periodo-sociedades" class="form-input">
+                                            <option value="1P">1P (20 de Abril)</option>
+                                            <option value="2P">2P (20 de Octubre)</option>
+                                            <option value="3P">3P (20 de Diciembre)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+    
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="search" class="w-4 h-4"></i> Generar Reporte
+                            </button>
+                        </form>
+                    </div>
+                    <div class="card p-6 rounded-xl lg:col-span-2">
+                        <div id="report-display-area" class="h-full">
+                            <div class="text-center text-gray-500 flex flex-col items-center justify-center h-full">
+                                <i data-lucide="file-search-2" class="w-16 h-16 mb-4"></i>
+                                <h3 class="font-semibold text-lg">Seleccione los filtros y genere un reporte</h3>
+                                <p class="text-sm">Los resultados se mostrarán aquí.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="page-archivos" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Archivos Anuales</h2>
+                <div class="card p-6 rounded-xl">
+                    <div class="flex items-end gap-4 mb-6">
+                        <div class="flex-grow">
+                            <label for="archive-year-select" class="block text-sm font-medium text-gray-400">Seleccionar Año</label>
+                            <select id="archive-year-select" class="form-input mt-1"></select>
+                        </div>
+                        <button id="view-archive-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Ver Archivo</button>
+                    </div>
+                    <div id="archive-display-area">
+                        <div class="text-center text-gray-500 py-10">
+                            <i data-lucide="archive" class="w-16 h-16 mx-auto mb-4"></i>
+                            <p>Seleccione un año para ver los datos archivados.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="page-ajustes" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Ajustes</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <div id="user-management-card" class="card p-6 rounded-xl lg:col-span-2 hidden">
+                        <h3 class="font-semibold text-lg mb-4 text-blue-300">Gestión de Usuarios</h3>
+                        <div id="users-list" class="space-y-2 max-h-72 overflow-y-auto">
+                            <!-- La lista de usuarios se generará aquí -->
+                        </div>
+                    </div>
+    
+                    <div id="aeat-settings-card" class="card p-6 rounded-xl lg:col-span-2 hidden">
+                        <h3 class="font-semibold text-lg mb-4">Configuración de Facturación Electrónica (AEAT)</h3>
+                        <div class="bg-gray-800/50 p-4 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-semibold text-blue-300">Activar Conexión con AEAT</h4>
+                                    <p class="text-sm text-gray-400">Permite la generación de facturas electrónicas válidas (`Veri*factu`).</p>
+                                </div>
+                                <div id="aeat-toggle-container">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+    
+                    <div class="card p-6 rounded-xl lg:col-span-2">
+                        <h3 class="font-semibold text-lg mb-4">Parámetros Fiscales</h3>
+                        <form id="fiscal-params-form" class="max-w-md">
+                            <div class="space-y-2">
+                                <label for="corporate-tax-rate" class="block text-sm font-medium text-gray-400">Tipo impositivo para pagos fraccionados (%)</label>
+                                <div class="flex items-center gap-4">
+                                    <input type="number" id="corporate-tax-rate" class="form-input" required value="17" step="0.01" min="0" max="100">
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors flex-shrink-0">Guardar</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+    
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold text-lg mb-4">Gestión de Cuentas</h3>
+                        <form id="add-account-form" class="space-y-4 mb-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="new-account-name" class="block text-sm font-medium text-gray-400">Nombre de la Cuenta</label>
+                                    <input type="text" id="new-account-name" class="form-input mt-1" required placeholder="Ej: Banco Principal">
+                                </div>
+                                <div>
+                                    <label for="new-account-currency" class="block text-sm font-medium text-gray-400">Moneda</label>
+                                    <select id="new-account-currency" class="form-input mt-1" required>
+                                        <option value="USD">USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="new-account-balance" class="block text-sm font-medium text-gray-400">Saldo Inicial</label>
+                                <input type="number" id="new-account-balance" class="form-input mt-1" required placeholder="1000.00" step="0.01">
+                            </div>
+                            <div>
+                                <label for="new-account-logo-select" class="block text-sm font-medium text-gray-400">Logo</label>
+                                <select id="new-account-logo-select" class="form-input mt-1"></select>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Agregar Cuenta
+                            </button>
+                        </form>
+                        <h4 class="font-semibold text-md mb-2">Cuentas Existentes</h4>
+                        <div id="settings-accounts-list" class="space-y-2 max-h-48 overflow-y-auto">
+                            </div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold text-lg mb-4">Gestión de Categorías</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-semibold mb-2">Ingresos</h4>
+                                <form id="add-income-category-form" class="flex gap-2 mb-3">
+                                    <input type="text" id="new-income-category" class="form-input" placeholder="Nueva categoría" required>
+                                    <button type="submit" class="p-3 bg-green-600/20 hover:bg-green-600/40 text-green-300 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                                </form>
+                                <div id="income-categories-list" class="space-y-2 max-h-32 overflow-y-auto">
+                                    </div>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold mb-2">Egresos</h4>
+                                <form id="add-expense-category-form" class="flex gap-2 mb-3">
+                                    <input type="text" id="new-expense-category" class="form-input" placeholder="Nueva categoría" required>
+                                    <button type="submit" class="p-3 bg-red-600/20 hover:bg-red-600/40 text-red-300 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                                </form>
+                                <div id="expense-categories-list" class="space-y-2 max-h-32 overflow-y-auto">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold text-lg mb-4">Gestión de Tipos de Operación</h3>
+                         <form id="add-operation-type-form" class="flex gap-2 mb-3">
+                            <input type="text" id="new-operation-type" class="form-input" placeholder="Nuevo tipo de operación" required>
+                            <button type="submit" class="p-3 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                        </form>
+                        <div id="operation-types-list" class="space-y-2 max-h-32 overflow-y-auto">
+                            </div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold text-lg mb-4">Gestión de Tipos de ID Fiscal</h3>
+                         <form id="add-tax-id-type-form" class="flex gap-2 mb-3">
+                            <input type="text" id="new-tax-id-type" class="form-input" placeholder="Nuevo tipo de ID (Ej: VAT)" required>
+                            <button type="submit" class="p-3 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 rounded-lg"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                        </form>
+                        <div id="tax-id-types-list" class="space-y-2 max-h-32 overflow-y-auto">
+                            </div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold text-lg mb-4">Actualizar Saldo de Cuenta</h3>
+                        <p class="text-sm text-gray-400 mb-4">Esto crea una transacción de ajuste para conciliar el saldo real con el del sistema.</p>
+                        <form id="update-balance-form" class="space-y-4">
+                            <div>
+                                <label for="update-account-select" class="block text-sm font-medium text-gray-400">Seleccionar Cuenta</label>
+                                <select id="update-account-select" class="form-input mt-1" required></select>
+                            </div>
+                            <div>
+                                <label for="new-balance-amount" class="block text-sm font-medium text-gray-400">Nuevo Saldo Real</label>
+                                <input type="number" id="new-balance-amount" class="form-input mt-1" required placeholder="1500.50" step="0.01">
+                            </div>
+                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Crear Ajuste de Saldo
+                            </button>
+                        </form>
+                    </div>
+    
+                    <!-- Nueva tarjeta para gestión de activos de inversión -->
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold text-lg mb-4">Gestión de Activos de Inversión</h3>
+                        <form id="add-investment-asset-form" class="space-y-4 mb-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="new-investment-asset-name" class="block text-sm font-medium text-gray-400">Nombre del Activo</label>
+                                    <input type="text" id="new-investment-asset-name" class="form-input mt-1" required placeholder="Ej: Bitcoin">
+                                </div>
+                                <div>
+                                    <label for="new-investment-asset-category" class="block text-sm font-medium text-gray-400">Categoría</label>
+                                    <input type="text" id="new-investment-asset-category" class="form-input mt-1" required placeholder="Ej: Criptomoneda">
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">
+                                Agregar Activo
+                            </button>
+                        </form>
+                        <h4 class="font-semibold text-md mb-2">Activos Existentes</h4>
+                        <div id="investment-assets-list" class="space-y-2 max-h-48 overflow-y-auto">
+                            <!-- La lista se generará aquí -->
+                        </div>
+                    </div>
+    
+                    <div class="card p-6 rounded-xl bg-red-900/20 border-red-500/30 lg:col-span-2">
+                        <h3 class="font-semibold text-lg mb-4 text-red-300">Cierre Anual</h3>
+                        <p class="text-sm text-red-200 mb-4">Esta acción archivará todos los movimientos y documentos dentro del rango de fechas seleccionado. Esta acción no se puede deshacer.</p>
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="cierre-start-date" class="block text-sm font-medium text-red-200 mb-1">Fecha de Inicio</label>
+                                <input type="date" id="cierre-start-date" class="form-input" required>
+                            </div>
+                            <div>
+                                <label for="cierre-end-date" class="block text-sm font-medium text-red-200 mb-1">Fecha de Cierre</label>
+                                <input type="date" id="cierre-end-date" class="form-input" required>
+                            </div>
+                        </div>
+                        <button id="close-year-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            Realizar Cierre de Año
+                        </button>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="page-facturacion" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Facturación Electrónica</h2>
+                
+                <div class="border-b border-gray-700 mb-6">
+                    <nav class="flex -mb-px space-x-6" aria-label="Tabs">
+                        <button id="facturacion-tab-crear" class="tab-button-inner active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition">Crear Factura</button>
+                        <button id="facturacion-tab-listado" class="tab-button-inner whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500 font-medium text-sm transition">Listado de Facturas</button>
+                        <button id="facturacion-tab-config" class="tab-button-inner whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500 font-medium text-sm transition">Configuración AEAT (Backend)</button>
+                    </nav>
+                </div>
+    
+                <div id="facturacion-content-crear">
+                    <div class="grid lg:grid-cols-5 gap-6">
+                        <div class="lg:col-span-3">
+                            <div class="card p-6 rounded-xl">
+                                <h3 class="font-semibold mb-4 text-lg">Nueva Factura</h3>
+                                <form id="nueva-factura-form" class="space-y-4">
+                                    <div>
+                                        <label for="factura-operation-type" class="block text-sm text-gray-400 mb-1">Tipo de Operación</label>
+                                        <select id="factura-operation-type" class="form-input">
+                                            </select>
+                                    </div>
+    
+                                    <div class="border-t border-b border-gray-700 py-4 space-y-4">
+                                        <div>
+                                            <label for="factura-select-cliente" class="block text-sm font-medium text-gray-400 mb-1">Seleccionar Cliente Existente</label>
+                                            <select id="factura-select-cliente" class="form-input">
+                                                <option value="">-- Entrada Manual --</option>
+                                            </select>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label for="factura-cliente" class="block text-sm text-gray-400 mb-1">Cliente</label>
+                                                <input type="text" id="factura-cliente" class="form-input" placeholder="Nombre del Cliente" required>
+                                            </div>
+                                            <div>
+                                                <label for="factura-nif" class="block text-sm text-gray-400 mb-1">NIF/CIF</label>
+                                                <input type="text" id="factura-nif" class="form-input" placeholder="NIF/CIF del Cliente" required>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="factura-cliente-direccion" class="block text-sm text-gray-400 mb-1">Dirección del Cliente</label>
+                                            <textarea id="factura-cliente-direccion" rows="2" class="form-input" placeholder="Ej: PALMA 915, ASUNCIÓN (PARAGUAY)" required></textarea>
+                                        </div>
+                                        <div>
+                                            <label for="factura-cliente-telefono" class="block text-sm text-gray-400 mb-1">Teléfono del Cliente</label>
+                                            <input type="text" id="factura-cliente-telefono" class="form-input" placeholder="Ej: (59) 597 4688 738">
+                                        </div>
+                                    </div>
+    
+                                    <div class="grid grid-cols-12 gap-4">
+                                        <div class="col-span-4">
+                                            <label for="factura-numero" class="block text-sm text-gray-400 mb-1">Nº Factura</label>
+                                            <input type="text" id="factura-numero" class="form-input bg-gray-700/50 cursor-not-allowed" readonly required>
+                                        </div>
+                                        <div class="col-span-4">
+                                            <label for="factura-fecha" class="block text-sm text-gray-400 mb-1">Fecha</label>
+                                            <input type="date" id="factura-fecha" class="form-input" required>
+                                        </div>
+                                        <div class="col-span-4">
+                                            <label for="factura-currency" class="block text-sm text-gray-400 mb-1">Moneda</label>
+                                            <select id="factura-currency" class="form-input">
+                                                <option value="EUR">EUR (€)</option>
+                                                <option value="USD">USD ($)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="border-t border-gray-700 pt-4">
+                                        <h4 class="font-semibold mb-2">Conceptos</h4>
+                                        <div id="factura-items-container" class="space-y-2">
+                                            </div>
+                                        <button type="button" id="factura-add-item-btn" class="mt-2 text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2">
+                                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Añadir concepto
+                                        </button>
+                                    </div>
+                                    <div class="pt-4 flex justify-end">
+                                        <button type="submit" id="generate-invoice-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            <i data-lucide="file-output" class="w-4 h-4"></i> Generar Factura
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-2">
+                            <div class="card p-6 rounded-xl">
+                                <h3 class="font-semibold mb-4 text-lg">Resumen y Resultado</h3>
+                                <div class="space-y-3 text-sm border-b border-gray-700 pb-3 mb-3">
+                                    <div class="flex justify-between"><span class="text-gray-400">Subtotal:</span> <span id="factura-subtotal">€0.00</span></div>
+                                    <div class="flex justify-between"><span class="text-gray-400" id="factura-iva-label">IVA (21%):</span> <span id="factura-iva">€0.00</span></div>
+                                    <div class="flex justify-between text-lg font-bold text-white"><span >TOTAL:</span> <span id="factura-total">€0.00</span></div>
+                                </div>
+                                <div id="factura-api-response" class="min-h-[150px]">
+                                    <p class="text-center text-gray-500 pt-8">El resultado de la generación aparecerá aquí.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    
+                <div id="facturacion-content-listado" class="hidden">
+                    <div class="card p-6 rounded-xl">
+                        <h3 class="font-semibold mb-4">Listado de Facturas</h3>
+                        <div class="mb-4">
+                            <input type="text" id="facturas-search" class="form-input" placeholder="Buscar por N° de factura o cliente...">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left min-w-[700px]">
+                                <thead>
+                                    <tr class="text-gray-400 border-b border-gray-700">
+                                        <th class="py-2 px-3">Fecha</th>
+                                        <th class="py-2 px-3">N° Factura</th>
+                                        <th class="py-2 px-3">Cliente</th>
+                                        <th class="py-2 px-3 text-right">Monto</th>
+                                        <th class="py-2 px-3 text-center">Estado</th>
+                                        <th class="py-2 px-3 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="facturas-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+    
+                <div id="facturacion-content-config" class="hidden">
+                    <div class="card p-6 rounded-xl max-w-4xl mx-auto">
+                        <h3 class="font-semibold text-lg mb-4">Configuración del Backend</h3>
+                        <p class="text-sm text-gray-400 mb-6">Introduce y guarda los datos de configuración para conectar con los servicios de la AEAT. Estos datos se almacenan localmente en tu navegador.</p>
+                        <form id="aeat-config-form">
+                            <div class="space-y-6">
+                                <div>
+                                    <h4 class="font-semibold text-blue-300">Certificado Digital</h4>
+                                    <div class="mt-2 space-y-3">
+                                        <div>
+                                            <label for="aeat-cert-path" class="block text-sm text-gray-400 mb-1">Ruta del Certificado (.p12, .pfx)</label>
+                                            <input type="text" id="aeat-cert-path" placeholder="/ruta/segura/en/servidor/certificado.p12" class="form-input">
+                                            <p class="text-xs text-yellow-400 mt-1">En un sistema real, esto sería una ruta en el servidor, no se subiría el archivo directamente desde aquí.</p>
+                                        </div>
+                                        <div>
+                                            <label for="aeat-cert-pass" class="block text-sm text-gray-400 mb-1">Contraseña del Certificado</label>
+                                            <input type="password" id="aeat-cert-pass" placeholder="Contraseña de tu certificado digital" class="form-input">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="border-t border-gray-700 pt-6">
+                                    <h4 class="font-semibold text-blue-300">Integración `Veri*factu`</h4>
+                                    <div class="mt-2 space-y-3">
+                                        <div>
+                                            <label for="aeat-endpoint" class="block text-sm text-gray-400 mb-1">Endpoint del Servicio de la AEAT</label>
+                                            <input type="text" id="aeat-endpoint" class="form-input">
+                                        </div>
+                                        <div>
+                                            <label for="aeat-api-key" class="block text-sm text-gray-400 mb-1">Credenciales API (si son requeridas)</label>
+                                            <input type="text" id="aeat-api-key" placeholder="Pega aquí tu clave API" class="form-input">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pt-4 flex justify-end">
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                        <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="page-clientes" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Clientes</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1">
+                        <div class="card p-6 rounded-xl">
+                            <h3 id="client-form-title" class="font-semibold mb-4 text-lg">Agregar Nuevo Cliente</h3>
+                            <form id="add-client-form" class="space-y-4">
+                                <input type="hidden" id="client-id">
+                                <div>
+                                    <label for="client-name" class="block text-sm font-medium text-gray-400 mb-1">Nombre Completo o Empresa</label>
+                                    <input type="text" id="client-name" class="form-input" required>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div class="col-span-1">
+                                        <label for="client-tax-id-type" class="block text-sm font-medium text-gray-400 mb-1">Tipo ID</label>
+                                        <select id="client-tax-id-type" class="form-input">
+                                            <option>NIF</option>
+                                            <option>CIF</option>
+                                            <option>RUC</option>
+                                            <option>CUIT</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label for="client-tax-id" class="block text-sm font-medium text-gray-400 mb-1">Número</label>
+                                        <input type="text" id="client-tax-id" class="form-input">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="client-address" class="block text-sm font-medium text-gray-400 mb-1">Dirección Completa</label>
+                                    <textarea id="client-address" rows="3" class="form-input" placeholder="País, Provincia, Ciudad, Calle, Número..."></textarea>
+                                </div>
+                                <div>
+                                    <label for="client-phone-landline" class="block text-sm font-medium text-gray-400 mb-1">Teléfono Fijo</label>
+                                    <div class="flex">
+                                        <select id="client-phone-landline-prefix" class="form-input rounded-r-none w-28">
+                                            <option value="+34">ES +34</option>
+                                            <option value="+595">PY +595</option>
+                                            <option value="+54">AR +54</option>
+                                            <option value="+1">US +1</option>
+                                        </select>
+                                        <input type="text" id="client-phone-landline" class="form-input rounded-l-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="client-phone-mobile" class="block text-sm font-medium text-gray-400 mb-1">Teléfono Celular</label>
+                                    <div class="flex">
+                                        <select id="client-phone-mobile-prefix" class="form-input rounded-r-none w-28">
+                                            <option value="+34">ES +34</option>
+                                            <option value="+595">PY +595</option>
+                                            <option value="+54">AR +54</option>
+                                            <option value="+1">US +1</option>
+                                        </select>
+                                        <input type="text" id="client-phone-mobile" class="form-input rounded-l-none">
+                                    </div>
+                                </div>
+                                 <div>
+                                    <label for="client-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                                    <input type="email" id="client-email" class="form-input">
+                                </div>
+                                <div>
+                                    <label for="client-industry" class="block text-sm font-medium text-gray-400 mb-1">Rubro</label>
+                                    <input type="text" id="client-industry" class="form-input">
+                                </div>
+    
+                                <div class="flex items-center gap-2 pt-2">
+                                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                        <i data-lucide="save" class="w-4 h-4"></i><span id="client-form-submit-text">Guardar Cliente</span>
+                                    </button>
+                                    <button type="button" id="client-form-cancel-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors hidden">
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+    
+                    <div class="lg:col-span-2">
+                         <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Listado de Clientes</h3>
+                             <div class="overflow-x-auto">
+                                <table class="w-full text-left min-w-[700px]">
+                                    <thead>
+                                        <tr class="text-gray-400 border-b border-gray-700">
+                                            <th class="py-2 px-3">Nombre</th>
+                                            <th class="py-2 px-3">ID Fiscal</th>
+                                            <th class="py-2 px-3">Email</th>
+                                            <th class="py-2 px-3">Teléfono</th>
+                                            <th class="py-2 px-3 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clients-table-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card p-6 rounded-xl mt-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-semibold">Total Facturado por Cliente</h3>
+                                <div>
+                                    <label for="clients-chart-currency" class="text-sm text-gray-400 mr-2">Moneda:</label>
+                                    <select id="clients-chart-currency" class="form-input !p-2 !w-auto !text-sm bg-gray-900">
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="USD">USD ($)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="h-96">
+                                <canvas id="clientsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="page-inversiones" class="page-content hidden">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Inversiones</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Columna Izquierda: Formulario y Totales -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4 text-lg">Registrar Inversión</h3>
+                            <form id="add-investment-form" class="space-y-4">
+                                <div>
+                                    <label for="investment-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
+                                    <input type="date" id="investment-date" class="form-input" required>
+                                </div>
+                                <div>
+                                    <label for="investment-account" class="block text-sm font-medium text-gray-400 mb-1">Cuenta Origen</label>
+                                    <select id="investment-account" class="form-input" required></select>
+                                </div>
+                                <div>
+                                    <label for="investment-asset" class="block text-sm font-medium text-gray-400 mb-1">Activo de Inversión</label>
+                                    <select id="investment-asset" class="form-input" required></select>
+                                </div>
+                                <div>
+                                    <label for="investment-amount" class="block text-sm font-medium text-gray-400 mb-1">Monto Invertido</label>
+                                    <input type="number" id="investment-amount" class="form-input" placeholder="1000.00" step="0.01" required>
+                                </div>
+                                 <div>
+                                    <label for="investment-description" class="block text-sm font-medium text-gray-400 mb-1">Descripción (Opcional)</label>
+                                    <input type="text" id="investment-description" class="form-input" placeholder="Compra inicial">
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">
+                                    Guardar Inversión
+                                </button>
+                            </form>
+                        </div>
+                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="card p-4 rounded-xl text-center">
+                                <p class="text-gray-400">Total Invertido (EUR)</p>
+                                <p id="total-invested-eur" class="text-2xl font-bold kpi-value mt-2">€0.00</p>
+                            </div>
+                            <div class="card p-4 rounded-xl text-center">
+                                <p class="text-gray-400">Total Invertido (USD)</p>
+                                <p id="total-invested-usd" class="text-2xl font-bold kpi-value mt-2">$0.00</p>
+                            </div>
+                        </div>
+                    </div>
+    
+                    <!-- Columna Derecha: Listado -->
+                    <div class="lg:col-span-2">
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Movimientos de Inversión</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left min-w-[600px]">
+                                    <thead>
+                                        <tr class="text-gray-400 border-b border-gray-700">
+                                            <th class="py-2 px-3">Fecha</th>
+                                            <th class="py-2 px-3">Activo</th>
+                                            <th class="py-2 px-3">Cuenta Origen</th>
+                                            <th class="py-2 px-3 text-right">Monto</th>
+                                            <th class="py-2 px-3 text-center">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="investments-table-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    
+    
+            <!-- MODALS -->
+            <div id="confirmation-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+                <div id="confirmation-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+                <div classs="card rounded-xl p-8 z-10 w-full max-w-md">
+                    <h3 id="modal-title" class="text-xl font-bold text-white mb-4">Confirmar Acción</h3>
+                    <p id="modal-message" class="text-gray-300 mb-6">¿Estás seguro de que quieres continuar?</p>
+                    <div class="flex justify-end gap-4">
+                        <button id="modal-cancel-btn" class="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold">Cancelar</button>
+                        <button id="modal-confirm-btn" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="invoice-viewer-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black/80">
+                <div class="card rounded-xl p-0 z-10 w-full max-w-4xl max-h-[90vh] flex flex-col">
+                    <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                        <h3 class="text-xl font-bold text-white">Visualizador de Factura</h3>
+                        <div class="flex items-center gap-2">
+                            <button id="print-invoice-btn" class="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold"><i data-lucide="printer" class="w-5 h-5"></i></button>
+                            <button id="pdf-invoice-btn" class="p-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold"><i data-lucide="file-down" class="w-5 h-5"></i></button>
+                            <button id="close-invoice-viewer-btn" class="p-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold"><i data-lucide="x" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>
+                    <div id="invoice-content-area" class="overflow-y-auto">
+                        </div>
+                </div>
+            </div>
+    
+            <div id="alert-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+                <div id="alert-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+                <div class="card rounded-xl p-8 z-10 w-full max-w-md">
+                    <h3 id="alert-modal-title" class="text-xl font-bold text-yellow-300 mb-4">Aviso</h3>
+                    <p id="alert-modal-message" class="text-gray-300 mb-6">Mensaje de alerta.</p>
+                    <div class="flex justify-end gap-4">
+                        <button id="alert-modal-ok-btn" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Entendido</button>
+                    </div>
+                </div>
+            </div>
+    
+            <div id="payment-details-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+                <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+                <div class="card rounded-xl p-8 z-10 w-full max-w-md">
+                    <h3 class="text-xl font-bold text-white mb-4">Detalles del Pago</h3>
+                    <p class="text-gray-300 mb-6">Completa la información del pago para generar el recibo.</p>
+                    <form id="payment-details-form" class="space-y-4">
+                        <input type="hidden" id="payment-details-invoice-id">
+                        <div>
+                            <label for="payment-method" class="block text-sm font-medium text-gray-400 mb-1">Método de Pago</label>
+                            <select id="payment-method" class="form-input" required>
+                                <option>Transferencia Bancaria</option>
+                                <option>Efectivo</option>
+                                <option>Tarjeta de Crédito/Débito</option>
+                                <option>Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="payment-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha de Pago</label>
+                            <input type="date" id="payment-date" class="form-input" required>
+                        </div>
+                        <div>
+                            <label for="payment-reference" class="block text-sm font-medium text-gray-400 mb-1">Referencia (Opcional)</label>
+                            <input type="text" id="payment-reference" class="form-input" placeholder="Ej: ID de transferencia">
+                        </div>
+                        <div class="flex justify-end gap-4 pt-4">
+                            <button type="button" id="payment-details-cancel-btn" class="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white font-semibold">Cancelar</button>
+                            <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Generar Recibo</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Modal de Permisos -->
+            <div id="permissions-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black/80">
+                <div class="card rounded-xl z-10 w-full max-w-2xl max-h-[90vh] flex flex-col">
+                    <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Gestionar Permisos</h3>
+                            <p id="permissions-modal-email" class="text-sm text-blue-400"></p>
+                        </div>
+                        <button id="permissions-modal-cancel-btn" class="p-2 rounded-lg hover:bg-gray-700 text-gray-400"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <div id="permissions-list" class="overflow-y-auto p-6 space-y-4">
+                        <!-- Los toggles de permisos se generarán aquí -->
+                    </div>
+                    <div class="flex justify-end gap-4 p-4 mt-auto border-t border-gray-700">
+                        <button id="permissions-modal-save-btn" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Guargar Cambios</button>
+                    </div>
+                </div>
+            </div>
+            <!-- END MODALS -->
+        </main>
+    
+        <!-- Global Loading Overlay -->
+        <div id="loading-overlay" class="fixed inset-0 z-[100] items-center justify-center hidden bg-black/70 backdrop-blur-sm">
+            <div class="spinner" role="status"></div>
+        </div>
+        
+        <!-- Script principal -->
+        <!-- Asegúrate de que tu main.js tiene el código completo ahora -->
+        <script type="module" src="js/main.js?v=3"></script> 
+        <!-- Ya no se necesita el bloque script aquí -->
+    
+    </body>
+    </html>
+    
 
