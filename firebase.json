@@ -15,7 +15,16 @@
     ],
     "headers": [
       {
-        "source": "**/js/*.js",
+        "source": "**/js/*.js", // Mantener no-cache para JS
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/index.html", // ¡NUEVO! Aplicar no-cache a index.html
         "headers": [
           {
             "key": "Cache-Control",
