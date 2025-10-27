@@ -4,11 +4,91 @@
  */
 import { elements } from '../elements.js';
 import { escapeHTML, formatCurrency } from '../../utils.js';
+import { getState } from '../../store.js';
+
+/** Helper that returns a row HTML for a transaction (pure function) */
+export function createTransactionRow(t, state) {
+    const { permissions, accounts } = state || getState();
+    if (!accounts || accounts.length === 0) {
+        console.warn(`createTransactionRow: No se encontraron cuentas para la transacción ${t.id}`);
+        return `
+        <tr class="border-b border-gray-800 text-red-400">
+            <td class="py-3 px-3">${t.date}</td>
+            <td class="py-3 px-3">${escapeHTML(t.description)}</td>
+            <td class="py-3 px-3 italic">Cuenta no encontrada (ID: ${t.accountId})</td>
+            <td class="py-3 px-3">${escapeHTML(t.category)}</td>
+            <td class="py-3 px-3">${escapeHTML(t.part)}</td>
+            <td class="py-3 px-3 text-right">-</td>
+            <td class="py-3 px-3 text-right">-</td>
+            <td class="py-3 px-3"></td>
+        </tr>`;
+    }
+
+    const account = accounts.find(acc => acc.id === t.accountId);
+    const accountName = account ? account.name : `Cuenta Borrada (ID: ${t.accountId})`;
+    const currency = account ? account.currency : 'EUR';
+
+    const amountColor = t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400';
+    const sign = t.type === 'Ingreso' ? '+' : '-';
+
+    const actionsHtml = permissions && permissions.manage_cashflow ? `
+        <div class="flex items-center justify-center gap-2">
+            <button class="edit-btn p-2 text-blue-400 hover:text-blue-300" data-id="${t.id}" title="Editar">
+                <i data-lucide="edit" class="w-4 h-4"></i>
+            </button>
+            <button class="delete-btn p-2 text-red-400 hover:text-red-300" data-id="${t.id}" title="Eliminar">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>` : '';
+
+    return `
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+            <td class="py-3 px-3">${t.date}</td>
+            <td class="py-3 px-3">${escapeHTML(t.description)}</td>
+            <td class="py-3 px-3">${escapeHTML(accountName)}</td>
+            <td class="py-3 px-3">${escapeHTML(t.category)}</td>
+            <td class="py-3 px-3">${escapeHTML(t.part)}</td>
+            <td class="py-3 px-3 text-right text-gray-400">${t.iva > 0 ? formatCurrency(t.iva, currency) : '-'}</td>
+            <td class="py-3 px-3 text-right font-medium ${amountColor}">${sign} ${formatCurrency(t.amount, currency)}</td>
+            <td class="py-3 px-3">${actionsHtml}</td>
+        </tr>`;
+}
 
 /** Render the transactions table */
 export function renderTransactions(state) {
-    // TODO: move implementation from ui.js
-    // Example signature: const { transactions } = state;
+    const { transactions, accounts } = state || getState();
+    const tbody = elements.transactionsTableBody;
+    if (!tbody || !transactions || !accounts || accounts.length === 0) {
+        console.warn("renderTransactions: Faltan datos (tbody, transactions o accounts)");
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">Cargando datos o no hay cuentas...</td></tr>`;
+        return;
+    }
+
+    let filteredTransactions = transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
+    const searchInput = document.getElementById('cashflow-search');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+    if (searchTerm) {
+        filteredTransactions = filteredTransactions.filter(t => {
+            const account = accounts.find(acc => acc.id === t.accountId);
+            const accountName = account ? account.name.toLowerCase() : '';
+            const categoryName = t.category ? t.category.toLowerCase() : '';
+            return t.description.toLowerCase().includes(searchTerm) ||
+                   accountName.includes(searchTerm) ||
+                   categoryName.includes(searchTerm);
+        });
+    }
+
+    if (filteredTransactions.length === 0) {
+        const message = searchTerm ? "No hay movimientos que coincidan con la búsqueda." : "No hay movimientos registrados.";
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">${message}</td></tr>`;
+    } else {
+        const rowsHtmlArray = filteredTransactions
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .map(t => createTransactionRow(t, state))
+            .filter(row => row !== '');
+        tbody.innerHTML = rowsHtmlArray.join('');
+    }
 }
 
 /** Helper that returns a row HTML for a transaction (pure function) */
