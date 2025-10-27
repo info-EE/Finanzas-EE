@@ -1598,7 +1598,9 @@ for (const key in logoCatalog) {
 export function populateSelects() {
 const { accounts } = getState();
 if (!accounts) return;
-const optionsHtml = accounts.map(acc => <option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>).join('');
+const optionsHtml = accounts.map(acc => `
+        <option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>
+    `).join('');
 ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select', 'investment-account'].forEach(id => {
 const el = document.getElementById(id);
 if(el) el.innerHTML = optionsHtml;
@@ -1617,7 +1619,9 @@ const { investmentAssets } = getState();
 const select = document.getElementById('investment-asset');
 if (select) {
 if(investmentAssets && investmentAssets.length > 0){
-select.innerHTML = investmentAssets.map(asset => <option value="${asset.id}">${escapeHTML(asset.name)}</option>).join('');
+select.innerHTML = investmentAssets.map(asset => `
+            <option value="${asset.id}">${escapeHTML(asset.name)}</option>
+        `).join('');
 } else {
 select.innerHTML = `<option value="">No hay activos definidos</option>`;
 }
@@ -1630,34 +1634,34 @@ if (!incomeCategories || !expenseCategories || !elements.transactionForm) return
 const type = elements.transactionForm.querySelector('#transaction-type').value;
 const categories = type === 'Ingreso' ? incomeCategories : expenseCategories;
 const categorySelect = elements.transactionForm.querySelector('#transaction-category');
-if (categorySelect) {
-categorySelect.innerHTML = categories.map(cat => <option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>).join('');
-}
+    if (categorySelect) {
+        categorySelect.innerHTML = categories.map(cat => `\n            <option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>\n        `).join('');
+    }
 toggleIvaField();
 }
 
 function populateOperationTypesSelect() {
 const { invoiceOperationTypes } = getState();
-if(elements.facturaOperationType) {
-elements.facturaOperationType.innerHTML = invoiceOperationTypes.map(type => <option value="${escapeHTML(type)}">${escapeHTML(type)}</option>).join('');
-}
+    if(elements.facturaOperationType) {
+        elements.facturaOperationType.innerHTML = invoiceOperationTypes.map(type => `\n            <option value="${escapeHTML(type)}">${escapeHTML(type)}</option>\n        `).join('');
+    }
 }
 
 function populateTaxIdTypeSelect() {
 const { taxIdTypes } = getState();
 const select = document.getElementById('client-tax-id-type');
-if(select) {
-select.innerHTML = taxIdTypes.map(type => <option value="${escapeHTML(type)}">${escapeHTML(type)}</option>).join('');
-}
+    if(select) {
+        select.innerHTML = taxIdTypes.map(type => `\n            <option value="${escapeHTML(type)}">${escapeHTML(type)}</option>\n        `).join('');
+    }
 }
 
 function populateReportAccounts() {
 const { accounts } = getState();
 const select = document.getElementById('report-account');
-if(select) {
-select.innerHTML = '<option value="all">Todas las Cuentas</option>';
-select.innerHTML += accounts.map(acc => <option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>).join('');
-}
+    if(select) {
+        select.innerHTML = '<option value="all">Todas las Cuentas</option>';
+        select.innerHTML += accounts.map(acc => `\n            <option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>\n        `).join('');
+    }
 const yearSelect = document.getElementById('report-year-sociedades');
 if(yearSelect) {
 const currentYear = new Date().getFullYear();
