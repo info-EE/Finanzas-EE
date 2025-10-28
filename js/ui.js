@@ -1,11 +1,13 @@
 import { getState } from './store.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
 import { CHART_COLORS, ESSENTIAL_TAX_ID_TYPES } from './config.js';
+// --- AÑADIR ESTA LÍNEA ---
+import { charts } from './ui/charts.js'; // Importa solo 'charts'
+// --- FIN LÍNEA AÑADIDA ---
 export { charts, renderSingleCurrencyChart, resizeCharts };
 import { charts, renderSingleCurrencyChart, resizeCharts } from './ui/charts.js';
 // Re-export chart helpers from the new ui module (migrated)
 
-import { renderSingleCurrencyChart } from './ui/charts.js';
 // Centralizar selectores del DOM desde js/ui/elements.js
 import { elements } from './ui/elements.js';
 // Renderers
