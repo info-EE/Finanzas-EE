@@ -86,6 +86,10 @@ async function main() {
 
     // 4. Configurar el Manejador de Autenticación
     onAuthStateChanged(api.getAuthInstance(), async (user) => {
+    // --- AÑADIR ESTA LÍNEA ---
+    console.log('onAuthStateChanged detectó un cambio. Usuario:', user);
+    // --- FIN LÍNEA AÑADIDA ---
+
         if (user) {
             updateConnectionStatus('loading', 'Autenticando...'); // <-- AÑADIDO
             api.setCurrentUser(user.uid); // Establecer UID globalmente en api.js
@@ -95,9 +99,17 @@ async function main() {
             const isAdminByUid = defaultAdminsByUid.includes(user.uid);
             const isAdminByEmail = defaultAdminsByEmail.includes(user.email);
             const isAdmin = isAdminByUid || isAdminByEmail;
+        // --- AÑADIR ESTA LÍNEA ---
+        console.log('Usuario detectado. Es admin por defecto:', isAdmin);
+        // --- FIN LÍNEA AÑADIDA ---
+
 
             // Obtener perfil de usuario de Firestore
             let userProfile = await api.getUserProfile(user.uid);
+        // --- AÑADIR ESTA LÍNEA ---
+        console.log('Perfil de Firestore:', userProfile);
+        // --- FIN LÍNEA AÑADIDA ---
+
 
             // Si no existe perfil o falta el email, crearlo
             if (!userProfile || !userProfile.email) {
@@ -122,13 +134,25 @@ async function main() {
             } else if (userProfile && userProfile.status === 'activo') {
                 console.log("Usuario regular con estado 'activo' detectado.");
                 canAccess = true;
-            } else {
-                console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userProfile ? userProfile.status : 'N/A'}`);
             }
+        else {
+            // --- AÑADIR ESTA LÍNEA ---
+            console.log('Acceso DENEGADO. Deslogueando...');
+            // --- FIN LÍNEA AÑADIDA ---
+console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userProfile ? userProfile.status : 'N/A'}`);
+            }
+        // --- AÑADIR ESTA LÍNEA ---
+        console.log('¿Puede acceder el usuario?', canAccess);
+        // --- FIN LÍNEA AÑADIDA ---
+
 
 
             if (canAccess) {
-                // Solo inicializar la app completamente la primera vez que se accede
+                
+            // --- AÑADIR ESTA LÍNEA ---
+            console.log('Acceso concedido. Inicializando/mostrando app...');
+            // --- FIN LÍNEA AÑADIDA ---
+// Solo inicializar la app completamente la primera vez que se accede
                 if (!isAppInitialized) {
                     await initState(); // Carga los datos iniciales y permisos (una vez)
 
@@ -227,8 +251,13 @@ async function main() {
                 }
                 // hideApp() se llamará automáticamente por onAuthStateChanged al cambiar a null
             }
-        } else {
-            // Usuario deslogueado
+        }
+    else {
+        // Usuario deslogueado
+        // --- AÑADIR ESTA LÍNEA ---
+        console.log('Usuario deslogueado detectado. Ocultando app.');
+        // --- FIN LÍNEA AÑADIDA ---
+
             api.setCurrentUser(null);
             setState({ currentUser: null }); // <-- AÑADIDO
             hideApp(); // Ocultar interfaz principal, mostrar login

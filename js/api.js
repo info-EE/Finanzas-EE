@@ -1,13 +1,13 @@
 // Importa solo las funciones que necesitas de la SDK de Firebase v9
-import { 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
     signOut
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { 
-    doc, 
-    getDoc, 
-    setDoc, 
+import {
+    doc,
+    getDoc,
+    setDoc,
     onSnapshot,
     collection,
     getDocs,
@@ -76,7 +76,7 @@ export function setCurrentUser(uid) {
     currentUserId = uid;
     if (!uid) {
         // Limpiar todos los listeners al cerrar sesión
-        clearAllListeners(); 
+        clearAllListeners();
     }
 }
 
@@ -120,13 +120,11 @@ export async function createUserProfile(uid, email, status) {
             return;
         }
         const defaultPermissions = getDefaultPermissions();
-        
-        await setDoc(userDocRef, { 
-            email, 
+        await setDoc(userDocRef, {
+            email,
             status,
             permisos: defaultPermissions
         }, { merge: true });
-
     } catch (error) {
         console.error("Error al crear el perfil del usuario:", error);
     }
@@ -146,7 +144,7 @@ export async function getAllUsers() {
 
 export function listenForAllUsersChanges(onUsersUpdate) {
     if (!currentUserId) return;
-    
+
     const usersCollection = collection(db, 'usuarios');
     const q = query(usersCollection); // (de Fase 1)
 
@@ -156,7 +154,6 @@ export function listenForAllUsersChanges(onUsersUpdate) {
     }, (error) => {
         console.error("Error escuchando cambios en usuarios:", error);
     });
-    
     dataListeners.push(unsubscribe); // (de Fase 1)
 }
 
@@ -205,14 +202,24 @@ export async function registerUser(email, password) {
         console.error("Error en el registro:", error.code);
         // --- ELIMINADO: showAuthError(translateAuthError(error.code)); ---
         // El error será "lanzado" para que lo maneje handlers.js
-        throw error; 
+        throw error;
     }
 }
 
 export async function loginUser(email, password) {
     try {
+        // --- AÑADIR ESTA LÍNEA ---
+        console.log('Dentro de api.loginUser, llamando a signInWithEmailAndPassword...');
+        // --- FIN LÍNEA AÑADIDA ---
         await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
+        // --- AÑADIR ESTA LÍNEA ---
+        console.log('signInWithEmailAndPassword ¡EXITOSO!');
+        // --- FIN LÍNEA AÑADIDA ---
+     // } <<-- ESTA ES LA LLAVE QUE SE ELIMINÓ
+     } catch (error) {
+        // --- AÑADIR ESTA LÍNEA ---
+        console.error('Error DENTRO de api.loginUser (signInWithEmailAndPassword falló):', error);
+        // --- FIN LÍNEA AÑADIDA ---
         console.error("Error en el inicio de sesión:", error.code);
         // --- ELIMINADO: showAuthError(translateAuthError(error.code)); ---
         // El error será "lanzado" para que lo maneje handlers.js
@@ -293,9 +300,9 @@ export async function addDocToCollection(collectionName, data) {
         // Generamos un ID local para consistencia
         const newDocRef = doc(collection(db, 'usuarios', currentUserId, collectionName));
         const dataWithId = { ...data, id: newDocRef.id };
-        
+
         await setDoc(newDocRef, dataWithId); // Usamos setDoc con el ID pre-generado
-        
+
         console.log(`Documento añadido a '${collectionName}' con ID: ${newDocRef.id}`);
         // --- ELIMINADO: setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000); ---
         return dataWithId; // Devolvemos los datos con el ID
@@ -380,7 +387,7 @@ export async function incrementAccountBalance(accountId, amount) {
     if (amount === 0) return; // No hacer nada si el monto es 0
 
     const accountDocRef = doc(db, 'usuarios', currentUserId, 'accounts', accountId);
-    
+
     try {
         // Usamos 'increment' para una actualización atómica.
         await updateDoc(accountDocRef, {
@@ -400,7 +407,7 @@ export async function incrementAccountBalance(accountId, amount) {
  */
 export function listenForCollectionChanges(collectionName, onUpdate) {
     if (!currentUserId) return;
-    
+
     const colRef = collection(db, 'usuarios', currentUserId, collectionName);
     const q = query(colRef);
 
@@ -413,7 +420,7 @@ export function listenForCollectionChanges(collectionName, onUpdate) {
         console.error(`Error en listener de ${collectionName}:`, error);
         // --- ELIMINADO: updateConnectionStatus('error', 'Desconectado'); ---
     });
-    
+
     dataListeners.push(unsubscribe); // Guardar para limpiar después
 }
 
@@ -423,7 +430,7 @@ export function listenForCollectionChanges(collectionName, onUpdate) {
  */
 export function listenForSettingsChanges(onUpdate) {
     if (!currentUserId) return;
-    
+
     const settingsDocRef = doc(db, 'usuarios', currentUserId, 'settings', 'appSettings');
 
     const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
@@ -436,7 +443,7 @@ export function listenForSettingsChanges(onUpdate) {
         console.error("Error en listener de settings:", error);
         // --- ELIMINADO: updateConnectionStatus('error', 'Desconectado'); ---
     });
-    
+
     dataListeners.push(unsubscribe); // Guardar para limpiar después
 }
 

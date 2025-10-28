@@ -111,13 +111,29 @@ function handleLoginSubmit(e) {
     const email = elements.loginForm.querySelector('#login-email').value;
     const password = elements.loginForm.querySelector('#login-password').value;
 
-    // Modificamos la función que pasamos a withSpinner
+    
+    // --- AÑADIR ESTAS LÍNEAS ---
+    console.log('Intentando iniciar sesión con:', email);
+    console.log('Contraseña (longitud):', password.length);
+    // --- FIN LÍNEAS AÑADIDAS ---
+// Modificamos la función que pasamos a withSpinner
     withSpinner(async () => {
         try {
+            // --- AÑADIR ESTA LÍNEA ---
+            console.log('Llamando a api.loginUser...');
+            // --- FIN LÍNEA AÑADIDA ---
             await api.loginUser(email, password);
-            // El éxito es manejado por el onAuthStateChanged en main.js
+            // --- AÑADIR ESTA LÍNEA ---
+            console.log('api.loginUser completado (¿éxito?)'); // No debería llegar aquí si falla
+            // --- FIN LÍNEA AÑADIDA ---
+// El éxito es manejado por el onAuthStateChanged en main.js
         } catch (error) {
-            // Atrapamos el error que 'api.js' lanzó
+            // --- AÑADIR ESTAS LÍNEAS ---
+            console.error('Error atrapado en handleLoginSubmit:', error);
+            console.log('Código de error:', error.code);
+            console.log('Mensaje traducido:', translateAuthError(error.code));
+            // --- FIN LÍNEAS AÑADIDAS ---
+// Atrapamos el error que 'api.js' lanzó
             showAuthError(translateAuthError(error.code));
         }
     })();
