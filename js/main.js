@@ -6,7 +6,7 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase
 
 import { subscribe, initState, setState, getState, getDefaultState } from './store.js';
 import { bindAuthEventListeners, bindEventListeners } from './handlers.js';
-import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus } from './ui.js';
+import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus } from './ui/index.js';
 import * as api from './api.js';
 import * as actions from './actions.js';
 

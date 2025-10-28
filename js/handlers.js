@@ -32,7 +32,7 @@ import {
     populateNextInvoiceNumber,
     showAuthError,
     resizeCharts // <-- Importar la nueva función
-} from './ui.js'; // <-- ESTA ES LA LÍNEA CORREGIDA
+} from './ui/index.js'; // <-- ESTA ES LA LÍNEA CORREGIDA
 import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
@@ -1256,7 +1256,11 @@ export function bindEventListeners() {
             <div class="col-span-3"><input type="text" inputmode="decimal" placeholder="0.00" class="form-input item-price text-right" required></div>
             <div class="col-span-1 flex justify-center"><button type="button" class="remove-item-btn p-2 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
         elements.facturaItemsContainer.appendChild(itemDiv);
-        lucide.createIcons(); // Create icon for the new button
+        // ✅ Crear icono solo para el botón nuevo
+    const newIcon = itemDiv.querySelector('i[data-lucide]');
+    if (newIcon) {
+        lucide.createIcons({ nodes: [newIcon] });
+    }
          // Add listeners to new quantity/price inputs
          itemDiv.querySelector('.item-quantity').addEventListener('input', updateInvoiceTotals);
          itemDiv.querySelector('.item-price').addEventListener('input', updateInvoiceTotals);
