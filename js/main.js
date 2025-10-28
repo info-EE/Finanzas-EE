@@ -4,15 +4,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// === INICIO: Importaciones locales COMENTADAS ===
-// import { subscribe, initState, setState, getState, getDefaultState } from './store.js';
-// import { bindAuthEventListeners, bindEventListeners } from './handlers.js';
-// import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus } from './ui.js';
-// import * as api from './api.js';
-// import * as actions from './actions.js';
-// === FIN: Importaciones locales COMENTADAS ===
+// === Importaciones locales (Descomentando Store y API) ===
+import { subscribe, initState, setState, getState, getDefaultState } from './store.js'; // <-- DESCOMENTADO
+// import { bindAuthEventListeners, bindEventListeners } from './handlers.js'; // Sigue comentado
+// import { renderAll, switchPage, showApp, hideApp, updateConnectionStatus } from './ui.js'; // Sigue comentado
+import * as api from './api.js'; // <-- DESCOMENTADO
+// import * as actions from './actions.js'; // Sigue comentado
+// === FIN: Importaciones locales ===
 
-console.log("--- main.js loaded (Imports Commented Test v2) ---"); // Mensaje de prueba principal
+console.log("--- main.js loaded (Testing Store & API) ---");
 
 // --- Configuración de Firebase ---
 const firebaseConfig = {
@@ -25,129 +25,116 @@ const firebaseConfig = {
     measurementId: "G-KZPBK200QS"
 };
 
-// --- Función para crear iconos iniciales (COMENTADA POR AHORA) ---
-/*
-function createInitialIcons() {
-    return new Promise((resolve, reject) => {
-        // Añadimos una pequeña demora para asegurar que Lucide esté listo
-        setTimeout(() => {
-            if (typeof lucide !== 'undefined' && lucide.createIcons) {
-                try {
-                    lucide.createIcons({
-                        nodes: document.querySelectorAll('i[data-lucide]') // Asegúrate que esto selecciona todos los iconos iniciales
-                    });
-                    console.log("Lucide icons created on DOMContentLoaded (with delay).");
-                    resolve();
-                } catch (error) {
-                    console.error("Error creating Lucide icons on DOMContentLoaded (with delay):", error);
-                    reject(error);
-                }
-            } else {
-                const errorMsg = "Lucide library not available on DOMContentLoaded (with delay).";
-                console.error(errorMsg);
-                reject(new Error(errorMsg));
-            }
-        }, 50); // 50ms de demora
-    });
-}
-*/
+// --- Función para crear iconos iniciales (Sigue COMENTADA) ---
+/* ... */
 
-// --- Función principal async (Simplificada) ---
+// --- Función principal async (Parcialmente restaurada) ---
 async function main() {
-    console.log("--- main() function started (Imports Commented Test v2) ---"); // Segundo mensaje de prueba
+    console.log("--- main() function started (Testing Store & API) ---");
     let app, auth, db;
+    let isAppInitialized = false; // Flag para controlar la inicialización
+    const defaultState = getDefaultState(); // Necesario para initState
+    const defaultAdminsByUid = defaultState.settings.adminUids || [];
+    const defaultAdminsByEmail = defaultState.settings.adminEmails || [];
 
-    // 1. Inicializar Firebase (Mínimo necesario)
+    // 1. Inicializar Firebase
     try {
         console.log("Initializing Firebase...");
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
-        // api.initFirebaseServices(app, auth, db); // Comentado porque api.js está comentado
+        api.initFirebaseServices(app, auth, db); // <-- DESCOMENTADO
         console.log("Firebase initialized successfully.");
-        // Mostrar mensaje visual simple para confirmar ejecución
-        document.body.innerHTML = `<div style="color: white; padding: 20px; font-family: sans-serif;">Prueba de carga JS: Firebase OK. Importaciones locales comentadas. Revisa la consola.</div>`;
+        // updateConnectionStatus('success', 'Conectado'); // Comentado (depende de ui.js)
     } catch (error) {
         console.error("!!! CRITICAL ERROR initializing Firebase:", error);
-        document.body.innerHTML = `<div style="color: red; padding: 20px; font-family: sans-serif;">Error Crítico al inicializar Firebase. Revisa la consola.</div>`;
+        document.body.innerHTML = `<div style="color: red; padding: 20px;">Error Crítico al inicializar Firebase.</div>`;
         return;
     }
 
-    // === INICIO: Código dependiente de importaciones COMENTADO ===
-    /*
-    // 2. Configurar Chart.js y el Store
+    // 2. Configurar Chart.js y el Store (Parcialmente restaurado)
     try {
-        console.log("Configuring Chart.js and subscribing to store...");
-        Chart.defaults.font.family = "'Inter', sans-serif";
+        console.log("Configuring Chart.js (defaults only) and subscribing to store...");
+        Chart.defaults.font.family = "'Inter', sans-serif"; // Configuración global
         Chart.defaults.color = '#e0e0e0';
-        subscribe(renderAll);
-        console.log("Chart.js configured and subscribed successfully.");
+        // subscribe(renderAll); // Comentado (depende de ui.js)
+        console.log("Chart.js configured (defaults). Subscription skipped.");
     } catch (error) {
-        console.error("!!! ERROR configuring Chart.js or subscribing:", error);
+        console.error("!!! ERROR configuring Chart.js defaults:", error);
     }
 
-    // 3. Crear iconos y vincular eventos de autenticación
-    try {
-        console.log("Creating initial icons and binding auth listeners...");
-        // await createInitialIcons(); // Comentado
-        // bindAuthEventListeners(); // Comentado
-        console.log("Skipped: Initial icons and auth listeners binding.");
-    } catch (error) {
-        console.error("!!! ERROR during skipped icon/listener binding:", error);
-    }
+    // 3. Crear iconos y vincular eventos de autenticación (Sigue COMENTADO)
+    // try { ... }
 
-    // 4. Configurar el Manejador de Autenticación (Simplificado solo para log)
+    // 4. Configurar el Manejador de Autenticación (Restaurado)
     try {
-        console.log("Setting up simple onAuthStateChanged listener...");
-        const authInstance = getAuth(app); // Obtener instancia directamente
-        onAuthStateChanged(authInstance, (user) => {
+        console.log("Setting up onAuthStateChanged listener...");
+        const authInstance = api.getAuthInstance(); // Usar la instancia de api.js
+        onAuthStateChanged(authInstance, async (user) => {
              console.log("onAuthStateChanged triggered. User:", user ? user.email : 'null');
-             // No modificar el body aquí para no borrar el mensaje de "Firebase OK"
              if (user) {
-                 console.log(`Usuario autenticado detectado: ${user.email}`);
+                 // updateConnectionStatus('loading', 'Autenticando...'); // Comentado
+                 api.setCurrentUser(user.uid);
+                 setState({ currentUser: { uid: user.uid, email: user.email } });
+
+                 const isAdminByUid = defaultAdminsByUid.includes(user.uid);
+                 const isAdminByEmail = defaultAdminsByEmail.includes(user.email);
+                 const isAdmin = isAdminByUid || isAdminByEmail;
+                 let userProfile = await api.getUserProfile(user.uid);
+
+                 if (!userProfile || !userProfile.email) {
+                    console.log("Creando perfil de usuario...");
+                    await api.createUserProfile(user.uid, user.email, isAdmin ? 'activo' : 'pendiente');
+                    userProfile = await api.getUserProfile(user.uid);
+                 }
+
+                 let canAccess = isAdmin || (userProfile && userProfile.status === 'activo');
+                 if (isAdmin && userProfile && userProfile.status !== 'activo') {
+                    console.log("Corrigiendo estado del admin...");
+                    await api.updateUserPermissions(user.uid, { status: 'activo' });
+                    userProfile = await api.getUserProfile(user.uid);
+                 }
+
+                 if (canAccess) {
+                    if (!isAppInitialized) {
+                        console.log("User can access. Calling initState()...");
+                        await initState(); // <-- LLAMADA A INITSTATE RESTAURADA
+                        console.log("initState() completed.");
+                        // showApp(); // Comentado
+                        // bindEventListeners(); // Comentado
+                        // ... listeners de datos comentados ...
+                        // switchPage('inicio'); // Comentado
+                        isAppInitialized = true;
+                        // updateConnectionStatus('success', 'Sincronizado'); // Comentado
+                        document.body.innerHTML = `<div style="color: white; padding: 20px;">Autenticado y estado inicializado (initState OK). UI/Listeners comentados. Revisa la consola.</div>`;
+                    } else {
+                         console.log("App already initialized.");
+                         // updateConnectionStatus('success', 'Sincronizado'); // Comentado
+                    }
+                 } else {
+                     console.log("Acceso denegado, deslogueando...");
+                     // showAuthError('Acceso denegado o pendiente de aprobación.'); // Comentado
+                     await api.logoutUser();
+                 }
              } else {
-                 console.log("No hay usuario autenticado.");
+                 api.setCurrentUser(null);
+                 setState({ currentUser: null });
+                 // hideApp(); // Comentado
+                 isAppInitialized = false;
+                 // updateConnectionStatus('success', 'Desconectado'); // Comentado
+                 document.body.innerHTML = `<div style="color: white; padding: 20px;">No autenticado. UI comentada. Revisa la consola para errores.</div>`; // Mostrar mensaje si no está logueado
+                 console.log("User logged out or not logged in.");
              }
         });
-        console.log("Simple onAuthStateChanged listener attached.");
+        console.log("onAuthStateChanged listener attached.");
     } catch (error) {
-        console.error("!!! ERROR setting up simple onAuthStateChanged listener:", error);
+        console.error("!!! ERROR setting up onAuthStateChanged listener:", error);
     }
 
-    // 5. Valores por defecto para fechas (COMENTADO)
-    // try {
-    //     console.log("Setting default dates...");
-    //     const today = new Date().toISOString().slice(0, 10);
-    //     ['transaction-date', 'transfer-date', 'proforma-date', 'factura-fecha', 'report-date', 'investment-date', 'payment-date'].forEach(id => {
-    //         const el = document.getElementById(id);
-    //         if (el) el.value = today;
-    //     });
-    //     const currentMonth = new Date().toISOString().slice(0, 7);
-    //     ['report-month', 'iva-month'].forEach(id => {
-    //         const monthInput = document.getElementById(id);
-    //         if (monthInput) monthInput.value = currentMonth;
-    //     });
-    //      const currentYear = new Date().getFullYear();
-    //      ['report-year', 'report-year-sociedades'].forEach(id => {
-    //         const yearInput = document.getElementById(id);
-    //         if (yearInput && yearInput.tagName === 'INPUT') yearInput.value = currentYear;
-    //         if (yearInput && yearInput.tagName === 'SELECT') {
-    //              let yearOptions = '';
-    //              for (let i = 0; i < 5; i++) {
-    //                  const year = currentYear - i;
-    //                  yearOptions += `<option value="${year}" ${year === currentYear ? 'selected' : ''}>${year}</option>`;
-    //              }
-    //              yearInput.innerHTML = yearOptions;
-    //         }
-    //     });
-    //     console.log("Default dates set successfully.");
-    // } catch (error) {
-    //     console.error("!!! ERROR setting default dates:", error);
-    // }
-    */
-    // === FIN: Código dependiente de importaciones COMENTADO ===
+    // 5. Valores por defecto para fechas (Sigue COMENTADO)
+    // try { ... }
 
-    console.log("--- main() function finished (Imports Commented Test v2) ---"); // Log final de prueba
+    console.log("--- main() function finished (Testing Store & API) ---");
 }
 
 // 6. Esperar a que el DOM esté listo para ejecutar main
@@ -155,8 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOMContentLoaded event fired.");
     main().catch(error => {
         console.error("!!! UNHANDLED ERROR in main() execution:", error);
-        // Mostrar error en pantalla si main falla catastróficamente
-        document.body.innerHTML = `<div style="color: red; padding: 20px; font-family: sans-serif;">Error Crítico durante la ejecución de main(). Revisa la consola.<pre>${error.stack || error}</pre></div>`;
+        document.body.innerHTML = `<div style="color: red; padding: 20px;">Error Crítico durante la ejecución de main(). Revisa la consola.<pre>${error.stack || error}</pre></div>`;
     });
 });
 
