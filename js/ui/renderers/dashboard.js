@@ -4,8 +4,12 @@
 import { elements } from '../elements.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from '../../utils.js';
 // --- AÑADIR ESTA LÍNEA ---
-import { charts } from '../charts.js';
+// --- AÑADIR ESTA LÍNEA ---
+
 // --- FIN LÍNEA AÑADIDA ---
+
+// --- FIN LÍNEA AÑADIDA ---
+
 
 export function updateInicioKPIs(state) {
     const { transactions, accounts } = state;
@@ -57,17 +61,22 @@ export function updateInicioKPIs(state) {
     if (kpiTotalBalanceEl) kpiTotalBalanceEl.textContent = formatCurrency(totalBalance, currency);
 }
 
-export function renderAnnualFlowChart(state) {
+
+export function renderAnnualFlowChart(state, charts) {
     const { transactions, accounts } = state;
     const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
+    // --- AÑADIR ESTA LÍNEA ---
+
+    // --- FIN LÍNEA AÑADIDA ---
+
     if (!annualCtx || !transactions || !accounts || accounts.length === 0) {
-        // --- USA charts importado ---
+        // --- CAMBIO AQUÍ ---
         if (charts && charts.annualFlowChart) { try { charts.annualFlowChart.destroy(); } catch(e){} charts.annualFlowChart = null; }
         if (annualCtx) { annualCtx.clearRect(0,0,annualCtx.canvas.width, annualCtx.canvas.height); annualCtx.fillStyle='#6b7280'; annualCtx.textAlign='center'; annualCtx.fillText('No hay datos para mostrar.', annualCtx.canvas.width/2, annualCtx.canvas.height/2); }
         return;
     }
 
-    // --- USA charts importado ---
+    // --- CAMBIO AQUÍ ---
     if (charts && charts.annualFlowChart) charts.annualFlowChart.destroy();
 
     const currencySelect = document.getElementById('inicio-chart-currency');
@@ -97,19 +106,24 @@ export function renderAnnualFlowChart(state) {
     const incomeGradient = annualCtx.createLinearGradient(0,0,0,320); incomeGradient.addColorStop(0,'rgba(59,130,246,0.5)'); incomeGradient.addColorStop(1,'rgba(59,130,246,0)');
     const expenseGradient = annualCtx.createLinearGradient(0,0,0,320); expenseGradient.addColorStop(0,'rgba(239,68,68,0.5)'); expenseGradient.addColorStop(1,'rgba(239,68,68,0)');
 
-    // --- USA charts importado ---
-    charts.annualFlowChart = new Chart(annualCtx, {
+    // --- CAMBIO AQUÍ (NO window.) ---
+    charts.annualFlowChart = new Chart(annualCtx, { // Quitamos window.
         type: 'line',
         data: { labels: months, datasets: [ { label: `Ingresos (${getCurrencySymbol(selectedCurrency)})`, data: incomeData, borderColor: 'rgba(59,130,246,1)', backgroundColor: incomeGradient, fill:true, tension:0.4 }, { label: `Egresos (${getCurrencySymbol(selectedCurrency)})`, data: expenseData, borderColor: 'rgba(239,68,68,1)', backgroundColor: expenseGradient, fill:true, tension:0.4 } ] },
         options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } } }
     });
 }
 
-export function renderExpenseDistributionChart(state) {
+
+export function renderExpenseDistributionChart(state, charts) {
     const { transactions, accounts } = state;
     const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
+    // --- AÑADIR ESTA LÍNEA ---
+
+    // --- FIN LÍNEA AÑADIDA ---
+
     if (!ctx || !transactions || !accounts || accounts.length === 0) {
-        // --- USA charts importado ---
+        // --- CAMBIO AQUÍ ---
         if (charts && charts.expenseDistributionChart) { try { charts.expenseDistributionChart.destroy(); } catch(e){} charts.expenseDistributionChart = null; }
         if (ctx) { ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height); ctx.fillStyle = '#6b7280'; ctx.textAlign='center'; ctx.fillText('No hay datos para mostrar.', ctx.canvas.width/2, ctx.canvas.height/2); }
         return;
@@ -132,7 +146,7 @@ export function renderExpenseDistributionChart(state) {
     const labels = Object.keys(expenseByCategory);
     const data = Object.values(expenseByCategory);
 
-    // --- USA charts importado ---
+    // --- CAMBIO AQUÍ ---
     if (charts && charts.expenseDistributionChart) charts.expenseDistributionChart.destroy();
 
     if (labels.length === 0) {
@@ -141,15 +155,14 @@ export function renderExpenseDistributionChart(state) {
         return;
     }
 
-    // --- USA charts importado ---
-    charts.expenseDistributionChart = new Chart(ctx, {
+    // --- CAMBIO AQUÍ (NO window.) ---
+    charts.expenseDistributionChart = new Chart(ctx, { // Quitamos window.
         type: 'doughnut',
         data: { labels: labels, datasets: [{ data: data, backgroundColor: window.CHART_COLORS || [], borderColor: '#0a0a0a', borderWidth:5, borderRadius:10 }] },
         options: { responsive:true, maintainAspectRatio:false, cutout: '70%', plugins:{ legend:{ position:'bottom', labels:{ color:'#e0e0e0', boxWidth:12, padding:15 } } } }
     });
 }
 
-// --- DUPLICADOS ELIMINADOS ---
 
 export function renderRecentTransactions(state) {
     const { transactions, accounts } = state;
@@ -183,6 +196,7 @@ export function renderRecentTransactions(state) {
     container.innerHTML = `<table class="w-full text-left"><tbody>${rowsHtmlArray.join('')}</tbody></table>`;
 }
 
+
 export function renderPendingInvoices(state) {
     const { documents } = state;
     const container = document.getElementById('pending-invoices-container');
@@ -205,7 +219,8 @@ export function renderPendingInvoices(state) {
     `).join('');
 }
 
-export function renderInicioDashboard(state) {
+
+export function renderInicioDashboard(state, charts) {
     updateInicioKPIs(state);
     renderAnnualFlowChart(state);
     renderExpenseDistributionChart(state);

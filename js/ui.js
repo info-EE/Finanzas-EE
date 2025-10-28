@@ -1,8 +1,10 @@
 import { getState } from './store.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
 import { CHART_COLORS, ESSENTIAL_TAX_ID_TYPES } from './config.js';
+export { charts, renderSingleCurrencyChart, resizeCharts };
+import { charts, renderSingleCurrencyChart, resizeCharts } from './ui/charts.js';
 // Re-export chart helpers from the new ui module (migrated)
-export { charts, renderSingleCurrencyChart, resizeCharts } from './ui/charts.js';
+
 import { renderSingleCurrencyChart } from './ui/charts.js';
 // Centralizar selectores del DOM desde js/ui/elements.js
 import { elements } from './ui/elements.js';
@@ -265,7 +267,6 @@ function updateInicioKPIs() {
         return;
     }
 
-
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) return;
     const currency = currencySelect.value;
@@ -303,7 +304,6 @@ function updateInicioKPIs() {
         .filter(a => a.currency === currency)
         .reduce((sum, a) => sum + a.balance, 0);
 
-
     const kpiIncomeEl = document.getElementById('kpi-monthly-income');
     if (kpiIncomeEl) kpiIncomeEl.textContent = formatCurrency(monthlyIncome, currency);
 
@@ -340,7 +340,6 @@ function renderAnnualFlowChart() {
         }
         return;
     }
-
 
     if (charts.annualFlowChart) charts.annualFlowChart.destroy();
 
@@ -423,7 +422,6 @@ function renderExpenseDistributionChart() {
         return;
     }
 
-
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) return;
     const currency = currencySelect.value;
@@ -450,7 +448,6 @@ function renderExpenseDistributionChart() {
             acc[category] = (acc[category] || 0) + (t.amount + (t.iva || 0)); // Incluir IVA
             return acc;
         }, {});
-
 
     const labels = Object.keys(expenseByCategory);
     const data = Object.values(expenseByCategory);
@@ -504,7 +501,6 @@ function renderRecentTransactions() {
         if(container) container.innerHTML = `<p class="text-center text-gray-500 py-4">Cargando o no hay datos...</p>`;
         return;
     }
-
 
     const recent = transactions
         .filter(t => !t.isInitialBalance) // Excluir saldos iniciales
@@ -743,7 +739,6 @@ function renderInvestments() {
         addInvestmentFormCard.classList.toggle('hidden', !permissions.manage_investments);
     }
 
-
     const investmentsData = transactions.filter(t => t.category === 'Inversión');
 
     // Calcular totales por moneda usando accountId
@@ -981,7 +976,6 @@ function renderReport() {
         return;
     }
 
-
     const { type, title, columns, data } = activeReport;
 
     // Lógica del footer para 'movimientos' (verificar uso de moneda)
@@ -1042,7 +1036,6 @@ function renderReport() {
             const isAmountColumn = ["Monto", "Importe", "Importe (€)", "Pago a cuenta estimado", "Resultado Contable Acumulado", "Total Ingresos Computables", "Total Gastos Deducibles"].some(h => columnName.startsWith(h));
             let cellContent = cell;
 
-
             if (isAmountColumn && (typeof cell === 'number' || (typeof cell === 'string' && cell.trim() !== '' && !isNaN(parseFloat(cell))))) {
                  const amount = typeof cell === 'number' ? cell : parseFloat(cell);
                  // Usar la moneda que viene en los datos del reporte (si existe la columna)
@@ -1084,7 +1077,6 @@ function renderReport() {
     // Crear icono del botón de descarga
     // Se mueve a renderAll()
 }
-
 
 function renderIvaReport() {
     const { activeIvaReport } = getState();
@@ -1233,7 +1225,6 @@ export function populateNextInvoiceNumber() {
     numberInput.value = invoiceNumber;
 }
 
-
 function renderInicioDashboard() {
     updateInicioKPIs();
     renderAnnualFlowChart();
@@ -1287,7 +1278,6 @@ export function switchPage(pageId, subpageId = null) {
         console.warn(`[switchPage] No permission defined for pageId: ${pageId}. Denying access.`);
         hasPermission = false; // Denegar por defecto
     }
-
 
     // Si no tiene permiso, redirige a inicio y muestra un aviso.
     if (!hasPermission) {
@@ -1726,4 +1716,3 @@ export function renderAll() {
         }
     }
 }
-
