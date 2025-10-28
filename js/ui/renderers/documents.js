@@ -7,6 +7,9 @@ import { getState } from '../../store.js';
 
 export function createDocumentRow(doc, type, state) {
     const { permissions } = state || getState();
+    // Asegurarse de que permissions existe, si no, usar un objeto vacío
+    const safePermissions = permissions || {};
+
     const statusClass = doc.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
     let actionsHtml = '';
 
@@ -24,7 +27,8 @@ export function createDocumentRow(doc, type, state) {
         </button>`;
     }
 
-    const canManage = (type === 'Factura' && permissions.manage_invoices) || (type === 'Proforma' && permissions.manage_proformas);
+    // Usar safePermissions para la comprobación
+    const canManage = (type === 'Factura' && safePermissions.manage_invoices) || (type === 'Proforma' && safePermissions.manage_proformas);
     if (canManage) {
         actionsHtml += `
         <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${doc.id}" title="Eliminar">
@@ -32,7 +36,8 @@ export function createDocumentRow(doc, type, state) {
         </button>`;
     }
 
-    const statusElement = permissions.change_document_status
+    // Usar safePermissions para la comprobación
+    const statusElement = safePermissions.change_document_status
         ? `<button class="status-btn text-xs font-semibold px-2 py-1 rounded-full ${statusClass}" data-id="${doc.id}">${doc.status}</button>`
         : `<span class="text-xs font-semibold px-2 py-1 rounded-full ${statusClass}">${doc.status}</span>`;
 
@@ -52,49 +57,72 @@ export function createDocumentRow(doc, type, state) {
 export function renderDocuments(type, tableBody, searchInputId, state) {
     const { documents, permissions } = state || getState();
     const searchInput = document.getElementById(searchInputId);
-    if (!tableBody || !searchInput || !permissions) return;
+    // Asegurarse de que permissions existe
+    if (!tableBody || !searchInput || !permissions) {
+         console.warn(`renderDocuments (${type}): Faltan elementos (tableBody=${!!tableBody}, searchInput=${!!searchInput}, permissions=${!!permissions})`);
+         if(tableBody) tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Cargando datos o error de permisos...</td></tr>`;
+         // Ocultar formularios si no hay permisos
+         if (type === 'Proforma' && elements.proformaForm && elements.proformaForm.parentElement) {
+            elements.proformaForm.parentElement.classList.add('hidden');
+         }
+         const createInvoiceTab = document.getElementById('facturacion-tab-crear');
+         if (type === 'Factura' && createInvoiceTab) {
+            createInvoiceTab.classList.add('hidden');
+         }
+         return; // Salir si faltan elementos
+    }
 
+    // Ocultar/Mostrar formularios según permisos
     if (type === 'Proforma' && elements.proformaForm && elements.proformaForm.parentElement) {
         elements.proformaForm.parentElement.classList.toggle('hidden', !permissions.manage_proformas);
     }
     const createInvoiceTab = document.getElementById('facturacion-tab-crear');
     if (type === 'Factura' && createInvoiceTab) {
         createInvoiceTab.classList.toggle('hidden', !permissions.manage_invoices);
+        // Si no tiene permiso y la pestaña activa es 'crear', cambiar a 'listado'
         if (!permissions.manage_invoices && createInvoiceTab.classList.contains('active')) {
-             document.getElementById('facturacion-tab-listado')?.click();
+             const listadoTab = document.getElementById('facturacion-tab-listado');
+             if (listadoTab) listadoTab.click(); // Simular clic para cambiar de pestaña
         }
     }
 
+    // Filtrar documentos por tipo y búsqueda
     const filteredDocs = (documents || []).filter(d => d.type === type);
     const searchTerm = searchInput.value.toLowerCase();
     let displayDocs = filteredDocs;
     if (searchTerm) {
         displayDocs = filteredDocs.filter(d =>
-            d.number.toLowerCase().includes(searchTerm) ||
-            d.client.toLowerCase().includes(searchTerm)
+            (d.number && d.number.toLowerCase().includes(searchTerm)) || // Verificar que number existe
+            (d.client && d.client.toLowerCase().includes(searchTerm)) // Verificar que client existe
         );
     }
 
+    // Renderizar tabla
     tableBody.innerHTML = '';
     if (displayDocs.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay ${type.toLowerCase()}s.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay ${type.toLowerCase()}s que coincidan.</td></tr>`;
     } else {
-        const rowsHtml = displayDocs.sort((a, b) => new Date(b.date) - new Date(a.date))
-                   .map(doc => createDocumentRow(doc, type, state))
+        // Ordenar y mapear, pasando el estado completo
+        const rowsHtml = displayDocs
+                   .sort((a, b) => new Date(b.date) - new Date(a.date))
+                   .map(doc => createDocumentRow(doc, type, state)) // Pasar 'state'
                    .join('');
         tableBody.innerHTML = rowsHtml;
     }
 }
 
-export function renderDocuments(type, tableBody, searchInputId, state) {
-    // TODO: move implementation from ui.js
-}
 
-export function renderFacturas(state) {
-    // TODO: move implementation from ui.js
-}
+// ---- ELIMINAR ESTA SECCIÓN DUPLICADA ----
+// export function renderDocuments(type, tableBody, searchInputId, state) {
+//     // TODO: move implementation from ui.js
+// }
 
-export function createDocumentRow(doc, type, permissions = {}) {
-    // TODO
-    return `<!-- document row ${escapeHTML(doc.id || '')} -->`;
-}
+// export function renderFacturas(state) {
+//     // TODO: move implementation from ui.js
+// }
+
+// export function createDocumentRow(doc, type, permissions = {}) {
+//     // TODO
+//     return `<!-- document row ${escapeHTML(doc.id || '')} -->`;
+// }
+// ---- FIN DE SECCIÓN DUPLICADA ----
