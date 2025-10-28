@@ -32,7 +32,7 @@ import {
     populateNextInvoiceNumber,
     showAuthError,
     resizeCharts // <-- Importar la nueva función
-} from './ui';
+} from './ui.js'; // <-- ESTA ES LA LÍNEA CORREGIDA
 import { getState, resetState } from './store.js';
 import { ESSENTIAL_INCOME_CATEGORIES, ESSENTIAL_EXPENSE_CATEGORIES, ESSENTIAL_OPERATION_TYPES, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 import { escapeHTML } from './utils.js';
@@ -1350,3 +1350,4 @@ export function bindEventListeners() {
     if (elements.permissionsModalSaveBtn) elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
 
 }
+
