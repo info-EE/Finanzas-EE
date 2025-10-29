@@ -1,9 +1,10 @@
 import { getState } from './store.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
 import { CHART_COLORS, ESSENTIAL_TAX_ID_TYPES } from './config.js';
-// --- AÑADIR ESTA LÍNEA ---
-import { charts } from './ui/charts.js'; // Importa solo 'charts'
-// --- FIN LÍNEA AÑADIDA ---
+
+// --- ERROR CORREGIDO ---
+// Se eliminó la línea duplicada: import { charts } from './ui/charts.js';
+// La siguiente línea ya importa 'charts' y todo lo demás necesario.
 export { charts, renderSingleCurrencyChart, resizeCharts };
 import { charts, renderSingleCurrencyChart, resizeCharts } from './ui/charts.js';
 // Re-export chart helpers from the new ui module (migrated)
@@ -1527,7 +1528,7 @@ export function exportReportAsXLSX() {
 
 export function exportReportAsPDF() {
     const { activeReport } = getState();
-    if (!activeReport || !activeReport.data || activeReport.data.length === 0) {
+    if (!activeReport || !activeBreport.data || activeReport.data.length === 0) {
         showAlertModal('Sin Datos', 'No hay datos para exportar.');
         return;
     }
