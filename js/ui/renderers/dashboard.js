@@ -3,41 +3,37 @@
  */
 import { elements } from '../elements.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from '../../utils.js';
-// Los imports vacíos se pueden eliminar si no se usan
-// import { ... } from './charts.js'; // Asumiendo que las funciones de chart se llaman desde ui.js todavía
+// Añadimos getState aquí
+import { getState } from '../../store.js';
+import { CHART_COLORS } from '../../config.js'; // Asegúrate de importar CHART_COLORS
 
 export function updateInicioKPIs(state) {
-    // --- DEBUG: Log al inicio de la función ---
     console.log('[updateInicioKPIs] *** INTENTANDO EJECUTAR updateInicioKPIs ***');
+    const currentState = getState();
+    const { transactions, accounts } = currentState;
 
-    const { transactions, accounts } = state;
+    console.log(`[updateInicioKPIs] Verificando datos (desde getState): transactions existe=${!!transactions}, accounts existe=${!!accounts}, accounts.length=${accounts ? accounts.length : 'N/A'}, transactions.length=${transactions ? transactions.length : 'N/A'}`);
 
-    // --- DEBUG: Log antes de la comprobación de datos ---
-    console.log(`[updateInicioKPIs] Verificando datos: transactions existe=${!!transactions}, accounts existe=${!!accounts}, accounts.length=${accounts ? accounts.length : 'N/A'}`);
-
-    // Comprobación más explícita
     if (!transactions || !Array.isArray(transactions) || transactions.length === 0 ||
         !accounts || !Array.isArray(accounts) || accounts.length === 0) {
-        console.warn("[updateInicioKPIs] SALIENDO TEMPRANO: Faltan datos o están vacíos (transactions o accounts).");
-        // Asegurarse de poner a 0 si salimos temprano
+        console.warn("[updateInicioKPIs] SALIENDO TEMPRANO: Faltan datos o están vacíos (transactions o accounts desde getState).");
         ['kpi-monthly-income', 'kpi-monthly-expense', 'kpi-monthly-profit', 'kpi-total-balance'].forEach(id => {
             const el = document.getElementById(id);
-            // El Saldo Total SÍ se calcula aquí basado en las cuentas existentes, incluso si no hay transacciones este mes.
             if (id === 'kpi-total-balance' && accounts && accounts.length > 0) {
                  const currencySelectForTotal = document.getElementById('inicio-chart-currency');
                  const currencyForTotal = currencySelectForTotal ? currencySelectForTotal.value : 'EUR';
                  const totalBalanceForKPI = accounts.filter(a => a.currency === currencyForTotal).reduce((sum, a) => sum + a.balance, 0);
                  if (el) el.textContent = formatCurrency(totalBalanceForKPI, currencyForTotal);
             } else if (el) {
-                 // Los otros KPIs sí dependen de las transacciones del mes
-                 el.textContent = formatCurrency(0, 'EUR'); // O usar la moneda seleccionada si se prefiere
+                 const currencySelectForZero = document.getElementById('inicio-chart-currency');
+                 const currencyForZero = currencySelectForZero ? currencySelectForZero.value : 'EUR';
+                 el.textContent = formatCurrency(0, currencyForZero);
             }
         });
-        return; // Salir de la función
+        return;
     }
 
-    // --- DEBUG: Si pasa la comprobación ---
-    console.log('[updateInicioKPIs] Datos encontrados. Continuando cálculo...');
+    console.log('[updateInicioKPIs] Datos encontrados (getState). Continuando cálculo...');
 
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) {
@@ -52,45 +48,68 @@ export function updateInicioKPIs(state) {
     const currentYear = now.getFullYear();
     console.log(`[updateInicioKPIs] Mes actual (0-11): ${currentMonth}, Año actual: ${currentYear}`);
 
-    let monthlyIncome = 0;
-    let monthlyExpense = 0;
+    // --- NUEVO LOG: Mostrar algunas transacciones ANTES de filtrar ---
+    console.log('[updateInicioKPIs] Primeras 5 transacciones (para verificar formato fecha/accountId):', transactions.slice(0, 5).map(t => ({ date: t.date, accountId: t.accountId, amount: t.amount, type: t.type })));
+    // --- FIN NUEVO LOG ---
 
     console.log('[updateInicioKPIs] Filtrando transacciones...');
     const filteredTransactions = transactions.filter(t => {
-        // console.log(`[updateInicioKPIs] Evaluando transacción:`, t); // Puedes descomentar este si necesitas detalle extremo
-
         if (!t.date) return false;
-        const tDate = new Date(t.date + 'T00:00:00');
-        if (isNaN(tDate.getTime())) return false;
+        // --- FORZAR UTC PARA PRUEBA ---
+        // Intentamos interpretar la fecha como UTC para evitar problemas de zona horaria
+        const dateParts = String(t.date).split('-'); // Asegurarse que t.date es string
+        let tDate;
+        if (dateParts.length === 3) {
+             // Asumimos YYYY-MM-DD y creamos fecha UTC
+             tDate = new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2])));
+        } else {
+             // Si el formato no es YYYY-MM-DD, intentar parseo normal y cruzar dedos
+             tDate = new Date(t.date + 'T00:00:00'); // Volver a local si UTC falla
+             if(isNaN(tDate.getTime())) return false; // Salir si sigue siendo inválida
+        }
+        // --- FIN FORZAR UTC ---
+
+        // Validar fecha resultante
+        if (isNaN(tDate.getTime())) {
+             console.log(`[updateInicioKPIs] -> Ignorada (Filtro): Fecha inválida (${t.date}).`);
+             return false;
+        }
+
 
         const account = accounts.find(acc => acc.id === t.accountId);
-        if (!account) return false;
+        if (!account) {
+            // console.log(`[updateInicioKPIs] -> Ignorada (Filtro): Cuenta no encontrada (ID: ${t.accountId}).`); // Mucho ruido, comentar si funciona
+            return false;
+        }
 
         const isCorrectCurrency = account.currency === currency;
-        const transactionMonth = tDate.getMonth();
-        const transactionYear = tDate.getFullYear();
+        // --- Usar getUTCMonth y getUTCFullYear si forzamos UTC ---
+        const transactionMonth = tDate.getUTCMonth(); // Usar UTC
+        const transactionYear = tDate.getUTCFullYear(); // Usar UTC
+        // --- Fin Usar UTC ---
         const isCurrentMonth = transactionMonth === currentMonth;
         const isCurrentYear = transactionYear === currentYear;
 
-        // console.log(`[updateInicioKPIs] -> Fecha Tx: ${t.date} (${transactionMonth}/${transactionYear}) | Moneda Cuenta: ${account.currency}`); // Descomentar si es necesario
-        // console.log(`[updateInicioKPIs] -> ¿Moneda Correcta?: ${isCorrectCurrency} | ¿Mes Correcto?: ${isCurrentMonth} | ¿Año Correcto?: ${isCurrentYear}`); // Descomentar si es necesario
+        // Log DETALLADO dentro del filtro (descomentar si es necesario revisar una por una)
+        // console.log(`[updateInicioKPIs] -> Tx(${t.id}): Date=${t.date} -> UTCDate=${tDate.toISOString().slice(0,10)} (${transactionMonth}/${transactionYear}) | Acc=${account.name}(${account.currency}) | Filtro: Curr=${isCorrectCurrency}, Month=${isCurrentMonth}, Year=${isCurrentYear}`);
 
         const shouldInclude = isCorrectCurrency && isCurrentMonth && isCurrentYear;
-        // console.log(`[updateInicioKPIs] -> ¿Incluir?: ${shouldInclude}`); // Descomentar si es necesario
         return shouldInclude;
     });
 
     console.log('[updateInicioKPIs] Transacciones que pasaron el filtro:', filteredTransactions);
+
+    if(filteredTransactions.length === 0){
+        console.log('[updateInicioKPIs] No hay transacciones para el mes/año/moneda actual (después del filtro).');
+    }
 
     filteredTransactions.forEach(t => {
             const amount = t.amount || 0;
             const iva = t.iva || 0;
             if (t.type === 'Ingreso') {
                 monthlyIncome += amount;
-                // console.log(`[updateInicioKPIs] -> Sumando Ingreso: ${amount}. Total Ingresos ahora: ${monthlyIncome}`); // Descomentar si es necesario
             } else if (t.type === 'Egreso') {
                 monthlyExpense += (amount + iva);
-                // console.log(`[updateInicioKPIs] -> Sumando Egreso: ${amount} + IVA ${iva}. Total Egresos ahora: ${monthlyExpense}`); // Descomentar si es necesario
             }
         });
 
@@ -110,7 +129,6 @@ export function updateInicioKPIs(state) {
         kpiProfitEl.classList.remove('text-green-400', 'text-red-400');
         kpiProfitEl.classList.add(monthlyProfit >= 0 ? 'text-green-400' : 'text-red-400');
     }
-    // El kpiTotalBalanceEl se actualiza incluso si salimos temprano, basado solo en accounts.
     const kpiTotalBalanceEl = document.getElementById('kpi-total-balance');
      if (kpiTotalBalanceEl) kpiTotalBalanceEl.textContent = formatCurrency(totalBalance, currency);
 
@@ -122,7 +140,9 @@ export function updateInicioKPIs(state) {
 
 
 export function renderAnnualFlowChart(state, charts) {
-    const { transactions, accounts } = state;
+    // --- Obtener estado con getState() ---
+    const currentState = getState();
+    const { transactions, accounts } = currentState;
     const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
 
     if (!annualCtx || !transactions || !accounts || accounts.length === 0) {
@@ -144,14 +164,30 @@ export function renderAnnualFlowChart(state, charts) {
 
     transactions.filter(t => {
         const account = accounts.find(acc => acc.id === t.accountId);
-        if (!t.date || !account) return false; // Ignorar si falta fecha o cuenta
-        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
-        return account.currency === selectedCurrency && !isNaN(tDate.getTime()) && tDate.getFullYear() === currentYear;
+        if (!t.date || !account) return false;
+        // --- Usar UTC aquí también ---
+        const dateParts = String(t.date).split('-');
+        let tDate;
+         if (dateParts.length === 3) {
+             tDate = new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2])));
+        } else {
+             tDate = new Date(t.date + 'T00:00:00'); // Fallback
+        }
+        // --- Fin UTC ---
+        return account.currency === selectedCurrency && !isNaN(tDate.getTime()) && tDate.getUTCFullYear() === currentYear; // Usar UTC
     }).forEach(t => {
-        const date = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
-        // Asegurarse que getTime no es NaN antes de llamar a getMonth
+        // --- Usar UTC aquí también ---
+         const dateParts = String(t.date).split('-');
+        let date;
+         if (dateParts.length === 3) {
+             date = new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2])));
+        } else {
+             date = new Date(t.date + 'T00:00:00'); // Fallback
+        }
+        // --- Fin UTC ---
+
         if (!isNaN(date.getTime())) {
-            const month = date.getMonth();
+            const month = date.getUTCMonth(); // Usar UTC
             if (month >=0 && month <=11) {
                 const amount = t.amount || 0;
                 const iva = t.iva || 0;
@@ -164,7 +200,6 @@ export function renderAnnualFlowChart(state, charts) {
     const incomeGradient = annualCtx.createLinearGradient(0,0,0,320); incomeGradient.addColorStop(0,'rgba(59,130,246,0.5)'); incomeGradient.addColorStop(1,'rgba(59,130,246,0)');
     const expenseGradient = annualCtx.createLinearGradient(0,0,0,320); expenseGradient.addColorStop(0,'rgba(239,68,68,0.5)'); expenseGradient.addColorStop(1,'rgba(239,68,68,0)');
 
-    // Asegurarse que 'charts' existe antes de asignarle una propiedad
     if(charts) {
         charts.annualFlowChart = new Chart(annualCtx, {
             type: 'line',
@@ -178,7 +213,8 @@ export function renderAnnualFlowChart(state, charts) {
 
 
 export function renderExpenseDistributionChart(state, charts) {
-    const { transactions, accounts } = state;
+    const currentState = getState();
+    const { transactions, accounts } = currentState;
     const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
 
     if (!ctx || !transactions || !accounts || accounts.length === 0) {
@@ -198,8 +234,16 @@ export function renderExpenseDistributionChart(state, charts) {
     const expenseByCategory = transactions.filter(t => {
         const account = accounts.find(acc => acc.id === t.accountId);
         if(!t.date || !account) return false;
-        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
-        return t.type === 'Egreso' && account.currency === currency && !isNaN(tDate.getTime()) && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+        // --- Usar UTC ---
+        const dateParts = String(t.date).split('-');
+        let tDate;
+         if (dateParts.length === 3) {
+             tDate = new Date(Date.UTC(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2])));
+        } else {
+             tDate = new Date(t.date + 'T00:00:00'); // Fallback
+        }
+        // --- Fin UTC ---
+        return t.type === 'Egreso' && account.currency === currency && !isNaN(tDate.getTime()) && tDate.getUTCMonth() === currentMonth && tDate.getUTCFullYear() === currentYear; // Usar UTC
     }).reduce((acc, t) => {
         const category = t.category || 'Sin Categoría';
         const amount = t.amount || 0;
@@ -219,7 +263,6 @@ export function renderExpenseDistributionChart(state, charts) {
         return;
     }
 
-    // Usar CHART_COLORS importado si está disponible
     const chartColors = typeof CHART_COLORS !== 'undefined' ? CHART_COLORS : ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
 
     if (charts) {
@@ -235,7 +278,8 @@ export function renderExpenseDistributionChart(state, charts) {
 
 
 export function renderRecentTransactions(state) {
-    const { transactions, accounts } = state;
+    const currentState = getState();
+    const { transactions, accounts } = currentState;
     const container = document.getElementById('recent-transactions-container');
     if (!container || !transactions || !accounts || accounts.length === 0) {
         if(container) container.innerHTML = `<p class="text-center text-gray-500 py-4">Cargando o no hay datos...</p>`;
@@ -250,7 +294,7 @@ export function renderRecentTransactions(state) {
         const account = accounts.find(acc => acc.id === t.accountId);
         const accountName = account ? account.name : `Cuenta Borrada (ID: ${t.accountId})`;
         const currency = account ? account.currency : 'EUR';
-        const amount = t.amount || 0; // Asegurar que amount es número
+        const amount = t.amount || 0;
         return `
             <tr class="border-b border-gray-800 last:border-b-0">
                 <td class="py-3 px-3">
@@ -262,14 +306,15 @@ export function renderRecentTransactions(state) {
                 </td>
             </tr>
         `;
-    }).filter(Boolean); // Filtrar resultados potencialmente nulos
+    }).filter(Boolean);
 
     container.innerHTML = `<table class="w-full text-left"><tbody>${rowsHtmlArray.join('')}</tbody></table>`;
 }
 
 
 export function renderPendingInvoices(state) {
-    const { documents } = state;
+    const currentState = getState();
+    const { documents } = currentState;
     const container = document.getElementById('pending-invoices-container');
     if (!container || !documents) return;
 
@@ -285,17 +330,15 @@ export function renderPendingInvoices(state) {
                 <p class="font-medium">${escapeHTML(doc.number)}</p>
                 <p class="text-xs text-gray-400">${escapeHTML(doc.client)}</p>
             </div>
-            <span class="font-semibold">${formatCurrency(doc.amount || 0, doc.currency)}</span> {/* Asegurar amount */}
+            <span class="font-semibold">${formatCurrency(doc.amount || 0, doc.currency)}</span>
         </div>
     `).join('');
 }
 
-// Nota: renderInicioDashboard ahora necesita el objeto charts como segundo argumento
 export function renderInicioDashboard(state, charts) {
     updateInicioKPIs(state);
-    renderAnnualFlowChart(state, charts); // Pasar charts
-    renderExpenseDistributionChart(state, charts); // Pasar charts
-    // renderMainBalances() es llamado por renderAccountsTab que se llama desde renderAll
+    renderAnnualFlowChart(state, charts);
+    renderExpenseDistributionChart(state, charts);
     renderPendingInvoices(state);
     renderRecentTransactions(state);
 }
