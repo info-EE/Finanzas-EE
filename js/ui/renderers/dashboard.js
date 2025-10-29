@@ -7,15 +7,12 @@ import { getState } from '../../store.js';
 import { CHART_COLORS } from '../../config.js';
 
 export function updateInicioKPIs(state) {
-    // console.log('[updateInicioKPIs] *** INTENTANDO EJECUTAR updateInicioKPIs ***'); // Log opcional
     const currentState = getState();
     const { transactions, accounts } = currentState;
 
-    // console.log(`[updateInicioKPIs] Verificando datos (desde getState): transactions existe=${!!transactions}, accounts existe=${!!accounts}, accounts.length=${accounts ? accounts.length : 'N/A'}, transactions.length=${transactions ? transactions.length : 'N/A'}`); // Log opcional
-
     if (!transactions || !Array.isArray(transactions) || transactions.length === 0 ||
         !accounts || !Array.isArray(accounts) || accounts.length === 0) {
-        // console.warn("[updateInicioKPIs] SALIENDO TEMPRANO: Faltan datos o están vacíos (transactions o accounts desde getState)."); // Log opcional
+        // Manejo de salida temprana
         ['kpi-monthly-income', 'kpi-monthly-expense', 'kpi-monthly-profit', 'kpi-total-balance'].forEach(id => {
             const el = document.getElementById(id);
             if (id === 'kpi-total-balance' && accounts && accounts.length > 0) {
@@ -32,62 +29,57 @@ export function updateInicioKPIs(state) {
         return;
     }
 
-    // console.log('[updateInicioKPIs] Datos encontrados (getState). Continuando cálculo...'); // Log opcional
-
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) {
         console.error("[updateInicioKPIs] Error: No se encontró el selector de moneda 'inicio-chart-currency'.");
         return;
     }
     const currency = currencySelect.value;
-    // console.log(`[updateInicioKPIs] Moneda seleccionada: ${currency}`); // Log opcional
-
-    const now = new Date(); // Fecha local del navegador
+    const now = new Date(); // Fecha local
     const currentMonth = now.getMonth(); // Mes local (0-11)
     const currentYear = now.getFullYear(); // Año local
-    // console.log(`[updateInicioKPIs] Mes actual LOCAL (0-11): ${currentMonth}, Año actual LOCAL: ${currentYear}`); // Log opcional
 
-    // console.log('[updateInicioKPIs] Primeras 5 transacciones (para verificar formato fecha/accountId):', transactions.slice(0, 5).map(t => ({ date: t.date, accountId: t.accountId, amount: t.amount, type: t.type }))); // Log opcional útil
+    // console.log(`[updateInicioKPIs] Iniciando filtro para Mes=${currentMonth}, Año=${currentYear}, Moneda=${currency}`); // Log opcional
 
-    // console.log('[updateInicioKPIs] Filtrando transacciones...'); // Log opcional
     const filteredTransactions = transactions.filter(t => {
-        if (!t.date || typeof t.date !== 'string') return false; // Asegurar que date existe y es string
+        if (!t.date || typeof t.date !== 'string') return false;
 
-        // --- CORRECCIÓN: Volver a interpretar la fecha como LOCAL ---
-        // Asumiendo que t.date es 'YYYY-MM-DD', esto crea la fecha a las 00:00:00 en la zona horaria LOCAL del navegador.
-        const tDate = new Date(t.date + 'T00:00:00');
-        // --- FIN CORRECCIÓN ---
+        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como LOCAL
 
-        // Validar fecha resultante
-        if (isNaN(tDate.getTime())) {
-             // console.log(`[updateInicioKPIs] -> Ignorada (Filtro): Fecha inválida (${t.date}).`); // Log opcional
-             return false;
-        }
+        if (isNaN(tDate.getTime())) return false;
 
         const account = accounts.find(acc => acc.id === t.accountId);
-        if (!account) {
-            return false;
-        }
+        if (!account) return false;
 
         const isCorrectCurrency = account.currency === currency;
-        // --- Usar getMonth y getFullYear (LOCALES) ---
         const transactionMonth = tDate.getMonth(); // Mes local (0-11)
         const transactionYear = tDate.getFullYear(); // Año local
-        // --- Fin Usar LOCALES ---
         const isCurrentMonth = transactionMonth === currentMonth;
         const isCurrentYear = transactionYear === currentYear;
 
-        // Log DETALLADO dentro del filtro (descomentar si es necesario revisar una por una)
-        // console.log(`[updateInicioKPIs] -> Tx(${t.id}): Date=${t.date} -> LocalDate=${tDate.toLocaleDateString()} (${transactionMonth}/${transactionYear}) | Acc=${account.name}(${account.currency}) | Filtro: Curr=${isCorrectCurrency}, Month=${isCurrentMonth}, Year=${isCurrentYear}`);
+        // --- LOG SÚPER DETALLADO ---
+        // Imprimir solo para una transacción específica de Octubre 2025 para no llenar la consola
+        if (t.date === '2025-10-09' || t.date === '2025-10-23') { // <-- AJUSTA ESTA FECHA si tienes otra transacción de Octubre 2025
+             console.log(`--- DEBUG FILTRO ---
+             Transacción ID: ${t.id || 'N/A'}
+             Fecha String (t.date): ${t.date}
+             Fecha Interpretada (tDate): ${tDate.toString()}
+             Mes Tx (local): ${transactionMonth} (Esperado: ${currentMonth}) -> Coincide? ${isCurrentMonth}
+             Año Tx (local): ${transactionYear} (Esperado: ${currentYear}) -> Coincide? ${isCurrentYear}
+             Cuenta ID: ${t.accountId}
+             Moneda Cuenta: ${account.currency} (Esperada: ${currency}) -> Coincide? ${isCorrectCurrency}
+             --- FIN DEBUG ---`);
+        }
+        // --- FIN LOG SÚPER DETALLADO ---
 
         const shouldInclude = isCorrectCurrency && isCurrentMonth && isCurrentYear;
         return shouldInclude;
     });
 
-    console.log('[updateInicioKPIs] Transacciones que pasaron el filtro:', filteredTransactions); // Mantener este log
+    console.log('[updateInicioKPIs] Transacciones que pasaron el filtro:', filteredTransactions);
 
     if(filteredTransactions.length === 0){
-        console.log('[updateInicioKPIs] No hay transacciones para el mes/año/moneda actual (después del filtro).'); // Mantener este log
+        console.log('[updateInicioKPIs] No hay transacciones para el mes/año/moneda actual (después del filtro).');
     }
 
     let monthlyIncome = 0;
@@ -105,7 +97,7 @@ export function updateInicioKPIs(state) {
     const monthlyProfit = monthlyIncome - monthlyExpense;
     const totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
 
-    console.log(`[updateInicioKPIs] Cálculo final: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}, Beneficio=${monthlyProfit}, Saldo Total=${totalBalance}`); // Mantener este log
+    console.log(`[updateInicioKPIs] Cálculo final: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}, Beneficio=${monthlyProfit}, Saldo Total=${totalBalance}`);
 
     // Actualizar DOM
     const kpiIncomeEl = document.getElementById('kpi-monthly-income');
@@ -120,14 +112,11 @@ export function updateInicioKPIs(state) {
     }
     const kpiTotalBalanceEl = document.getElementById('kpi-total-balance');
      if (kpiTotalBalanceEl) kpiTotalBalanceEl.textContent = formatCurrency(totalBalance, currency);
-
-     // console.log('[updateInicioKPIs] Fin del cálculo y actualización del DOM.'); // Log opcional
 }
-
-// ... (El resto de las funciones: renderAnnualFlowChart, renderExpenseDistributionChart, etc., también deberían usar la interpretación LOCAL de fechas si filtran por mes/año. Revisar si es necesario)
 
 
 // --- REVISIÓN RÁPIDA de otras funciones ---
+// (Se mantienen las correcciones para usar fecha LOCAL)
 
 export function renderAnnualFlowChart(state, charts) {
     const currentState = getState();
@@ -154,15 +143,10 @@ export function renderAnnualFlowChart(state, charts) {
     transactions.filter(t => {
         const account = accounts.find(acc => acc.id === t.accountId);
         if (!t.date || !account || typeof t.date !== 'string') return false;
-        // --- USAR LOCAL ---
         const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
-        // --- FIN USAR LOCAL ---
         return account.currency === selectedCurrency && !isNaN(tDate.getTime()) && tDate.getFullYear() === currentYear; // Usar local
     }).forEach(t => {
-        // --- USAR LOCAL ---
         const date = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
-        // --- FIN USAR LOCAL ---
-
         if (!isNaN(date.getTime())) {
             const month = date.getMonth(); // Usar local
             if (month >=0 && month <=11) {
@@ -211,9 +195,7 @@ export function renderExpenseDistributionChart(state, charts) {
     const expenseByCategory = transactions.filter(t => {
         const account = accounts.find(acc => acc.id === t.accountId);
         if(!t.date || !account || typeof t.date !== 'string') return false;
-        // --- USAR LOCAL ---
         const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
-        // --- FIN USAR LOCAL ---
         return t.type === 'Egreso' && account.currency === currency && !isNaN(tDate.getTime()) && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear; // Usar local
     }).reduce((acc, t) => {
         const category = t.category || 'Sin Categoría';
@@ -257,7 +239,6 @@ export function renderRecentTransactions(state) {
         return;
     }
 
-    // Ordenar por fecha sigue siendo válido
     const recent = transactions.filter(t => !t.isInitialBalance).sort((a,b)=> new Date(b.date)-new Date(a.date)).slice(0,5);
     if (recent.length === 0) { container.innerHTML = `<p class="text-center text-gray-500 py-4">No hay movimientos recientes.</p>`; return; }
 
