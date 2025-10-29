@@ -6,130 +6,102 @@ import { escapeHTML, formatCurrency, getCurrencySymbol } from '../../utils.js';
 import { getState } from '../../store.js';
 import { CHART_COLORS } from '../../config.js';
 
-export function updateInicioKPIs(state) {
+// Calcula y actualiza los KPIs del dashboard en el DOM
+export function updateInicioKPIs() {
     const currentState = getState();
     const { transactions, accounts } = currentState;
 
-    if (!transactions || !Array.isArray(transactions) || transactions.length === 0 ||
-        !accounts || !Array.isArray(accounts) || accounts.length === 0) {
-        // Manejo de salida temprana
-        ['kpi-monthly-income', 'kpi-monthly-expense', 'kpi-monthly-profit', 'kpi-total-balance'].forEach(id => {
-            const el = document.getElementById(id);
-            if (id === 'kpi-total-balance' && accounts && accounts.length > 0) {
-                 const currencySelectForTotal = document.getElementById('inicio-chart-currency');
-                 const currencyForTotal = currencySelectForTotal ? currencySelectForTotal.value : 'EUR';
-                 const totalBalanceForKPI = accounts.filter(a => a.currency === currencyForTotal).reduce((sum, a) => sum + a.balance, 0);
-                 if (el) el.textContent = formatCurrency(totalBalanceForKPI, currencyForTotal);
-            } else if (el) {
-                 const currencySelectForZero = document.getElementById('inicio-chart-currency');
-                 const currencyForZero = currencySelectForZero ? currencySelectForZero.value : 'EUR';
-                 el.textContent = formatCurrency(0, currencyForZero);
-            }
-        });
-        return;
-    }
-
+    // Obtener elementos del DOM una sola vez
+    const kpiIncomeEl = document.getElementById('kpi-monthly-income');
+    const kpiExpenseEl = document.getElementById('kpi-monthly-expense');
+    const kpiProfitEl = document.getElementById('kpi-monthly-profit');
+    const kpiTotalBalanceEl = document.getElementById('kpi-total-balance');
     const currencySelect = document.getElementById('inicio-chart-currency');
-    if (!currencySelect) {
-        console.error("[updateInicioKPIs] Error: No se encontró el selector de moneda 'inicio-chart-currency'.");
+
+    // Salir si faltan elementos esenciales del DOM
+    if (!kpiIncomeEl || !kpiExpenseEl || !kpiProfitEl || !kpiTotalBalanceEl || !currencySelect) {
+        console.error("[updateInicioKPIs] Error crítico: Faltan elementos KPI o selector de moneda en el DOM.");
         return;
     }
-    const currency = currencySelect.value;
-    const now = new Date(); // Fecha local
-    const currentMonth = now.getMonth(); // Mes local (0-11)
-    const currentYear = now.getFullYear(); // Año local
 
-    // console.log(`[updateInicioKPIs] Iniciando filtro para Mes=${currentMonth}, Año=${currentYear}, Moneda=${currency}`); // Log opcional
+    const currency = currencySelect.value; // Moneda seleccionada
 
-    const filteredTransactions = transactions.filter(t => {
-        if (!t.date || typeof t.date !== 'string') return false;
-
-        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como LOCAL
-
-        if (isNaN(tDate.getTime())) return false;
-
-        const account = accounts.find(acc => acc.id === t.accountId);
-        if (!account) return false;
-
-        const isCorrectCurrency = account.currency === currency;
-        const transactionMonth = tDate.getMonth(); // Mes local (0-11)
-        const transactionYear = tDate.getFullYear(); // Año local
-        const isCurrentMonth = transactionMonth === currentMonth;
-        const isCurrentYear = transactionYear === currentYear;
-
-        // --- LOG SÚPER DETALLADO ---
-        // Imprimir solo para una transacción específica de Octubre 2025 para no llenar la consola
-        if (t.date === '2025-10-09' || t.date === '2025-10-23') { // <-- AJUSTA ESTA FECHA si tienes otra transacción de Octubre 2025
-             console.log(`--- DEBUG FILTRO ---
-             Transacción ID: ${t.id || 'N/A'}
-             Fecha String (t.date): ${t.date}
-             Fecha Interpretada (tDate): ${tDate.toString()}
-             Mes Tx (local): ${transactionMonth} (Esperado: ${currentMonth}) -> Coincide? ${isCurrentMonth}
-             Año Tx (local): ${transactionYear} (Esperado: ${currentYear}) -> Coincide? ${isCurrentYear}
-             Cuenta ID: ${t.accountId}
-             Moneda Cuenta: ${account.currency} (Esperada: ${currency}) -> Coincide? ${isCorrectCurrency}
-             --- FIN DEBUG ---`);
-        }
-        // --- FIN LOG SÚPER DETALLADO ---
-
-        const shouldInclude = isCorrectCurrency && isCurrentMonth && isCurrentYear;
-        return shouldInclude;
-    });
-
-    console.log('[updateInicioKPIs] Transacciones que pasaron el filtro:', filteredTransactions);
-
-    if(filteredTransactions.length === 0){
-        console.log('[updateInicioKPIs] No hay transacciones para el mes/año/moneda actual (después del filtro).');
-    }
-
+    // Valores por defecto
     let monthlyIncome = 0;
     let monthlyExpense = 0;
-    filteredTransactions.forEach(t => {
-            const amount = t.amount || 0;
-            const iva = t.iva || 0;
-            if (t.type === 'Ingreso') {
-                monthlyIncome += amount;
-            } else if (t.type === 'Egreso') {
-                monthlyExpense += (amount + iva);
-            }
-        });
+    let monthlyProfit = 0;
+    let totalBalance = 0;
 
-    const monthlyProfit = monthlyIncome - monthlyExpense;
-    const totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
+    // Calcular Saldo Total (siempre que haya cuentas)
+    if (accounts && Array.isArray(accounts) && accounts.length > 0) {
+        totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
+    }
 
-    console.log(`[updateInicioKPIs] Cálculo final: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}, Beneficio=${monthlyProfit}, Saldo Total=${totalBalance}`);
+    // Calcular Ingresos/Egresos del mes (solo si hay transacciones)
+    if (transactions && Array.isArray(transactions) && transactions.length > 0 &&
+        accounts && Array.isArray(accounts) && accounts.length > 0)
+    {
+        const now = new Date(); // Fecha local
+        const currentMonth = now.getMonth(); // Mes local (0-11)
+        const currentYear = now.getFullYear(); // Año local
+
+        transactions
+            .filter(t => {
+                if (!t.date || typeof t.date !== 'string') return false;
+                const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como LOCAL
+                if (isNaN(tDate.getTime())) return false;
+                const account = accounts.find(acc => acc.id === t.accountId);
+                if (!account) return false;
+
+                return account.currency === currency &&
+                       tDate.getMonth() === currentMonth &&
+                       tDate.getFullYear() === currentYear;
+            })
+            .forEach(t => {
+                const amount = t.amount || 0;
+                const iva = t.iva || 0;
+                if (t.type === 'Ingreso') {
+                    monthlyIncome += amount;
+                } else if (t.type === 'Egreso') {
+                    monthlyExpense += (amount + iva);
+                }
+            });
+
+        monthlyProfit = monthlyIncome - monthlyExpense;
+    }
 
     // Actualizar DOM
-    const kpiIncomeEl = document.getElementById('kpi-monthly-income');
-    if (kpiIncomeEl) kpiIncomeEl.textContent = formatCurrency(monthlyIncome, currency);
-    const kpiExpenseEl = document.getElementById('kpi-monthly-expense');
-    if (kpiExpenseEl) kpiExpenseEl.textContent = formatCurrency(monthlyExpense, currency);
-    const kpiProfitEl = document.getElementById('kpi-monthly-profit');
-    if (kpiProfitEl) {
-        kpiProfitEl.textContent = formatCurrency(monthlyProfit, currency);
-        kpiProfitEl.classList.remove('text-green-400', 'text-red-400');
-        kpiProfitEl.classList.add(monthlyProfit >= 0 ? 'text-green-400' : 'text-red-400');
-    }
-    const kpiTotalBalanceEl = document.getElementById('kpi-total-balance');
-     if (kpiTotalBalanceEl) kpiTotalBalanceEl.textContent = formatCurrency(totalBalance, currency);
+    kpiIncomeEl.textContent = formatCurrency(monthlyIncome, currency);
+    kpiExpenseEl.textContent = formatCurrency(monthlyExpense, currency);
+    kpiProfitEl.textContent = formatCurrency(monthlyProfit, currency);
+    kpiProfitEl.classList.remove('text-green-400', 'text-red-400');
+    kpiProfitEl.classList.add(monthlyProfit >= 0 ? 'text-green-400' : 'text-red-400');
+    kpiTotalBalanceEl.textContent = formatCurrency(totalBalance, currency);
 }
 
 
-// --- REVISIÓN RÁPIDA de otras funciones ---
-// (Se mantienen las correcciones para usar fecha LOCAL)
+// --- El resto de funciones (renderAnnualFlowChart, etc.) se mantienen igual ---
+// --- Asegúrate de que también usan la interpretación LOCAL de fechas ---
 
-export function renderAnnualFlowChart(state, charts) {
+export function renderAnnualFlowChart(state, charts) { // charts es pasado desde ui.js
     const currentState = getState();
     const { transactions, accounts } = currentState;
     const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
 
-    if (!annualCtx || !transactions || !accounts || accounts.length === 0) {
-        if (charts && charts.annualFlowChart) { try { charts.annualFlowChart.destroy(); } catch(e){} charts.annualFlowChart = null; }
-        if (annualCtx) { annualCtx.clearRect(0,0,annualCtx.canvas.width, annualCtx.canvas.height); annualCtx.fillStyle='#6b7280'; annualCtx.textAlign='center'; annualCtx.fillText('No hay datos para mostrar.', annualCtx.canvas.width/2, annualCtx.canvas.height/2); }
-        return;
+    // Destruir gráfico anterior si existe
+    if (charts && charts.annualFlowChart) {
+        try { charts.annualFlowChart.destroy(); } catch(e){}
+        charts.annualFlowChart = null; // Resetear referencia
     }
 
-    if (charts && charts.annualFlowChart) charts.annualFlowChart.destroy();
+    if (!annualCtx || !transactions || !accounts || accounts.length === 0) {
+        if (annualCtx) { // Limpiar canvas si no hay datos
+             annualCtx.clearRect(0,0,annualCtx.canvas.width, annualCtx.canvas.height);
+             annualCtx.fillStyle='#6b7280'; annualCtx.textAlign='center';
+             annualCtx.fillText('No hay datos para mostrar.', annualCtx.canvas.width/2, annualCtx.canvas.height/2);
+        }
+        return;
+    }
 
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) return;
@@ -161,7 +133,7 @@ export function renderAnnualFlowChart(state, charts) {
     const incomeGradient = annualCtx.createLinearGradient(0,0,0,320); incomeGradient.addColorStop(0,'rgba(59,130,246,0.5)'); incomeGradient.addColorStop(1,'rgba(59,130,246,0)');
     const expenseGradient = annualCtx.createLinearGradient(0,0,0,320); expenseGradient.addColorStop(0,'rgba(239,68,68,0.5)'); expenseGradient.addColorStop(1,'rgba(239,68,68,0)');
 
-    if(charts) {
+    if(charts) { // Crear el nuevo gráfico
         charts.annualFlowChart = new Chart(annualCtx, {
             type: 'line',
             data: { labels: months, datasets: [ { label: `Ingresos (${getCurrencySymbol(selectedCurrency)})`, data: incomeData, borderColor: 'rgba(59,130,246,1)', backgroundColor: incomeGradient, fill:true, tension:0.4 }, { label: `Egresos (${getCurrencySymbol(selectedCurrency)})`, data: expenseData, borderColor: 'rgba(239,68,68,1)', backgroundColor: expenseGradient, fill:true, tension:0.4 } ] },
@@ -173,14 +145,23 @@ export function renderAnnualFlowChart(state, charts) {
 }
 
 
-export function renderExpenseDistributionChart(state, charts) {
+export function renderExpenseDistributionChart(state, charts) { // charts es pasado desde ui.js
     const currentState = getState();
     const { transactions, accounts } = currentState;
     const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
 
+     // Destruir gráfico anterior si existe
+    if (charts && charts.expenseDistributionChart) {
+        try { charts.expenseDistributionChart.destroy(); } catch(e){}
+        charts.expenseDistributionChart = null; // Resetear referencia
+    }
+
     if (!ctx || !transactions || !accounts || accounts.length === 0) {
-        if (charts && charts.expenseDistributionChart) { try { charts.expenseDistributionChart.destroy(); } catch(e){} charts.expenseDistributionChart = null; }
-        if (ctx) { ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height); ctx.fillStyle = '#6b7280'; ctx.textAlign='center'; ctx.fillText('No hay datos para mostrar.', ctx.canvas.width/2, ctx.canvas.height/2); }
+        if (ctx) { // Limpiar canvas si no hay datos
+            ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = '#6b7280'; ctx.textAlign='center';
+            ctx.fillText('No hay datos para mostrar.', ctx.canvas.width/2, ctx.canvas.height/2);
+        }
         return;
     }
 
@@ -208,8 +189,6 @@ export function renderExpenseDistributionChart(state, charts) {
     const labels = Object.keys(expenseByCategory);
     const data = Object.values(expenseByCategory);
 
-    if (charts && charts.expenseDistributionChart) charts.expenseDistributionChart.destroy();
-
     if (labels.length === 0) {
         ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
         ctx.fillStyle = '#6b7280'; ctx.textAlign='center'; ctx.fillText(`No hay gastos en ${currency} este mes.`, ctx.canvas.width/2, ctx.canvas.height/2);
@@ -218,7 +197,7 @@ export function renderExpenseDistributionChart(state, charts) {
 
     const chartColors = typeof CHART_COLORS !== 'undefined' ? CHART_COLORS : ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
 
-    if (charts) {
+    if (charts) { // Crear el nuevo gráfico
         charts.expenseDistributionChart = new Chart(ctx, {
             type: 'doughnut',
             data: { labels: labels, datasets: [{ data: data, backgroundColor: chartColors, borderColor: '#0a0a0a', borderWidth:5, borderRadius:10 }] },
@@ -230,7 +209,7 @@ export function renderExpenseDistributionChart(state, charts) {
 }
 
 
-export function renderRecentTransactions(state) {
+export function renderRecentTransactions() { // Ya no necesita 'state'
     const currentState = getState();
     const { transactions, accounts } = currentState;
     const container = document.getElementById('recent-transactions-container');
@@ -265,7 +244,7 @@ export function renderRecentTransactions(state) {
 }
 
 
-export function renderPendingInvoices(state) {
+export function renderPendingInvoices() { // Ya no necesita 'state'
     const currentState = getState();
     const { documents } = currentState;
     const container = document.getElementById('pending-invoices-container');
@@ -274,8 +253,14 @@ export function renderPendingInvoices(state) {
     const pending = documents.filter(doc => doc.type === 'Factura' && doc.status === 'Adeudada');
     if (pending.length === 0) {
         container.innerHTML = `<div class="text-center text-gray-500 py-4"><i data-lucide="check-circle-2" class="w-8 h-8 mx-auto mb-2 text-green-500"></i><p>¡Todo al día!</p></div>`;
+        // Asegurarse de crear el ícono si se muestra este mensaje
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+             const icon = container.querySelector('i[data-lucide]');
+             if(icon) lucide.createIcons({nodes: [icon]});
+        }
         return;
     }
+
 
     container.innerHTML = pending.slice(0,3).map(doc => `
         <div class="flex justify-between items-center text-sm border-b border-gray-800 last:border-b-0 py-2">
@@ -288,11 +273,13 @@ export function renderPendingInvoices(state) {
     `).join('');
 }
 
+// Recibe 'charts' para pasarlo a las funciones de gráficos
 export function renderInicioDashboard(state, charts) {
-    updateInicioKPIs(state);
+    updateInicioKPIs(); // Usa getState()
+    // Pasar 'charts' a las funciones que renderizan gráficos
     renderAnnualFlowChart(state, charts);
     renderExpenseDistributionChart(state, charts);
-    renderPendingInvoices(state);
-    renderRecentTransactions(state);
+    renderPendingInvoices(); // Usa getState()
+    renderRecentTransactions(); // Usa getState()
 }
 
