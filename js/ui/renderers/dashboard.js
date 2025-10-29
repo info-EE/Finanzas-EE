@@ -6,12 +6,72 @@ import { escapeHTML, formatCurrency, getCurrencySymbol } from '../../utils.js';
 import { getState } from '../../store.js';
 import { CHART_COLORS } from '../../config.js';
 
+/**
+ * Calcula los ingresos y egresos totales para un mes/año/moneda específicos.
+ * @param {Array} transactions - Array de todas las transacciones.
+ * @param {Array} accounts - Array de todas las cuentas.
+ * @param {string} currency - La moneda a filtrar ('EUR' o 'USD').
+ * @param {number} month - El mes a filtrar (0-11).
+ * @param {number} year - El año a filtrar.
+ * @returns {object} - Un objeto { income: number, expense: number }.
+ */
+function calculateMonthlyTotals(transactions, accounts, currency, month, year) {
+    console.log(`[calculateMonthlyTotals] Iniciando cálculo para Mes=${month}, Año=${year}, Moneda=${currency}`);
+    let monthlyIncome = 0;
+    let monthlyExpense = 0;
+
+    if (!transactions || !accounts) {
+        console.warn("[calculateMonthlyTotals] Datos de transacciones o cuentas no proporcionados.");
+        return { income: 0, expense: 0 };
+    }
+
+    transactions
+        .filter(t => {
+            // Log de evaluación inicial dentro del filtro aislado
+            // console.log(`[Calc Filter Eval] Tx ID: ${t.id || 'N/A'}, Fecha Str: ${t.date}, Acc ID: ${t.accountId}`);
+
+            if (!t.date || typeof t.date !== 'string') return false;
+            const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como LOCAL
+            if (isNaN(tDate.getTime())) return false;
+
+            const account = accounts.find(acc => acc.id === t.accountId);
+            if (!account) return false;
+
+            const isCorrectCurrency = account.currency === currency;
+            const transactionMonth = tDate.getMonth();
+            const transactionYear = tDate.getFullYear();
+            const isCorrectMonth = transactionMonth === month; // Comparar con el mes pasado como argumento
+            const isCorrectYear = transactionYear === year;   // Comparar con el año pasado como argumento
+
+            const shouldInclude = isCorrectCurrency && isCorrectMonth && isCorrectYear;
+
+             // Log del resultado si es necesario depurar más
+             // if (t.date === '2025-10-09' || t.date === '2025-10-23'){ // Ajustar si es necesario
+             //     console.log(`[Calc Filter Result] Tx ID: ${t.id || 'N/A'} -> Include? ${shouldInclude} (Curr: ${isCorrectCurrency}, Month: ${isCorrectMonth}, Year: ${isCorrectYear})`);
+             // }
+
+            return shouldInclude;
+        })
+        .forEach(t => {
+            // Asegurarse que amount es un número antes de sumar
+            const amount = typeof t.amount === 'number' ? t.amount : 0;
+            const iva = typeof t.iva === 'number' ? t.iva : 0;
+            if (t.type === 'Ingreso') {
+                monthlyIncome += amount;
+            } else if (t.type === 'Egreso') {
+                monthlyExpense += (amount + iva);
+            }
+        });
+
+    console.log(`[calculateMonthlyTotals] Cálculo finalizado: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}`);
+    return { income: monthlyIncome, expense: monthlyExpense };
+}
+
 // Calcula y actualiza los KPIs del dashboard en el DOM
 export function updateInicioKPIs() {
     const currentState = getState();
     const { transactions, accounts } = currentState;
 
-    // Obtener elementos del DOM una sola vez
     const kpiIncomeEl = document.getElementById('kpi-monthly-income');
     const kpiExpenseEl = document.getElementById('kpi-monthly-expense');
     const kpiProfitEl = document.getElementById('kpi-monthly-profit');
@@ -24,66 +84,30 @@ export function updateInicioKPIs() {
     }
 
     const currency = currencySelect.value;
-    let monthlyIncome = 0;
-    let monthlyExpense = 0;
     let monthlyProfit = 0;
     let totalBalance = 0;
 
+    // Calcular Saldo Total (siempre que haya cuentas)
     if (accounts && Array.isArray(accounts) && accounts.length > 0) {
         totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
     }
 
-    if (transactions && Array.isArray(transactions) && transactions.length > 0 &&
-        accounts && Array.isArray(accounts) && accounts.length > 0)
-    {
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        // console.log(`[updateInicioKPIs] Filtrando para Mes=${currentMonth}, Año=${currentYear}, Moneda=${currency}`); // Log Opcional
+    // Calcular Ingresos/Egresos usando la función aislada
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-        transactions
-            .filter(t => {
-                // --- LOG GENERAL DENTRO DEL FILTRO ---
-                console.log(`[Filter Eval] Tx ID: ${t.id || 'N/A'}, Fecha Str: ${t.date}, Acc ID: ${t.accountId}`);
-                // --- FIN LOG GENERAL ---
+    console.log('[updateInicioKPIs] Llamando a calculateMonthlyTotals...');
+    // Pasar todos los datos necesarios a la función aislada
+    const totals = calculateMonthlyTotals(transactions, accounts, currency, currentMonth, currentYear);
+    console.log('[updateInicioKPIs] Resultado de calculateMonthlyTotals:', totals);
 
-                if (!t.date || typeof t.date !== 'string') return false;
-                const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como LOCAL
-                if (isNaN(tDate.getTime())) return false;
-
-                const account = accounts.find(acc => acc.id === t.accountId);
-                if (!account) return false;
-
-                const isCorrectCurrency = account.currency === currency;
-                const transactionMonth = tDate.getMonth();
-                const transactionYear = tDate.getFullYear();
-                const isCurrentMonth = transactionMonth === currentMonth;
-                const isCurrentYear = transactionYear === currentYear;
-
-                const shouldInclude = isCorrectCurrency && isCurrentMonth && isCurrentYear;
-
-                // Log del resultado de la evaluación para esta transacción
-                // console.log(`[Filter Result] Tx ID: ${t.id || 'N/A'} -> Include? ${shouldInclude} (Curr: ${isCorrectCurrency}, Month: ${isCurrentMonth}, Year: ${isCurrentYear})`); // Log Opcional detallado
-
-                return shouldInclude;
-            })
-            .forEach(t => { // Este forEach solo se ejecuta si el filter devuelve algo
-                const amount = t.amount || 0;
-                const iva = t.iva || 0;
-                if (t.type === 'Ingreso') {
-                    monthlyIncome += amount;
-                } else if (t.type === 'Egreso') {
-                    monthlyExpense += (amount + iva);
-                }
-            });
-
-        monthlyProfit = monthlyIncome - monthlyExpense;
-    } else {
-         // Asegurar que monthlyProfit es 0 si no hay datos para calcular
-         monthlyProfit = 0;
-    }
+    const monthlyIncome = totals.income;
+    const monthlyExpense = totals.expense;
+    monthlyProfit = monthlyIncome - monthlyExpense;
 
     // Actualizar DOM
+    console.log(`[updateInicioKPIs] Actualizando DOM con: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}, Beneficio=${monthlyProfit}, Saldo=${totalBalance}`);
     kpiIncomeEl.textContent = formatCurrency(monthlyIncome, currency);
     kpiExpenseEl.textContent = formatCurrency(monthlyExpense, currency);
     kpiProfitEl.textContent = formatCurrency(monthlyProfit, currency);
@@ -94,6 +118,7 @@ export function updateInicioKPIs() {
 
 
 // --- El resto de funciones (renderAnnualFlowChart, etc.) se mantienen igual ---
+// --- Asegúrate de que también usan la interpretación LOCAL de fechas ---
 
 export function renderAnnualFlowChart(state, charts) {
     const currentState = getState();
@@ -119,27 +144,30 @@ export function renderAnnualFlowChart(state, charts) {
     const selectedCurrency = currencySelect.value;
 
     const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-    const currentYear = new Date().getFullYear();
+    const currentYear = new Date().getFullYear(); // Año local
     const incomeData = Array(12).fill(0);
     const expenseData = Array(12).fill(0);
 
     transactions.filter(t => {
         const account = accounts.find(acc => acc.id === t.accountId);
         if (!t.date || !account || typeof t.date !== 'string') return false;
-        const tDate = new Date(t.date + 'T00:00:00');
-        return account.currency === selectedCurrency && !isNaN(tDate.getTime()) && tDate.getFullYear() === currentYear;
+        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
+        // Asegurarse que tDate es válida antes de llamar a getFullYear
+        return account.currency === selectedCurrency && !isNaN(tDate.getTime()) && tDate.getFullYear() === currentYear; // Usar local
     }).forEach(t => {
-        const date = new Date(t.date + 'T00:00:00');
+        const date = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
         if (!isNaN(date.getTime())) {
-            const month = date.getMonth();
+            const month = date.getMonth(); // Usar local
             if (month >=0 && month <=11) {
-                const amount = t.amount || 0;
-                const iva = t.iva || 0;
+                // Asegurar que amount e iva son números
+                const amount = typeof t.amount === 'number' ? t.amount : 0;
+                const iva = typeof t.iva === 'number' ? t.iva : 0;
                 if (t.type === 'Ingreso') incomeData[month] += amount;
                 else if (t.type === 'Egreso') expenseData[month] += (amount + iva);
             }
         }
     });
+
 
     const incomeGradient = annualCtx.createLinearGradient(0,0,0,320); incomeGradient.addColorStop(0,'rgba(59,130,246,0.5)'); incomeGradient.addColorStop(1,'rgba(59,130,246,0)');
     const expenseGradient = annualCtx.createLinearGradient(0,0,0,320); expenseGradient.addColorStop(0,'rgba(239,68,68,0.5)'); expenseGradient.addColorStop(1,'rgba(239,68,68,0)');
@@ -179,22 +207,25 @@ export function renderExpenseDistributionChart(state, charts) {
     if (!currencySelect) return;
     const currency = currencySelect.value;
 
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const now = new Date(); // Fecha local
+    const currentMonth = now.getMonth(); // Mes local
+    const currentYear = now.getFullYear(); // Año local
 
     const expenseByCategory = transactions.filter(t => {
         const account = accounts.find(acc => acc.id === t.accountId);
         if(!t.date || !account || typeof t.date !== 'string') return false;
-        const tDate = new Date(t.date + 'T00:00:00');
-        return t.type === 'Egreso' && account.currency === currency && !isNaN(tDate.getTime()) && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
+        // Asegurarse que tDate es válida antes de llamar a getMonth/getFullYear
+        return t.type === 'Egreso' && account.currency === currency && !isNaN(tDate.getTime()) && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear; // Usar local
     }).reduce((acc, t) => {
         const category = t.category || 'Sin Categoría';
-        const amount = t.amount || 0;
-        const iva = t.iva || 0;
+        // Asegurar que amount e iva son números
+        const amount = typeof t.amount === 'number' ? t.amount : 0;
+        const iva = typeof t.iva === 'number' ? t.iva : 0;
         acc[category] = (acc[category] || 0) + (amount + iva);
         return acc;
      }, {});
+
 
     const labels = Object.keys(expenseByCategory);
     const data = Object.values(expenseByCategory);
@@ -236,7 +267,7 @@ export function renderRecentTransactions() {
         const account = accounts.find(acc => acc.id === t.accountId);
         const accountName = account ? account.name : `Cuenta Borrada (ID: ${t.accountId})`;
         const currency = account ? account.currency : 'EUR';
-        const amount = t.amount || 0;
+        const amount = typeof t.amount === 'number' ? t.amount : 0; // Asegurar número
         return `
             <tr class="border-b border-gray-800 last:border-b-0">
                 <td class="py-3 px-3">
@@ -277,16 +308,18 @@ export function renderPendingInvoices() {
                 <p class="font-medium">${escapeHTML(doc.number)}</p>
                 <p class="text-xs text-gray-400">${escapeHTML(doc.client)}</p>
             </div>
-            <span class="font-semibold">${formatCurrency(doc.amount || 0, doc.currency)}</span>
+            <span class="font-semibold">${formatCurrency(typeof doc.amount === 'number' ? doc.amount : 0, doc.currency)}</span> {/* Asegurar número */}
         </div>
     `).join('');
 }
 
+// Recibe 'charts' para pasarlo a las funciones de gráficos
 export function renderInicioDashboard(state, charts) {
-    updateInicioKPIs();
+    updateInicioKPIs(); // Usa getState()
+    // Pasar 'charts' a las funciones que renderizan gráficos
     renderAnnualFlowChart(state, charts);
     renderExpenseDistributionChart(state, charts);
-    renderPendingInvoices();
-    renderRecentTransactions();
+    renderPendingInvoices(); // Usa getState()
+    renderRecentTransactions(); // Usa getState()
 }
 
