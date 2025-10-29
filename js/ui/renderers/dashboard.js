@@ -7,102 +7,99 @@ import { escapeHTML, formatCurrency, getCurrencySymbol } from '../../utils.js';
 // import { ... } from './charts.js'; // Asumiendo que las funciones de chart se llaman desde ui.js todavía
 
 export function updateInicioKPIs(state) {
-    // --- DEBUG: Log inicial ---
-    console.log('[updateInicioKPIs] Iniciando cálculo. Estado recibido:', state);
+    // --- DEBUG: Log al inicio de la función ---
+    console.log('[updateInicioKPIs] *** INTENTANDO EJECUTAR updateInicioKPIs ***');
 
     const { transactions, accounts } = state;
-    if(!transactions || !accounts || accounts.length === 0) {
-        console.warn("[updateInicioKPIs] Faltan datos (transactions o accounts)");
+
+    // --- DEBUG: Log antes de la comprobación de datos ---
+    console.log(`[updateInicioKPIs] Verificando datos: transactions existe=${!!transactions}, accounts existe=${!!accounts}, accounts.length=${accounts ? accounts.length : 'N/A'}`);
+
+    // Comprobación más explícita
+    if (!transactions || !Array.isArray(transactions) || transactions.length === 0 ||
+        !accounts || !Array.isArray(accounts) || accounts.length === 0) {
+        console.warn("[updateInicioKPIs] SALIENDO TEMPRANO: Faltan datos o están vacíos (transactions o accounts).");
+        // Asegurarse de poner a 0 si salimos temprano
         ['kpi-monthly-income', 'kpi-monthly-expense', 'kpi-monthly-profit', 'kpi-total-balance'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.textContent = formatCurrency(0, 'EUR');
+            // El Saldo Total SÍ se calcula aquí basado en las cuentas existentes, incluso si no hay transacciones este mes.
+            if (id === 'kpi-total-balance' && accounts && accounts.length > 0) {
+                 const currencySelectForTotal = document.getElementById('inicio-chart-currency');
+                 const currencyForTotal = currencySelectForTotal ? currencySelectForTotal.value : 'EUR';
+                 const totalBalanceForKPI = accounts.filter(a => a.currency === currencyForTotal).reduce((sum, a) => sum + a.balance, 0);
+                 if (el) el.textContent = formatCurrency(totalBalanceForKPI, currencyForTotal);
+            } else if (el) {
+                 // Los otros KPIs sí dependen de las transacciones del mes
+                 el.textContent = formatCurrency(0, 'EUR'); // O usar la moneda seleccionada si se prefiere
+            }
         });
-        return;
+        return; // Salir de la función
     }
+
+    // --- DEBUG: Si pasa la comprobación ---
+    console.log('[updateInicioKPIs] Datos encontrados. Continuando cálculo...');
 
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) {
-        // --- DEBUG: Salida temprana ---
         console.error("[updateInicioKPIs] Error: No se encontró el selector de moneda 'inicio-chart-currency'.");
         return;
     }
     const currency = currencySelect.value;
-    // --- DEBUG: Moneda y fecha ---
     console.log(`[updateInicioKPIs] Moneda seleccionada: ${currency}`);
 
     const now = new Date();
-    const currentMonth = now.getMonth(); // 0 = Enero, 11 = Diciembre
+    const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    // --- DEBUG: Mes y Año ---
     console.log(`[updateInicioKPIs] Mes actual (0-11): ${currentMonth}, Año actual: ${currentYear}`);
 
     let monthlyIncome = 0;
     let monthlyExpense = 0;
 
-    // --- DEBUG: Filtrando transacciones ---
     console.log('[updateInicioKPIs] Filtrando transacciones...');
     const filteredTransactions = transactions.filter(t => {
-        // --- DEBUG: Dentro del filtro ---
-        console.log(`[updateInicioKPIs] Evaluando transacción:`, t);
+        // console.log(`[updateInicioKPIs] Evaluando transacción:`, t); // Puedes descomentar este si necesitas detalle extremo
 
-        // Validar fecha y crear objeto Date
-        if (!t.date) {
-            console.log(`[updateInicioKPIs] -> Ignorada: Sin fecha.`);
-            return false;
-        }
-        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
-        if (isNaN(tDate.getTime())) {
-            console.log(`[updateInicioKPIs] -> Ignorada: Fecha inválida (${t.date}).`);
-            return false;
-        }
+        if (!t.date) return false;
+        const tDate = new Date(t.date + 'T00:00:00');
+        if (isNaN(tDate.getTime())) return false;
 
-        // Encontrar cuenta y validar
         const account = accounts.find(acc => acc.id === t.accountId);
-        if (!account) {
-            console.log(`[updateInicioKPIs] -> Ignorada: Cuenta no encontrada (ID: ${t.accountId}).`);
-            return false;
-        }
+        if (!account) return false;
 
-        // Comparaciones
         const isCorrectCurrency = account.currency === currency;
         const transactionMonth = tDate.getMonth();
         const transactionYear = tDate.getFullYear();
         const isCurrentMonth = transactionMonth === currentMonth;
         const isCurrentYear = transactionYear === currentYear;
 
-        // --- DEBUG: Resultados de comparación ---
-        console.log(`[updateInicioKPIs] -> Fecha Tx: ${t.date} (${transactionMonth}/${transactionYear}) | Moneda Cuenta: ${account.currency}`);
-        console.log(`[updateInicioKPIs] -> ¿Moneda Correcta?: ${isCorrectCurrency} | ¿Mes Correcto?: ${isCurrentMonth} | ¿Año Correcto?: ${isCurrentYear}`);
+        // console.log(`[updateInicioKPIs] -> Fecha Tx: ${t.date} (${transactionMonth}/${transactionYear}) | Moneda Cuenta: ${account.currency}`); // Descomentar si es necesario
+        // console.log(`[updateInicioKPIs] -> ¿Moneda Correcta?: ${isCorrectCurrency} | ¿Mes Correcto?: ${isCurrentMonth} | ¿Año Correcto?: ${isCurrentYear}`); // Descomentar si es necesario
 
         const shouldInclude = isCorrectCurrency && isCurrentMonth && isCurrentYear;
-        console.log(`[updateInicioKPIs] -> ¿Incluir?: ${shouldInclude}`);
+        // console.log(`[updateInicioKPIs] -> ¿Incluir?: ${shouldInclude}`); // Descomentar si es necesario
         return shouldInclude;
     });
 
-    // --- DEBUG: Transacciones filtradas ---
     console.log('[updateInicioKPIs] Transacciones que pasaron el filtro:', filteredTransactions);
 
     filteredTransactions.forEach(t => {
-            // --- DEBUG: Dentro del forEach ---
-            const amount = t.amount || 0; // Asegurar que amount es un número
-            const iva = t.iva || 0;     // Asegurar que iva es un número
+            const amount = t.amount || 0;
+            const iva = t.iva || 0;
             if (t.type === 'Ingreso') {
                 monthlyIncome += amount;
-                console.log(`[updateInicioKPIs] -> Sumando Ingreso: ${amount}. Total Ingresos ahora: ${monthlyIncome}`);
+                // console.log(`[updateInicioKPIs] -> Sumando Ingreso: ${amount}. Total Ingresos ahora: ${monthlyIncome}`); // Descomentar si es necesario
             } else if (t.type === 'Egreso') {
                 monthlyExpense += (amount + iva);
-                console.log(`[updateInicioKPIs] -> Sumando Egreso: ${amount} + IVA ${iva}. Total Egresos ahora: ${monthlyExpense}`);
+                // console.log(`[updateInicioKPIs] -> Sumando Egreso: ${amount} + IVA ${iva}. Total Egresos ahora: ${monthlyExpense}`); // Descomentar si es necesario
             }
         });
 
     const monthlyProfit = monthlyIncome - monthlyExpense;
-    // El cálculo del saldo total parece funcionar, lo dejamos sin logs por ahora.
     const totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
 
-    // --- DEBUG: Totales finales ---
     console.log(`[updateInicioKPIs] Cálculo final: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}, Beneficio=${monthlyProfit}, Saldo Total=${totalBalance}`);
 
-    // Actualizar DOM (sin cambios)
+    // Actualizar DOM
     const kpiIncomeEl = document.getElementById('kpi-monthly-income');
     if (kpiIncomeEl) kpiIncomeEl.textContent = formatCurrency(monthlyIncome, currency);
     const kpiExpenseEl = document.getElementById('kpi-monthly-expense');
@@ -113,12 +110,15 @@ export function updateInicioKPIs(state) {
         kpiProfitEl.classList.remove('text-green-400', 'text-red-400');
         kpiProfitEl.classList.add(monthlyProfit >= 0 ? 'text-green-400' : 'text-red-400');
     }
+    // El kpiTotalBalanceEl se actualiza incluso si salimos temprano, basado solo en accounts.
     const kpiTotalBalanceEl = document.getElementById('kpi-total-balance');
-    if (kpiTotalBalanceEl) kpiTotalBalanceEl.textContent = formatCurrency(totalBalance, currency);
+     if (kpiTotalBalanceEl) kpiTotalBalanceEl.textContent = formatCurrency(totalBalance, currency);
 
-     // --- DEBUG: Fin de la función ---
+
      console.log('[updateInicioKPIs] Fin del cálculo y actualización del DOM.');
 }
+
+// ... (resto de las funciones renderAnnualFlowChart, renderExpenseDistributionChart, etc., sin cambios)
 
 
 export function renderAnnualFlowChart(state, charts) {
@@ -299,3 +299,4 @@ export function renderInicioDashboard(state, charts) {
     renderPendingInvoices(state);
     renderRecentTransactions(state);
 }
+
