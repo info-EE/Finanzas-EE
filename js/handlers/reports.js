@@ -3,7 +3,8 @@ import {
     elements,
     showAlertModal,
     exportReportAsXLSX,
-    exportReportAsPDF
+    exportReportAsPDF,
+    renderAll // <-- 1. AÑADIDO 'renderAll'
 } from '../ui/index.js';
 import { withSpinner } from './helpers.js';
 
@@ -38,10 +39,11 @@ function handleReportGeneration(e) {
 }
 
 
-function handleIvaReportGeneration() {
+async function handleIvaReportGeneration() { // <-- 2. AÑADIDO 'async'
     const month = elements.ivaMonthInput.value;
     if (month) {
-        withSpinner(() => actions.generateIvaReport(month), 500)();
+        await withSpinner(() => actions.generateIvaReport(month), 500)(); // <-- 3. AÑADIDO 'await'
+        renderAll(); // <-- 4. AÑADIDO ESTA LÍNEA PARA REDIBUJAR
     } else {
         showAlertModal('Falta Información', 'Por favor, seleccione un mes para generar el reporte de IVA.');
     }
@@ -127,3 +129,4 @@ export function bindReportEvents() {
     // IVA Section
     if (elements.ivaGenerateReportBtn) elements.ivaGenerateReportBtn.addEventListener('click', handleIvaReportGeneration);
 }
+
