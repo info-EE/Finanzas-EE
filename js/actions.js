@@ -1,4 +1,4 @@
-// Importaciones (sin cambios respecto a Fase 2)
+// Importaciones
 import { getState, setState } from './store.js';
 import { 
     addDocToCollection, 
@@ -11,7 +11,13 @@ import {
     incrementAccountBalance 
 } from './api.js';
 
-// --- Acciones de Usuarios (sin cambios en Fase 3) ---
+// --- INICIO DE MODIFICACIÓN: Fase 1 Refactor ---
+// Re-exportar el módulo de clientes
+export * from './actions/clients.js';
+// --- FIN DE MODIFICACIÓN ---
+
+
+// --- Acciones de Usuarios ---
 
 const getPermissionsForLevel = (level) => { // Función interna, sin cambios
     const allFalse = { /* ... permisos ... */ }; // Contenido omitido por brevedad
@@ -71,7 +77,7 @@ export async function blockUserAction(userId) { // Sin cambios
     return { success: true, message: 'El usuario ya estaba bloqueado.' };
 }
 
-// --- Acciones de Transacciones, Cuentas, Transferencias (Modificadas en Fase 3) ---
+// --- Acciones de Transacciones, Cuentas, Transferencias ---
 
 export async function saveTransaction(transactionData, transactionId) {
     const { accounts, transactions } = getState();
@@ -316,7 +322,7 @@ export async function addTransfer(transferData) {
     await Promise.all(promises);
 }
 
-// --- Acciones de Categorías, Clientes, Documentos (Modificadas en Fase 3) ---
+// --- Acciones de Categorías, Clientes, Documentos ---
 
 // Marcar como async porque llaman a saveSettings que es async
 export async function addCategory(categoryName, type) { 
@@ -383,7 +389,9 @@ export async function deleteCategory(categoryName, type) {
     }
 }
 
-export async function saveClient(clientData, clientId) { // Sin cambios funcionales en Fase 3
+// --- saveClient y deleteClient movidos a js/actions/clients.js ---
+/*
+export async function saveClient(clientData, clientId) { 
     if (clientId) {
         await updateDocInCollection('clients', clientId, clientData); 
     } else {
@@ -391,9 +399,10 @@ export async function saveClient(clientData, clientId) { // Sin cambios funciona
     }
 }
 
-export async function deleteClient(clientId) { // Sin cambios funcionales en Fase 3
+export async function deleteClient(clientId) { 
     await deleteDocFromCollection('clients', clientId); 
 }
+*/
 
 export async function addDocument(docData) { // Lógica del contador revisada
     const { settings } = getState();
@@ -513,7 +522,7 @@ export async function saveFiscalParams(fiscalParams) { // Sin cambios funcionale
     }
 }
 
-// --- Acciones de Reportes, Archivos (Modificadas en Fase 3) ---
+// --- Acciones de Reportes, Archivos ---
 
 export function generateReport(filters) {
     const { transactions, documents, settings } = getState(); 
@@ -783,9 +792,9 @@ export async function closeYear(startDate, endDate) { // Sin cambios en Fase 3
     alert("La función de Cierre Anual está desactivada temporalmente.");
 }
 
-// --- Investment Actions (Modificadas en Fase 3) ---
+// --- Investment Actions ---
 
-export async function addInvestmentAsset(assetData) { // Sin cambios funcionales en Fase 3
+export async function addInvestmentAsset(assetData) { 
     // Validar nombre
      if (typeof assetData.name !== 'string' || !assetData.name.trim()) {
         console.error("addInvestmentAsset: Nombre de activo inválido.");
@@ -797,7 +806,7 @@ export async function addInvestmentAsset(assetData) { // Sin cambios funcionales
     }); 
 }
 
-export async function deleteInvestmentAsset(assetId) { // Sin cambios funcionales en Fase 3
+export async function deleteInvestmentAsset(assetId) { 
     await deleteDocFromCollection('investmentAssets', assetId); 
 }
 
