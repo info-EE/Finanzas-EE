@@ -20,9 +20,12 @@ import {
 
 // Fase 3: Helpers (exportar, sidebar, conexión, etc.)
 import {
-    closeSidebar,
-    updateNavLinksVisibility,
-    updateActionElementsVisibility
+    closeSidebar
+    // --- INICIO DE CORRECCIÓN ---
+    // Estas funciones se definen localmente, no se importan.
+    // updateNavLinksVisibility, 
+    // updateActionElementsVisibility
+    // --- FIN DE CORRECCIÓN ---
 } from './ui/helpers.js';
 
 // Fase 4/5: Renderizadores (los que dibujan cada sección)
@@ -34,6 +37,82 @@ import { renderInvestments } from './ui/renderers/investments.js';
 import { renderInicioDashboard } from './ui/renderers/dashboard.js';
 import { renderReport, renderIvaReport } from './ui/renderers/reports.js';
 import { renderSettings } from './ui/renderers/settings.js';
+
+// --- INICIO DE CORRECCIÓN: Funciones movidas aquí ---
+// (Estas funciones se definen ahora localmente en ui.js)
+
+const viewPermissionMap = {
+    'inicio': 'view_dashboard',
+    'cashflow': 'view_cashflow',
+    'iva': 'view_iva_control',
+    'cuentas': 'view_accounts',
+    'proformas': 'view_documents',
+    'reportes': 'view_reports',
+    'archivos': 'view_archives',
+    'facturacion': 'view_documents',
+    'inversiones': 'view_investments',
+    'clientes': 'view_clients',
+    'ajustes': ['manage_accounts', 'manage_categories', 'execute_balance_adjustment', 'execute_year_close', 'manage_fiscal_settings', 'manage_users'],
+};
+
+/**
+ * Muestra u oculta los enlaces de navegación según los permisos del usuario.
+ * @param {object} permissions - El objeto de permisos del estado.
+ */
+function updateNavLinksVisibility(permissions) {
+    if (!permissions || !elements.navLinks) return;
+
+    elements.navLinks.forEach(link => {
+        const pageId = link.id.replace('nav-', '');
+        const requiredPermission = viewPermissionMap[pageId];
+        let hasPermission = false;
+
+        if (!requiredPermission) {
+            hasPermission = true; // ej. logout btn (aunque este no está en navLinks)
+        } else if (Array.isArray(requiredPermission)) {
+            hasPermission = requiredPermission.some(p => permissions[p]);
+        } else {
+            hasPermission = permissions[requiredPermission];
+        }
+        
+        // Ocultar si NO tiene permiso Y NO es el botón de logout
+        link.classList.toggle('hidden', !hasPermission && link.id !== 'logout-btn');
+    });
+}
+
+/**
+ * Muestra u oculta elementos de acción (ej. botones "Añadir") según los permisos.
+ * @param {object} permissions - El objeto de permisos del estado.
+ */
+function updateActionElementsVisibility(permissions) {
+    if (!permissions) return;
+
+    // Mapa de permisos para botones de acción (simplificado)
+    const actionPermissionMap = {
+        'quick-add-income': 'manage_cashflow',
+        'quick-add-expense': 'manage_cashflow',
+        // Ocultar los contenedores de formularios si no hay permisos
+        'transaction-form': 'manage_cashflow',
+        'transfer-form': 'execute_transfers',
+        'proforma-form': 'manage_proformas',
+    };
+
+    for (const id in actionPermissionMap) {
+        const el = document.getElementById(id);
+        const perm = actionPermissionMap[id];
+        if (el) {
+            // Los formularios están dentro de un div 'card', ocultamos el 'card'
+            const parentCard = el.closest('.card');
+            if (parentCard) {
+                parentCard.classList.toggle('hidden', !permissions[perm]);
+            } else {
+                el.classList.toggle('hidden', !permissions[perm]);
+            }
+        }
+    }
+}
+// --- FIN DE CORRECCIÓN ---
+
 
 // --- Funciones Centrales (Coordinadores) ---
 // (Estas son las ÚNICAS funciones que deben quedar en ui.js)
@@ -55,20 +134,8 @@ export function switchPage(pageId, subpageId = null) {
     // Oculta todas las páginas
     elements.pages.forEach(page => page.classList.add('hidden'));
 
-    // Mapa de permisos
-    const viewPermissionMap = {
-        'inicio': 'view_dashboard',
-        'cashflow': 'view_cashflow',
-        'iva': 'view_iva_control',
-        'cuentas': 'view_accounts',
-        'proformas': 'view_documents',
-        'reportes': 'view_reports',
-        'archivos': 'view_archives',
-        'facturacion': 'view_documents',
-        'inversiones': 'view_investments',
-        'clientes': 'view_clients',
-        'ajustes': ['manage_accounts', 'manage_categories', 'execute_balance_adjustment', 'execute_year_close', 'manage_fiscal_settings', 'manage_users'],
-    };
+    // Mapa de permisos (MOVIDO ARRIBA)
+    // const viewPermissionMap = { ... };
 
     const requiredPermission = viewPermissionMap[pageId];
     let hasPermission = false;
@@ -119,6 +186,17 @@ export function switchPage(pageId, subpageId = null) {
                 subpageId = 'crear';
             }
         }
+        
+        // --- INICIO CORRECCIÓN PERMISOS SUB-PÁGINA ---
+        const configTab = document.getElementById('facturacion-tab-config');
+        if (configTab) {
+            configTab.classList.toggle('hidden', !permissions.manage_fiscal_settings);
+        }
+        // Si intenta ir a 'config' sin permisos, redirigir
+        if (subpageId === 'config' && !permissions.manage_fiscal_settings) {
+            subpageId = 'crear';
+        }
+        // --- FIN CORRECCIÓN PERMISOS SUB-PÁGINA ---
 
         document.querySelectorAll('#page-facturacion .tab-button-inner').forEach(btn => btn.classList.remove('active'));
         const tabButton = document.getElementById(`facturacion-tab-${subpageId}`);
@@ -146,7 +224,7 @@ export function switchPage(pageId, subpageId = null) {
  */
 export function renderAll() {
     const state = getState();
-    // Salir si el estado o los permisos aún no están listos
+    // Salir si el estado o los permisos o las cuentas aún no están listos
     if (!state || !state.permissions || !state.accounts) {
         console.warn("[renderAll] Estado, permisos o cuentas no disponibles aún. Esperando...");
         return;
@@ -207,6 +285,10 @@ export function renderAll() {
             case 'iva':
                 renderIvaReport(); // Usa getState() internamente
                 break;
+            case 'archivos':
+                // (No hay un renderizador específico para 'archivos' aún)
+                console.log("[renderAll] Página 'archivos' visible, pero sin renderizador asignado.");
+                break;
             default:
                 console.warn("[renderAll] Página visible desconocida:", pageId);
         }
@@ -229,4 +311,3 @@ export function renderAll() {
     }
     console.log("[renderAll] Ciclo de renderizado completo.");
 }
-
