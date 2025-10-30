@@ -1,4 +1,4 @@
-import * as actions from '../actions.js';
+import * as actions from '../../actions.js';
 import {
     elements,
     switchPage,
@@ -10,10 +10,10 @@ import {
     showAlertModal,
     showConfirmationModal,
     renderAll
-} from '../ui/index.js';
-import { getState } from '../store.js';
-import { escapeHTML } from '../utils.js';
-import { withSpinner } from './helpers.js';
+} from '../index.js'; // Corregido (apunta a js/ui/index.js)
+import { getState } from '../../store.js';
+import { escapeHTML } from '../../utils.js';
+import { withSpinner } from '../../handlers/helpers.js';
 
 // --- Funciones Manejadoras (Handlers) ---
 
