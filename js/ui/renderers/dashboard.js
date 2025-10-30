@@ -203,7 +203,7 @@ export function renderExpenseDistributionChart() {
     if (!ctx || !transactions || !accounts || accounts.length === 0) {
         if (ctx) {
             ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
-            ctx.fillStyle = '#6b7280'; ctx.textAlign='center';
+            ctx.fillStyle='#6b7280'; ctx.textAlign='center';
             ctx.fillText('No hay datos para mostrar.', ctx.canvas.width/2, ctx.canvas.height/2);
         }
         return;
@@ -252,7 +252,7 @@ export function renderExpenseDistributionChart() {
     charts.expenseDistributionChart = new Chart(ctx, {
         type: 'doughnut',
         data: { labels: labels, datasets: [{ data: data, backgroundColor: chartColors, borderColor: '#0a0a0a', borderWidth:5, borderRadius:10 }] },
-        options: { responsive:true, maintainAspectRatio:false, cutout: '70%', plugins:{ legend:{ position:'bottom', labels:{ color:'#e0e000', boxWidth:12, padding:15 } } } }
+        options: { responsive:true, maintainAspectRatio:false, cutout: '70%', plugins:{ legend:{ position:'bottom', labels:{ color:'#e0e0e0', boxWidth:12, padding:15 } } } }
     });
 }
 
@@ -337,8 +337,8 @@ export function renderPendingInvoices() {
     container.innerHTML = pending.slice(0,3).map(doc => `
         <div class="flex justify-between items-center text-sm border-b border-gray-800 last:border-b-0 py-2">
             <div>
-                <p class="font-medium">${escapeHTML(doc.number)}</p>
-                <p class="text-xs text-gray-400">${escapeHTML(doc.client)}</p>
+                <p class="font-medium">${escapeHTML(doc.number || '[Sin Número]')}</p>
+                <p class="text-xs text-gray-400">${escapeHTML(doc.client || '[Sin Cliente]')}</p>
             </div>
             <span class="font-semibold">${formatCurrency(typeof doc.amount === 'number' ? doc.amount : 0, doc.currency)}</span> {/* Asegurar número */}
         </div>
