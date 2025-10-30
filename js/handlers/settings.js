@@ -153,6 +153,19 @@ function handleAeatConfigSave(e) {
     })();
 }
 
+// *** 1. FUNCIÓN AÑADIDA ***
+// Manejador para el botón de activar/desactivar AEAT
+function handleAeatToggleClick() {
+    // Llama a la acción 'toggleAeatModule' (que ya existe en actions/documents.js)
+    // El spinner es útil para dar feedback
+    withSpinner(async () => {
+        // La acción se encarga de guardar el estado en la base de datos
+        await actions.toggleAeatModule();
+        // No necesitamos 'renderAll()' aquí, porque el 'listener' de 'settings'
+        // detectará el cambio y actualizará la UI automáticamente.
+    }, 300)();
+}
+
 // Nueva función para guardar parámetros fiscales (según plan)
 function handleFiscalParamsSave(e) {
     e.preventDefault();
@@ -217,6 +230,19 @@ export function bindSettingsEvents() {
     // Configuración AEAT (movido de documents.js)
     if (elements.aeatConfigForm) elements.aeatConfigForm.addEventListener('submit', handleAeatConfigSave);
 
+    // *** 2. CÓDIGO AÑADIDO (Y CORREGIDO CON LLAVES {}) ***
+    // Listener para el botón de activar/desactivar AEAT
+    if (elements.aeatToggleContainer) {
+        // Usamos delegación de eventos en el contenedor
+        elements.aeatToggleContainer.addEventListener('click', (e) => {
+            // Solo reacciona si el clic fue en el botón
+            if (e.target.closest('.aeat-toggle-btn')) {
+                handleAeatToggleClick();
+            }
+        });
+    }
+    
     // Parámetros Fiscales (nuevo)
     if (elements.fiscalParamsForm) elements.fiscalParamsForm.addEventListener('submit', handleFiscalParamsSave);
 }
+
