@@ -2,13 +2,11 @@
 import { getState, setState } from './store.js';
 import { 
     addDocToCollection, 
-    updateDocInCollection,
     deleteDocFromCollection,
     saveSettings,
     getAllUsers, 
     updateUserStatus, 
-    updateUserPermissions,
-    incrementAccountBalance // Este import puede quedar o irse, pero no molesta
+    updateUserPermissions
 } from './api.js';
 
 // --- INICIO DE MODIFICACIÓN: Fase 1 Refactor ---
@@ -18,8 +16,12 @@ export * from './actions/clients.js';
 
 // --- INICIO DE MODIFICACIÓN: Fase 2 Refactor ---
 // Re-exportar el módulo de cashflow
-// Esto exporta saveTransaction, deleteTransaction, addAccount, deleteAccount, updateBalance, addTransfer
 export * from './actions/cashflow.js'; 
+// --- FIN DE MODIFICACIÓN ---
+
+// --- INICIO DE MODIFICACIÓN: Fase 3 Refactor ---
+// Re-exportar el módulo de documentos
+export * from './actions/documents.js';
 // --- FIN DE MODIFICACIÓN ---
 
 
@@ -167,128 +169,22 @@ export async function saveClient(clientData, clientId) { ... }
 export async function deleteClient(clientId) { ... }
 */
 
-export async function addDocument(docData) { // Lógica del contador revisada
-    const { settings } = getState();
-    
-    let updatedSettings = { ...settings }; // Copiar settings para modificar
-    let settingsChanged = false;
-
-    // Actualizar contador SOLO si es factura y el contador existe
-    if (docData.type === 'Factura' && updatedSettings.invoiceCounter) { 
-        const currentCounter = updatedSettings.invoiceCounter;
-        const docDate = docData.date ? new Date(docData.date + 'T00:00:00Z') : new Date(); // Usar UTC
-        const currentYear = docDate.getUTCFullYear();
-        
-        // Inicializar si falta algún valor
-        let nextNumber = currentCounter.nextInvoiceNumber || 1; 
-        let lastYear = currentCounter.lastInvoiceYear || currentYear -1; // Asumir año anterior si no existe
-
-        if (currentYear > lastYear) {
-            nextNumber = 1; // Reiniciar contador para el nuevo año
-            lastYear = currentYear;
-            settingsChanged = true;
-        } else if (currentYear === lastYear) {
-             // Asignar el número actual antes de incrementar para el próximo
-             docData.number = `${currentYear}-${String(nextNumber).padStart(4, '0')}`;
-             nextNumber++; // Incrementar para la siguiente factura
-             settingsChanged = true;
-        } else {
-            // Fecha anterior al último año registrado, no se actualiza contador
-            // Se usa el número que viene en docData (si lo hay) o se genera uno temporal
-             if (!docData.number) {
-                docData.number = `${currentYear}-MANUAL`; // Indicar que requiere revisión
-             }
-             console.warn(`Factura (${docData.number}) con fecha (${docData.date}) anterior al último año registrado (${lastYear}). El contador no se actualizará.`);
-        }
-
-        if (settingsChanged) {
-            updatedSettings.invoiceCounter = {
-                nextInvoiceNumber: nextNumber,
-                lastInvoiceYear: lastYear
-            };
-            await saveSettings(updatedSettings); 
-        }
-    } else if (docData.type === 'Factura' && !updatedSettings.invoiceCounter) {
-        // Si no hay contador, inicializarlo y asignar número 1
-        console.warn("Inicializando contador de facturas...");
-        const docDate = docData.date ? new Date(docData.date + 'T00:00:00Z') : new Date();
-        const currentYear = docDate.getUTCFullYear();
-        docData.number = `${currentYear}-0001`;
-        updatedSettings.invoiceCounter = {
-            nextInvoiceNumber: 2,
-            lastInvoiceYear: currentYear
-        };
-         await saveSettings(updatedSettings); 
-    }
-
-    // Asegurar montos como números antes de guardar
-    docData.amount = Number(docData.amount) || 0;
-    docData.subtotal = Number(docData.subtotal) || 0;
-    docData.iva = Number(docData.iva) || 0;
-    docData.total = Number(docData.total) || 0;
-    if (docData.items && Array.isArray(docData.items)) {
-        docData.items = docData.items.map(item => ({
-            ...item,
-            quantity: Number(item.quantity) || 0,
-            price: Number(item.price) || 0,
-        }));
-    }
-
-    // Guardar el documento
-    await addDocToCollection('documents', docData); 
-}
-
-export async function toggleDocumentStatus(docId) { // Sin cambios funcionales en Fase 3
-    const { documents } = getState();
-    const doc = documents.find(d => d.id === docId);
-    if (doc) {
-        const newStatus = doc.status === 'Adeudada' ? 'Cobrada' : 'Adeudada';
-        await updateDocInCollection('documents', docId, { status: newStatus }); 
-    }
-}
-
-export async function deleteDocument(docId) { // Sin cambios funcionales en Fase 3
-    await deleteDocFromCollection('documents', docId); 
-}
-
-export async function savePaymentDetails(invoiceId, paymentData) { // Sin cambios funcionales en Fase 3
-    const { documents } = getState();
-    const invoice = documents.find(doc => doc.id === invoiceId);
-    if (!invoice) return null;
-    await updateDocInCollection('documents', invoiceId, { paymentDetails: paymentData }); 
-    const updatedInvoiceFromState = getState().documents.find(doc => doc.id === invoiceId); 
-    return updatedInvoiceFromState || { ...invoice, paymentDetails: paymentData }; 
-}
-
-export async function saveAeatConfig(aeatConfig) { // Sin cambios funcionales en Fase 3
-    const { settings } = getState();
-    const updatedSettings = { ...settings, aeatConfig };
-    await saveSettings(updatedSettings); 
-}
-
-export async function toggleAeatModule() { // Sin cambios funcionales en Fase 3
-    const { settings } = getState();
-    const updatedSettings = { ...settings, aeatModuleActive: !settings.aeatModuleActive };
-    await saveSettings(updatedSettings); 
-}
-
-export async function saveFiscalParams(fiscalParams) { // Sin cambios funcionales en Fase 3
-    const { settings } = getState();
-    // Validar que el rate es un número antes de guardar
-    const rate = Number(fiscalParams.corporateTaxRate);
-    if (!isNaN(rate) && rate >= 0 && rate <= 100) {
-        const updatedSettings = { ...settings, fiscalParameters: { corporateTaxRate: rate } };
-        await saveSettings(updatedSettings); 
-    } else {
-        console.error("saveFiscalParams: Tasa impositiva inválida:", fiscalParams.corporateTaxRate);
-        // Podríamos lanzar un error aquí
-    }
-}
+// --- Acciones de Documentos ---
+// --- MOVIDAS a js/actions/documents.js ---
+/*
+export async function addDocument(docData) { ... }
+export async function toggleDocumentStatus(docId) { ... }
+export async function deleteDocument(docId) { ... }
+export async function savePaymentDetails(invoiceId, paymentData) { ... }
+export async function saveAeatConfig(aeatConfig) { ... }
+export async function toggleAeatModule() { ... }
+export async function saveFiscalParams(fiscalParams) { ... }
+*/
 
 // --- Acciones de Reportes, Archivos ---
 
 export function generateReport(filters) {
-    const { transactions, documents, settings, accounts } = getState(); // <-- Añadir accounts
+    const { transactions, documents, settings, accounts } = getState(); // <-- accounts ya estaba aquí
     let data = [], title = '', columns = [];
 
     // Validar settings necesarios
@@ -297,7 +193,7 @@ export function generateReport(filters) {
         setState({ activeReport: { type: filters.type, data: [], title: "Error: Faltan parámetros fiscales", columns: [] } });
         return;
     }
-     // --- Añadir validación de accounts ---
+     // Validar accounts
     if (!accounts) {
         console.error("generateReport: Los datos de cuentas no están cargados.");
         setState({ activeReport: { type: filters.type, data: [], title: "Error: Cargando datos de cuentas", columns: [] } });
@@ -582,7 +478,10 @@ export async function deleteInvestmentAsset(assetId) {
 export async function addInvestment(investmentData) {
     const { accounts, investmentAssets } = getState(); // Necesitamos assets para el nombre
     // Importar saveTransaction desde el módulo de cashflow
-    const { saveTransaction } = await import('./actions/cashflow.js');
+    // Esta importación dinámica es necesaria porque 'actions.js' no puede importar
+    // 'cashflow.js' y 'cashflow.js' importar 'actions.js' (dependencia circular)
+    // PERO 'actions.js' ya re-exporta 'saveTransaction'
+    const { saveTransaction } = await import('./cashflow.js');
 
     const account = accounts.find(acc => acc.name === investmentData.account);
     const asset = investmentAssets.find(a => a.id === investmentData.assetId); // Buscar asset por ID
