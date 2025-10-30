@@ -10,7 +10,7 @@ import { withSpinner } from './helpers.js';
 
 // --- Funciones Manejadoras (Handlers) ---
 
-function handleReportGeneration(e) {
+async function handleReportGeneration(e) { // <-- 1. AÑADIDO 'async'
     e.preventDefault();
     const form = e.target;
     const type = form.querySelector('#report-type').value;
@@ -35,7 +35,8 @@ function handleReportGeneration(e) {
             return;
         }
     }
-    withSpinner(() => actions.generateReport(filters), 500)();
+    await withSpinner(() => actions.generateReport(filters), 500)(); // <-- 2. AÑADIDO 'await'
+    renderAll(); // <-- 3. AÑADIDO ESTA LÍNEA
 }
 
 
