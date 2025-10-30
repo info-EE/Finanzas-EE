@@ -1,6 +1,6 @@
 import * as actions from '../actions.js';
+import { elements } from '../ui/elements.js'; // <-- CORREGIDO
 import {
-    elements,
     switchPage,
     renderAll
 } from '../ui.js'; // Funciones principales de UI
