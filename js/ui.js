@@ -29,6 +29,7 @@ import {
 } from './ui/helpers.js';
 
 // Fase 4/5: Renderizadores (los que dibujan cada sección)
+import { charts } from './ui/charts.js'; // <-- CORRECCIÓN: Esta línea fue añadida
 import { renderTransactions } from './ui/renderers/transactions.js';
 import { renderAccountsTab, renderBalanceLegendAndChart } from './ui/renderers/accounts.js';
 import { renderDocuments } from './ui/renderers/documents.js';
@@ -311,3 +312,4 @@ export function renderAll() {
     }
     console.log("[renderAll] Ciclo de renderizado completo.");
 }
+
