@@ -348,15 +348,16 @@ export function renderPendingInvoices() {
 
 // Recibe 'charts' para pasarlo a las funciones de gráficos
 export function renderInicioDashboard() {
-    // --- INICIO DE CÓDIGO AÑADIDO ---
+    // --- INICIO DE CÓDIGO MODIFICADO ---
     const { currentUser } = getState();
     if (elements.dashboardTitle && currentUser && currentUser.email) {
-        const userName = capitalizeNameFromEmail(currentUser.email);
-        elements.dashboardTitle.textContent = `Bienvenido, ${escapeHTML(userName)}`;
-        // Quitamos la clase 'uppercase' para que el nombre capitalizado se vea bien
+        // Usamos el email completo directamente
+        const userEmail = currentUser.email;
+        elements.dashboardTitle.textContent = `Bienvenido, ${escapeHTML(userEmail)}`;
+        // Quitamos la clase 'uppercase' para que el email se vea bien
         elements.dashboardTitle.classList.remove('uppercase');
     }
-    // --- FIN DE CÓDIGO AÑADIDO ---
+    // --- FIN DE CÓDIGO MODIFICADO ---
 
     updateInicioKPIs(); // Usa getState()
     renderAnnualFlowChart();
@@ -365,3 +366,4 @@ export function renderInicioDashboard() {
     renderPendingInvoices(); // Usa getState()
     renderRecentTransactions(); // Usa getState()
 }
+
