@@ -2,11 +2,12 @@
  * Viewers for invoices/receipts and printing/PDF download
  */
 import { elements } from './elements.js';
-import { formatCurrency, escapeHTML } from '../../utils.js';
+import { formatCurrency, escapeHTML } from '../utils.js'; // <-- ¡CORREGIDO!
 import { getState } from '../store.js';
 
 export function showInvoiceViewer(invoiceId, state) {
     const { documents } = state || getState && getState();
+// ... (el resto del archivo es idéntico)
     const invoice = documents ? documents.find(doc => doc.id === invoiceId) : null;
     if (!invoice || !elements.invoiceContentArea) return;
 
