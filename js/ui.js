@@ -19,6 +19,25 @@ import { renderClients as renderClientsRenderer } from './ui/renderers/clients.j
 import { renderInvestments as renderInvestmentsRenderer } from './ui/renderers/investments.js';
 import { renderInicioDashboard as renderInicioDashboardRenderer } from './ui/renderers/dashboard.js';
 
+// --- NUEVAS IMPORTACIONES (FASE 1) ---
+import {
+    populateSelects,
+    populateCategories,
+    // Las siguientes ya no necesitan ser exportadas desde ui.js, pero sí usadas aquí:
+    // populateOperationTypesSelect,
+    // populateTaxIdTypeSelect,
+    // populateReportAccounts,
+    // populateClientSelectForInvoice,
+    // populateInvestmentAssetSelect,
+    // populateLogoSelect,
+    updateCurrencySymbol,
+    updateTransferFormUI,
+    resetTransactionForm,
+    toggleIvaField
+} from './ui/controls.js';
+// --- FIN NUEVAS IMPORTACIONES ---
+
+
 // Charts are now centralized in js/ui/charts.js (re-exports above)
 
 // --- Funciones de UI para Autenticación ---
@@ -1237,14 +1256,13 @@ function renderInicioDashboard() {
     renderRecentTransactions();
 }
 
+// --- FUNCIONES MOVIDAS A js/ui/controls.js ---
+/*
 function toggleIvaField() {
-    const type = elements.transactionForm?.querySelector('#transaction-type').value;
-    if (type === 'Egreso') {
-        elements.transactionIvaContainer?.classList.remove('hidden');
-    } else {
-        elements.transactionIvaContainer?.classList.add('hidden');
-    }
+    ... MOVIDO ...
 }
+*/
+// --- FIN FUNCIONES MOVIDAS ---
 
 export function switchPage(pageId, subpageId = null) {
     const { permissions } = getState();
@@ -1334,181 +1352,54 @@ export function switchPage(pageId, subpageId = null) {
     renderAll();
 }
 
+// --- FUNCIONES MOVIDAS A js/ui/controls.js ---
+/*
 function populateLogoSelect() {
-    const { logoCatalog } = getState();
-    const select = elements.newAccountLogoSelect;
-    if (!select || !logoCatalog) return;
-
-    select.innerHTML = ''; 
-
-    for (const key in logoCatalog) {
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = (key.charAt(0).toUpperCase() + key.slice(1)).replace(/_/g, ' ');
-        select.appendChild(option);
-    }
+    ... MOVIDO ...
 }
 
 export function populateSelects() {
-    const { accounts } = getState();
-    if (!accounts) return;
-    const optionsHtml = accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
-    ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select', 'investment-account'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.innerHTML = optionsHtml;
-    });
-    populateCategories();
-    populateOperationTypesSelect();
-    populateTaxIdTypeSelect();
-    populateReportAccounts();
-    populateClientSelectForInvoice();
-    populateInvestmentAssetSelect();
-    populateLogoSelect();
+    ... MOVIDO ...
 }
 
 function populateInvestmentAssetSelect() {
-    const { investmentAssets } = getState();
-    const select = document.getElementById('investment-asset');
-    if (select) {
-        if(investmentAssets && investmentAssets.length > 0){
-             select.innerHTML = investmentAssets.map(asset => `<option value="${asset.id}">${escapeHTML(asset.name)}</option>`).join('');
-        } else {
-            select.innerHTML = `<option value="">No hay activos definidos</option>`;
-        }
-    }
+    ... MOVIDO ...
 }
 
 export function populateCategories() {
-    const { incomeCategories, expenseCategories } = getState();
-    if (!incomeCategories || !expenseCategories || !elements.transactionForm) return;
-    const type = elements.transactionForm.querySelector('#transaction-type').value;
-    const categories = type === 'Ingreso' ? incomeCategories : expenseCategories;
-    const categorySelect = elements.transactionForm.querySelector('#transaction-category');
-    if (categorySelect) {
-        categorySelect.innerHTML = categories.map(cat => `<option value="${escapeHTML(cat)}">${escapeHTML(cat)}</option>`).join('');
-    }
-    toggleIvaField();
+    ... MOVIDO ...
 }
 
 function populateOperationTypesSelect() {
-    const { invoiceOperationTypes } = getState();
-    if(elements.facturaOperationType) {
-        elements.facturaOperationType.innerHTML = invoiceOperationTypes.map(type => `<option value="${escapeHTML(type)}">${escapeHTML(type)}</option>`).join('');
-    }
+    ... MOVIDO ...
 }
 
 function populateTaxIdTypeSelect() {
-    const { taxIdTypes } = getState();
-    const select = document.getElementById('client-tax-id-type');
-    if(select) {
-        select.innerHTML = taxIdTypes.map(type => `<option value="${escapeHTML(type)}">${escapeHTML(type)}</option>`).join('');
-    }
+    ... MOVIDO ...
 }
 
 function populateReportAccounts() {
-    const { accounts } = getState();
-    const select = document.getElementById('report-account');
-    if(select) {
-        select.innerHTML = '<option value="all">Todas las Cuentas</option>';
-        select.innerHTML += accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
-    }
-    const yearSelect = document.getElementById('report-year-sociedades');
-    if(yearSelect) {
-        const currentYear = new Date().getFullYear();
-        let yearOptions = '';
-        for (let i = 0; i < 5; i++) {
-            yearOptions += `<option value="${currentYear - i}">${currentYear - i}</option>`;
-        }
-        yearSelect.innerHTML = yearOptions;
-    }
+    ... MOVIDO ...
 }
 
 export function populateClientSelectForInvoice() {
-    const { clients } = getState();
-    const select = elements.facturaSelectCliente;
-    if (!select || !clients) return;
-    const selectedValue = select.value;
-    while (select.options.length > 1) select.remove(1);
-    clients.forEach(client => {
-        const option = document.createElement('option');
-        option.value = client.id;
-        option.textContent = client.name;
-        select.appendChild(option);
-    });
-    select.value = selectedValue;
+    ... MOVIDO ...
 }
 
 export function updateCurrencySymbol() {
-    const { accounts } = getState();
-    if (!elements.transactionForm) return;
-    const accountName = elements.transactionForm.querySelector('#transaction-account').value;
-    const account = accounts.find(acc => acc.name === accountName);
-    if (account) {
-        const amountSymbol = document.getElementById('amount-currency-symbol');
-        if (amountSymbol) amountSymbol.textContent = getCurrencySymbol(account.currency);
-        const ivaSymbol = document.getElementById('iva-currency-symbol');
-        if (ivaSymbol) ivaSymbol.textContent = getCurrencySymbol(account.currency);
-    }
+    ... MOVIDO ...
 }
 
 export function updateTransferFormUI() {
-    const { accounts } = getState();
-    const fromSelect = document.getElementById('transfer-from');
-    const toSelect = document.getElementById('transfer-to');
-    if (!fromSelect || !toSelect) return;
-
-    const fromAccount = accounts.find(a => a.name === fromSelect.value);
-    const toAccount = accounts.find(a => a.name === toSelect.value);
-    if (!fromAccount || !toAccount) return;
-    
-    const amountSymbol = document.getElementById('transfer-amount-currency-symbol');
-    if(amountSymbol) amountSymbol.textContent = getCurrencySymbol(fromAccount.currency);
-
-    const feeSourceSymbol = document.getElementById('transfer-fee-source-currency-symbol');
-    if(feeSourceSymbol) feeSourceSymbol.textContent = getCurrencySymbol(fromAccount.currency);
-
-    const extraSymbol = document.getElementById('transfer-extra-currency-symbol');
-    if(extraSymbol) extraSymbol.textContent = getCurrencySymbol(toAccount.currency);
-    
-    const extraLabel = document.getElementById('transfer-extra-label');
-    const extraField = document.getElementById('transfer-extra-field');
-
-    if (extraLabel && extraField) {
-        if (fromAccount.currency !== toAccount.currency) {
-            extraLabel.textContent = `Monto a Recibir (${getCurrencySymbol(toAccount.currency)})`;
-            extraField.required = true;
-        } else {
-            extraLabel.textContent = "Comisión Destino (Opcional)";
-            extraField.required = false;
-        }
-    }
+    ... MOVIDO ...
 }
 
 export function resetTransactionForm() {
-    if (!elements.transactionForm) return;
-    elements.transactionForm.reset();
-    
-    const idInput = elements.transactionForm.querySelector('#transaction-id');
-    if (idInput) idInput.value = '';
-    
-    const ivaInput = elements.transactionForm.querySelector('#transaction-iva');
-    if (ivaInput) ivaInput.value = '';
-
-    const formTitle = elements.transactionForm.querySelector('#form-title');
-    if(formTitle) formTitle.textContent = 'Agregar Nuevo Movimiento';
-
-    const submitText = elements.transactionForm.querySelector('#form-submit-button-text');
-    if(submitText) submitText.textContent = 'Guardar';
-    
-    const cancelBtn = elements.transactionForm.querySelector('#form-cancel-button');
-    if (cancelBtn) cancelBtn.classList.add('hidden');
-
-    const dateInput = document.getElementById('transaction-date');
-    if(dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
-    
-    populateCategories();
-    updateCurrencySymbol();
+    ... MOVIDO ...
 }
+*/
+// --- FIN FUNCIONES MOVIDAS ---
+
 
 // Confirmation and alert modals moved to js/ui/modals.js
 
@@ -1528,7 +1419,7 @@ export function exportReportAsXLSX() {
 
 export function exportReportAsPDF() {
     const { activeReport } = getState();
-    if (!activeReport || !activeBreport.data || activeReport.data.length === 0) {
+    if (!activeReport || !activeReport.data || activeReport.data.length === 0) {
         showAlertModal('Sin Datos', 'No hay datos para exportar.');
         return;
     }
@@ -1684,6 +1575,7 @@ export function renderAll() {
                 renderClients();
                 renderClientsChart();
                 break;
+
             case 'inversiones':
                 renderInvestments();
                 break;
@@ -1719,3 +1611,4 @@ export function renderAll() {
         }
     }
 }
+
