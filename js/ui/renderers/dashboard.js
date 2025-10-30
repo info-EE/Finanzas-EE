@@ -13,8 +13,8 @@ import { charts } from '../charts.js';
  * @param {Array} transactions - Array de todas las transacciones.
  * @param {Array} accounts - Array de todas las cuentas.
  * @param {string} currency - La moneda a filtrar ('EUR' o 'USD').
- * @param {number} month - El mes a filtrar (0-11).
- * @param {number} year - El año a filtrar.
+ * @param {number} month - El mes a filtrar (0-11) (UTC).
+ * @param {number} year - El año a filtrar (UTC).
  * @returns {object} - Un objeto { income: number, expense: number }.
  */
 function calculateMonthlyTotals(transactions, accounts, currency, month, year) {
@@ -30,16 +30,16 @@ function calculateMonthlyTotals(transactions, accounts, currency, month, year) {
     transactions
         .filter(t => {
             if (!t.date || typeof t.date !== 'string') return false;
-            // *** SOLUCIÓN PROBLEMA 1 (ZONA HORARIA) ***
-            const tDate = new Date(t.date + 'T00:00:00'); // Interpretar como local
+            // *** CORRECCIÓN ZONA HORARIA: Interpretar fecha como UTC ***
+            const tDate = new Date(t.date + 'T00:00:00Z'); // Interpretar como UTC
             if (isNaN(tDate.getTime())) return false;
 
             const account = accounts.find(acc => acc.id === t.accountId);
             if (!account) return false;
 
             const isCorrectCurrency = account.currency === currency;
-            const transactionMonth = tDate.getMonth(); // Mes local
-            const transactionYear = tDate.getFullYear(); // Año local
+            const transactionMonth = tDate.getUTCMonth(); // Mes UTC
+            const transactionYear = tDate.getUTCFullYear(); // Año UTC
             const isCorrectMonth = transactionMonth === month; // Comparar con el mes pasado como argumento
             const isCorrectYear = transactionYear === year;   // Comparar con el año pasado como argumento
 
@@ -97,10 +97,10 @@ export function updateInicioKPIs() {
     // Calcular Saldo Total (siempre que haya cuentas)
     totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
 
-    // Calcular Ingresos/Egresos usando la función aislada
+    // *** CORRECCIÓN ZONA HORARIA: Usar UTC para mes/año actual ***
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const currentMonth = now.getUTCMonth(); // Mes UTC
+    const currentYear = now.getUTCFullYear(); // Año UTC
 
     // console.log('[updateInicioKPIs] Llamando a calculateMonthlyTotals...');
     const totals = calculateMonthlyTotals(transactions, accounts, currency, currentMonth, currentYear);
@@ -145,20 +145,23 @@ export function renderAnnualFlowChart() {
     const selectedCurrency = currencySelect.value;
 
     const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-    const currentYear = new Date().getFullYear(); // Año local
+    // *** CORRECCIÓN ZONA HORARIA: Usar UTC para año actual ***
+    const currentYear = new Date().getUTCFullYear(); // Año UTC
     const incomeData = Array(12).fill(0);
     const expenseData = Array(12).fill(0);
 
     transactions.filter(t => {
         const account = accounts.find(acc => acc.id === t.accountId);
         if (!t.date || !account || typeof t.date !== 'string') return false;
-        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
+        // *** CORRECCIÓN ZONA HORARIA: Interpretar fecha como UTC ***
+        const tDate = new Date(t.date + 'T00:00:00Z'); // Interpretar fecha como UTC
         // Asegurarse que tDate es válida antes de llamar a getFullYear
-        return account.currency === selectedCurrency && !isNaN(tDate.getTime()) && tDate.getFullYear() === currentYear; // Usar local
+        return account.currency === selectedCurrency && !isNaN(tDate.getTime()) && tDate.getUTCFullYear() === currentYear; // Usar UTC
     }).forEach(t => {
-        const date = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
+        // *** CORRECCIÓN ZONA HORARIA: Interpretar fecha como UTC ***
+        const date = new Date(t.date + 'T00:00:00Z'); // Interpretar fecha como UTC
         if (!isNaN(date.getTime())) {
-            const month = date.getMonth(); // Usar local
+            const month = date.getUTCMonth(); // Usar UTC
             if (month >=0 && month <=11) {
                 // Asegurar que amount e iva son números
                 const amount = typeof t.amount === 'number' ? t.amount : 0;
@@ -204,16 +207,19 @@ export function renderExpenseDistributionChart() {
     if (!currencySelect) return;
     const currency = currencySelect.value;
 
+    // *** CORRECCIÓN ZONA HORARIA: Usar UTC para mes/año actual ***
     const now = new Date(); // Fecha local
-    const currentMonth = now.getMonth(); // Mes local
-    const currentYear = now.getFullYear(); // Año local
+    const currentMonth = now.getUTCMonth(); // Mes UTC
+    const currentYear = now.getUTCFullYear(); // Año UTC
 
     const expenseByCategory = transactions.filter(t => {
         const account = accounts.find(acc => acc.id === t.accountId);
         if(!t.date || !account || typeof t.date !== 'string') return false;
-        const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como local
+        // *** CORRECCIÓN ZONA HORARIA: Interpretar fecha como UTC ***
+        const tDate = new Date(t.date + 'T00:00:00Z'); // Interpretar fecha como UTC
         // Asegurarse que tDate es válida antes de llamar a getMonth/getFullYear
-        return t.type === 'Egreso' && account.currency === currency && !isNaN(tDate.getTime()) && tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear; // Usar local
+        return t.type === 'Egreso' && account.currency === currency && !isNaN(tDate.getTime()) && tDate.getUTCMonth() === currentMonth && tDate.getUTCFullYear() === currentYear; // Usar UTC
+D
     }).reduce((acc, t) => {
         const category = t.category || 'Sin Categoría';
         // Asegurar que amount e iva son números
