@@ -1,9 +1,11 @@
 import * as actions from '../actions.js';
-// --- INICIO DE CORRECCIÓN POR DEPENDENCIA CIRCULAR ---
 import {
     elements,
     switchPage,
-    // populateNextInvoiceNumber, // <-- Eliminado de aquí
+    // --- CORRECCIÓN ---
+    // Esta importación debe venir de 'controls.js', no del índice
+    // populateNextInvoiceNumber,
+    // --- FIN CORRECCIÓN ---
     showInvoiceViewer,
     hidePaymentDetailsModal,
     showPaymentDetailsModal,
@@ -12,9 +14,10 @@ import {
     showConfirmationModal,
     renderAll
 } from '../ui/index.js';
-// AÑADIR IMPORTACIÓN DIRECTA DE CONTROLS.JS
+// --- CORRECCIÓN ---
+// Importar 'populateNextInvoiceNumber' desde su archivo correcto
 import { populateNextInvoiceNumber } from '../ui/controls.js';
-// --- FIN DE CORRECCIÓN ---
+// --- FIN CORRECCIÓN ---
 import { getState } from '../store.js';
 import { escapeHTML } from '../utils.js';
 import { withSpinner } from './helpers.js';
@@ -65,9 +68,15 @@ function handleDocumentsTableClick(e) {
         withSpinner(() => actions.toggleDocumentStatus(statusBtn.dataset.id), 150)();
     }
     if (deleteBtn) {
-        showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento?', withSpinner(() => {
-            actions.deleteDocument(deleteBtn.dataset.id);
-        }));
+        // --- INICIO DE CORRECCIÓN ---
+        // Se añade async/await para asegurar que withSpinner complete su ejecución
+        // antes de que el modal intente hacer algo más.
+        showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento?', async () => {
+            await withSpinner(async () => {
+                actions.deleteDocument(deleteBtn.dataset.id);
+            })();
+        });
+        // --- FIN DE CORRECCIÓN ---
     }
     if (viewBtn) {
         showInvoiceViewer(viewBtn.dataset.id);
