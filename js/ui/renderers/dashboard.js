@@ -34,8 +34,11 @@ function calculateMonthlyTotals(transactions, accounts, currency, month, year) {
             const tDate = new Date(t.date + 'T00:00:00Z'); // Interpretar como UTC
             if (isNaN(tDate.getTime())) return false;
 
-            const account = accounts.find(acc => acc.id === t.accountId);
+            // --- CORRECCIÓN RETROCOMPATIBILIDAD ---
+            // Buscar por ID y, si falla, por nombre de cuenta (datos antiguos)
+            const account = accounts.find(acc => acc.id === t.accountId) || accounts.find(acc => acc.name === t.account);
             if (!account) return false;
+            // --- FIN CORRECCIÓN ---
 
             const isCorrectCurrency = account.currency === currency;
             const transactionMonth = tDate.getUTCMonth(); // Mes UTC
@@ -151,8 +154,11 @@ export function renderAnnualFlowChart() {
     const expenseData = Array(12).fill(0);
 
     transactions.filter(t => {
-        const account = accounts.find(acc => acc.id === t.accountId);
+        // --- CORRECCIÓN RETROCOMPATIBILIDAD ---
+        const account = accounts.find(acc => acc.id === t.accountId) || accounts.find(acc => acc.name === t.account);
         if (!t.date || !account || typeof t.date !== 'string') return false;
+        // --- FIN CORRECCIÓN ---
+
         // *** CORRECCIÓN ZONA HORARIA: Interpretar fecha como UTC ***
         const tDate = new Date(t.date + 'T00:00:00Z'); // Interpretar fecha como UTC
         // Asegurarse que tDate es válida antes de llamar a getFullYear
@@ -213,13 +219,15 @@ export function renderExpenseDistributionChart() {
     const currentYear = now.getUTCFullYear(); // Año UTC
 
     const expenseByCategory = transactions.filter(t => {
-        const account = accounts.find(acc => acc.id === t.accountId);
+        // --- CORRECCIÓN RETROCOMPATIBILIDAD ---
+        const account = accounts.find(acc => acc.id === t.accountId) || accounts.find(acc => acc.name === t.account);
         if(!t.date || !account || typeof t.date !== 'string') return false;
+        // --- FIN CORRECCIÓN ---
+
         // *** CORRECCIÓN ZONA HORARIA: Interpretar fecha como UTC ***
         const tDate = new Date(t.date + 'T00:00:00Z'); // Interpretar fecha como UTC
         // Asegurarse que tDate es válida antes de llamar a getMonth/getFullYear
         return t.type === 'Egreso' && account.currency === currency && !isNaN(tDate.getTime()) && tDate.getUTCMonth() === currentMonth && tDate.getUTCFullYear() === currentYear; // Usar UTC
-D
     }).reduce((acc, t) => {
         const category = t.category || 'Sin Categoría';
         // Asegurar que amount e iva son números
@@ -244,7 +252,7 @@ D
     charts.expenseDistributionChart = new Chart(ctx, {
         type: 'doughnut',
         data: { labels: labels, datasets: [{ data: data, backgroundColor: chartColors, borderColor: '#0a0a0a', borderWidth:5, borderRadius:10 }] },
-        options: { responsive:true, maintainAspectRatio:false, cutout: '70%', plugins:{ legend:{ position:'bottom', labels:{ color:'#e0e0e0', boxWidth:12, padding:15 } } } }
+        options: { responsive:true, maintainAspectRatio:false, cutout: '70%', plugins:{ legend:{ position:'bottom', labels:{ color:'#e0e000', boxWidth:12, padding:15 } } } }
     });
 }
 
@@ -263,8 +271,10 @@ export function renderRecentTransactions() {
 
     const rowsHtmlArray = recent.map(t => {
         const isIncome = t.type === 'Ingreso';
-        const account = accounts.find(acc => acc.id === t.accountId);
-        const accountName = account ? account.name : `Cuenta Borrada (ID: ${t.accountId})`;
+        // --- CORRECCIÓN RETROCOMPATIBILIDAD ---
+        const account = accounts.find(acc => acc.id === t.accountId) || accounts.find(acc => acc.name === t.account);
+        const accountName = account ? account.name : (t.account || 'Cuenta Desconocida'); // Usar t.account si existe
+        // --- FIN CORRECCIÓN ---
         const currency = account ? account.currency : 'EUR';
         const amount = typeof t.amount === 'number' ? t.amount : 0; // Asegurar número
         return `
@@ -344,3 +354,4 @@ export function renderInicioDashboard() {
     renderPendingInvoices(); // Usa getState()
     renderRecentTransactions(); // Usa getState()
 }
+
