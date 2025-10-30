@@ -2,7 +2,7 @@
  * Viewers for invoices/receipts and printing/PDF download
  */
 import { elements } from './elements.js';
-import { formatCurrency, escapeHTML } from '../utils.js';
+import { formatCurrency, escapeHTML } from '../../utils.js';
 import { getState } from '../store.js';
 
 export function showInvoiceViewer(invoiceId, state) {
@@ -106,32 +106,84 @@ export function hideInvoiceViewer() {
 
 export function showReceiptViewer(invoice) {
     if (!invoice || !invoice.paymentDetails || !elements.invoiceContentArea) return;
-    // For brevity keep the printable content generation in ui.js for now.
-    elements.invoiceViewerModal.classList.remove('hidden');
-    elements.invoiceViewerModal.classList.add('flex');
+    // Por ahora, el contenido del recibo es el mismo que el de la factura
+    // (Esto podría expandirse para mostrar detalles del pago)
+    showInvoiceViewer(invoice.id, getState());
+    
+    // Sobrescribir el título para que diga "Recibo"
+    const titleEl = elements.invoiceViewerModal.querySelector('h1');
+    if (titleEl) titleEl.textContent = 'RECIBO';
 }
 
 export function printInvoice() {
     const printContent = document.getElementById('invoice-printable-area')?.innerHTML;
     if (!printContent) return;
     const printWindow = window.open('', '', 'height=800,width=800');
-    printWindow.document.write(`\n        <html>\n            <head>\n                <title>Factura</title>\n                <script src="https://cdn.tailwindcss.com"><\\/script>\n                <style>\n                    @media print { @page { size: A4 portrait; margin: 1.6cm; } body { -webkit-print-color-adjust: exact; } }\n                </style>\n            </head>\n            <body>\n                ${printContent}\n            </body>\n        </html>\n    `);
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Factura</title>
+                <script src="https://cdn.tailwindcss.com"><\/script>
+                <style>
+                    @media print { @page { size: A4 portrait; margin: 1.6cm; } body { -webkit-print-color-adjust: exact; } }
+                </style>
+            </head>
+            <body>
+                ${printContent}
+            </body>
+        </html>
+    `);
     printWindow.document.close();
-    printWindow.onload = function() { printWindow.focus(); printWindow.print(); printWindow.close(); };
+    
+    // --- CORRECCIÓN: Añadir un setTimeout para dar tiempo a Tailwind a renderizar ---
+    printWindow.onload = function() { 
+        printWindow.focus(); 
+        setTimeout(function() {
+            printWindow.print();
+            printWindow.close();
+        }, 500); // 500ms de espera
+    };
 }
 
 export function downloadInvoiceAsPDF() {
     const { jsPDF } = window.jspdf;
     const invoiceElement = document.getElementById('invoice-printable-area');
     if (!invoiceElement) return;
+    
     const titleElement = elements.invoiceViewerModal.querySelector('h1');
     const isReceipt = titleElement && titleElement.textContent.toLowerCase() === 'recibo';
-    const docNumberElement = invoiceElement.querySelector('strong');
-    const docNumberText = docNumberElement ? docNumberElement.textContent : 'documento';
+    
+    // Encontrar el número de documento
+    let docNumberText = 'documento';
+    const strongElements = invoiceElement.querySelectorAll('strong');
+    // Asumir que el primer <strong> después de "Nº de factura:" o "Nº de recibo:" es el número
+    if (strongElements.length > 0) docNumberText = strongElements[0].textContent; 
+
     const docType = isReceipt ? 'Recibo' : 'Factura';
     const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+    
+    // --- CORRECCIÓN: Usar html2canvas explícitamente (más robusto) ---
+    html2canvas(invoiceElement, {
+        scale: 2, // Mejorar resolución
+        useCORS: true
+    }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        doc.save(`${docType}-${docNumberText.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+    }).catch(err => {
+        console.error("Error al generar el PDF con html2canvas:", err);
+        // Aquí podríamos mostrar un showAlertModal si lo importamos
+    });
+
+    /*
+    // --- CÓDIGO ANTIGUO (Reemplazado por el de arriba) ---
     doc.html(invoiceElement, {
         callback: (doc) => { doc.save(`${docType}-${docNumberText.replace(/[^a-z0-9]/gi, '_')}.pdf`); },
         margin: [40,0,40,0], autoPaging: 'text', x:0, y:0, width:595, windowWidth:700
     });
+    */
 }
+
