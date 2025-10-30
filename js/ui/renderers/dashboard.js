@@ -340,7 +340,7 @@ export function renderPendingInvoices() {
                 <p class="font-medium">${escapeHTML(doc.number || '[Sin Número]')}</p>
                 <p class="text-xs text-gray-400">${escapeHTML(doc.client || '[Sin Cliente]')}</p>
             </div>
-            <span class="font-semibold">${formatCurrency(typeof doc.amount === 'number' ? doc.amount : 0, doc.currency)}</span> {/* Asegurar número */}
+            <span class="font-semibold">${formatCurrency(typeof doc.amount === 'number' ? doc.amount : 0, doc.currency)}</span>
         </div>
     `).join('');
 }
