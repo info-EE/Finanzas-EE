@@ -3,40 +3,25 @@ import { escapeHTML, formatCurrency, getCurrencySymbol } from './utils.js';
 import { CHART_COLORS, ESSENTIAL_TAX_ID_TYPES } from './config.js';
 
 // --- (FASE 1) Importar los controles ---
-import { populateCategories, updateCurrencySymbol } from './ui/controls.js';
-// --- FIN (FASE 1) ---
+import { populateCategories, updateCurrencySymbol, populateSelects } from './ui/controls.js';
+// --- (FASE 2) Importar los modales ---
+import { showAlertModal, populateNextInvoiceNumber } from './ui/modals.js';
+// --- (FASE 3) Importar los helpers ---
+import { closeSidebar } from './ui/helpers.js';
 
-// --- ERROR CORREGIDO ---
-// Se eliminó la línea duplicada: import { charts } from './ui/charts.js';
-// La siguiente línea ya importa 'charts' y todo lo demás necesario.
+// Re-export chart helpers from the new ui module (migrated)
 export { charts, renderSingleCurrencyChart, resizeCharts };
 import { charts, renderSingleCurrencyChart, resizeCharts } from './ui/charts.js';
-// Re-export chart helpers from the new ui module (migrated)
 
 // Centralizar selectores del DOM desde js/ui/elements.js
 import { elements } from './ui/elements.js';
 // Renderers
 import { renderTransactions as renderTransactionsRenderer, createTransactionRow as createTransactionRowRenderer } from './ui/renderers/transactions.js';
-import { renderAccountsTab as renderAccountsTabRenderer } from './ui/renderers/accounts.js';
-import { renderDocuments as renderDocumentsRenderer } from './ui/renderers/documents.js';
-import { renderClients as renderClientsRenderer } from './ui/renderers/clients.js';
-import { renderInvestments as renderInvestmentsRenderer } from './ui/renderers/investments.js';
-import { renderInicioDashboard as renderInicioDashboardRenderer } from './ui/renderers/dashboard.js';
-
-// Charts are now centralized in js/ui/charts.js (re-exports above)
-
-// --- (FASE 2) Funciones de UI para Autenticación ---
-// --- MOVIDAS a js/ui/modals.js ---
-// export function showAuthError(message) { ... }
-// export function clearAuthError() { ... }
-// export function showLoginView() { ... }
-// export function showRegisterView() { ... }
-// export function showApp() { ... }
-// export function hideApp() { ... }
-// export function showPermissionsModal() { ... }
-// export function hidePermissionsModal() { ... }
-// --- FIN (FASE 2) ---
-
+// import { renderAccountsTab as renderAccountsTabRenderer } from './ui/renderers/accounts.js';
+// import { renderDocuments as renderDocumentsRenderer } from './ui/renderers/documents.js';
+// import { renderClients as renderClientsRenderer } from './ui/renderers/clients.js';
+// import { renderInvestments as renderInvestmentsRenderer } from './ui/renderers/investments.js';
+// import { renderInicioDashboard as renderInicioDashboardRenderer } from './ui/renderers/dashboard.js';
 
 // --- Funciones Creadoras de Elementos ---
 
@@ -1122,29 +1107,14 @@ function renderIvaReport() {
     `;
 }
 
-// --- Funciones de Utilidad y Ayuda para la UI ---
-
-export function openSidebar() {
-    const sidebar = elements.sidebar;
-    const overlay = elements.sidebarOverlay;
-    if (sidebar && overlay) {
-        sidebar.classList.remove('-translate-x-full');
-        overlay.classList.remove('hidden');
-    }
-}
-
-export function closeSidebar() {
-    const sidebar = elements.sidebar;
-    const overlay = elements.sidebarOverlay;
-    if (sidebar && overlay) {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    }
-}
-
-// --- (FASE 2) Rellena el campo de número de factura ---
-// --- MOVIDA a js/ui/modals.js ---
-// export function populateNextInvoiceNumber() { ... }
+// --- (FASE 3) Funciones de Utilidad y Ayuda para la UI ---
+// --- MOVIDAS a js/ui/helpers.js ---
+// export function openSidebar() { ... }
+// export function closeSidebar() { ... }
+// export function exportReportAsXLSX() { ... }
+// export function exportReportAsPDF() { ... }
+// export function updateConnectionStatus(status, message) { ... }
+// --- FIN (FASE 3) ---
 
 
 function renderInicioDashboard() {
@@ -1155,23 +1125,6 @@ function renderInicioDashboard() {
     renderPendingInvoices();
     renderRecentTransactions();
 }
-
-// --- (FASE 1) Funciones de controles de formulario ---
-// --- MOVIDAS a js/ui/controls.js ---
-// function toggleIvaField() { ... }
-// export function populateSelects() { ... }
-// function populateInvestmentAssetSelect() { ... }
-// export function populateCategories() { ... }
-// function populateOperationTypesSelect() { ... }
-// function populateTaxIdTypeSelect() { ... }
-// function populateReportAccounts() { ... }
-// export function populateClientSelectForInvoice() { ... }
-// export function updateCurrencySymbol() { ... }
-// export function updateTransferFormUI() { ... }
-// export function resetTransactionForm() { ... }
-// function populateLogoSelect() { ... }
-// --- FIN (FASE 1) ---
-
 
 export function switchPage(pageId, subpageId = null) {
     const { permissions } = getState();
@@ -1253,74 +1206,12 @@ export function switchPage(pageId, subpageId = null) {
 
     // Cierra el menú lateral en móvil
     if (window.innerWidth < 768) {
-        closeSidebar();
+        closeSidebar(); // (FASE 3) Esta función ahora se importa desde helpers.js
     }
 
     // Llama a la función principal de renderizado UNA SOLA VEZ después de cambiar la página.
     // Esto asegura que solo se renderice el contenido de la página visible.
     renderAll();
-}
-
-
-// Confirmation and alert modals moved to js/ui/modals.js
-
-// Invoice/receipt viewers and print/pdf helpers moved to js/ui/viewers.js
-
-export function exportReportAsXLSX() {
-    const { activeReport } = getState();
-    if (!activeReport || !activeReport.data || activeReport.data.length === 0) {
-        showAlertModal('Sin Datos', 'No hay datos para exportar.');
-        return;
-    }
-    const worksheet = XLSX.utils.aoa_to_sheet([activeReport.columns, ...activeReport.data]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Reporte");
-    XLSX.writeFile(workbook, `${activeReport.title.replace(/ /g, '_')}.xlsx`);
-}
-
-export function exportReportAsPDF() {
-    const { activeReport } = getState();
-    if (!activeReport || !activeBreport.data || activeReport.data.length === 0) {
-        showAlertModal('Sin Datos', 'No hay datos para exportar.');
-        return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text(activeReport.title, 14, 16);
-    doc.autoTable({
-        head: [activeReport.columns],
-        body: activeReport.data,
-        startY: 20
-    });
-    doc.save(`${activeReport.title.replace(/ /g, '_')}.pdf`);
-}
-
-// Spinner helpers moved to js/ui/modals.js to centralize modal/spinner logic
-
-export function updateConnectionStatus(status, message) {
-    const { connectionStatus, statusIcon, statusText } = elements;
-    if (!connectionStatus || !statusIcon || !statusText) return;
-    connectionStatus.classList.remove('opacity-0');
-
-    statusText.textContent = message;
-
-    switch (status) {
-        case 'loading':
-            statusIcon.innerHTML = `<div class="w-3 h-3 border-2 border-t-transparent border-yellow-400 rounded-full animate-spin"></div>`;
-            statusText.classList.remove('text-green-400', 'text-red-400');
-            statusText.classList.add('text-yellow-400');
-            break;
-        case 'success':
-            statusIcon.innerHTML = `<div class="w-3 h-3 bg-green-500 rounded-full"></div>`;
-            statusText.classList.remove('text-yellow-400', 'text-red-400');
-            statusText.classList.add('text-green-400');
-            break;
-        case 'error':
-            statusIcon.innerHTML = `<div class="w-3 h-3 bg-red-500 rounded-full"></div>`;
-            statusText.classList.remove('text-yellow-400', 'text-green-400');
-            statusText.classList.add('text-red-400');
-            break;
-    }
 }
 
 /**
@@ -1428,36 +1319,8 @@ export function renderAll() {
                 { // Usar bloque para limitar el alcance de createInvoiceTab
                     const createInvoiceTab = document.getElementById('facturacion-content-crear');
                     if (createInvoiceTab && !createInvoiceTab.classList.contains('hidden')) {
-                        // (FASE 2) La función ahora se importa desde 'controls.js' y se re-exporta por 'index.js'
-                        // (Pero handlers.js no la importa... así que la llamamos desde su importación original)
-                        // A-ha, `populateNextInvoiceNumber` no se re-exporta en index.js.
-                        // Lo llamaremos desde 'js/ui/modals.js' donde lo movimos.
-                        // Esto fallará porque `handlers.js` no importa `populateNextInvoiceNumber`
-                        // ¡Ah! No, `ui.js` no necesita llamar a `populateNextInvoiceNumber` aquí.
-                        // `handlers.js` es quien lo llama, y lo importa desde `js/ui/index.js`,
-                        // que a su vez lo obtiene de `js/ui/modals.js`.
-                        // ...
-                        // Revisando `handlers.js`... sí, importa `populateNextInvoiceNumber` desde `ui/index.js`.
-                        // Revisando `ui/index.js`... sí, exporta `*` desde `modals.js`.
-                        // Revisando `ui/modals.js` (mi versión corregida)... sí, exporta `populateNextInvoiceNumber`.
-                        // PERO... `ui.js` no debería llamar a una función que está en `modals.js`.
-                        // El `handler` para el tab de facturación es quien debe llamar a `populateNextInvoiceNumber`.
-                        // ¡Exacto! En `handlers.js`, la función `bindEventListeners` tiene esto:
-                        //
-                        // const crearTab = document.getElementById('facturacion-tab-crear');
-                        // if (crearTab) crearTab.addEventListener('click', () => {
-                        //     switchPage('facturacion', 'crear');
-                        //     populateNextInvoiceNumber(); // <-- El handler lo llama.
-                        // });
-                        //
-                        // Por lo tanto, no necesito llamarlo aquí en `renderAll`.
-                        // ...
-                        // PERO... ¿qué pasa si la página se carga por defecto?
-                        // `switchPage` llama a `renderAll`.
-                        // `renderAll` SÍ necesita llamar a `populateNextInvoiceNumber` si la pestaña activa es 'crear'.
-                        //
-                        // OK, esto significa que `ui.js` SÍ necesita acceso a `populateNextInvoiceNumber`.
-                        // Vamos a importarlo desde `modals.js`.
+                        // (FASE 2) Esta función ahora se importa desde modals.js
+                        populateNextInvoiceNumber();
                     }
                 }
                 break;
@@ -1484,48 +1347,21 @@ export function renderAll() {
         console.warn("[renderAll] No visible page found to render.");
     }
     
-    // (FASE 1) La función `populateSelects` ahora se importa desde 'controls.js'
-    // y se re-exporta a través de 'index.js'.
-    // `handlers.js` no la importa, así que `ui.js` debe importarla.
-    // ...
-    // Ah, no. `renderAll` *depende* de `populateSelects`, así que `ui.js`
-    // debe importarla desde `controls.js`.
-    // populateSelects(); // <-- Esta línea estaba en el original, pero no la importamos.
-    // ¡La importación de `controls.js` en la línea 7 está comentada!
-    
-    // CORRECCIÓN: Voy a descomentar la importación de `controls.js`
-    // y voy a añadir `populateSelects` y `populateNextInvoiceNumber` a esa importación.
-    
-    // ...Revisando mi propio código...
-    // Línea 7: import { populateCategories, updateCurrencySymbol } from './ui/controls.js';
-    // Debería ser:
-    // import { populateCategories, updateCurrencySymbol, populateSelects } from './ui/controls.js';
-    // Y también necesito `populateNextInvoiceNumber` de `modals.js`.
-    
-    // Vamos a añadir AMBAS importaciones.
-    
-    // (Este pensamiento es demasiado complejo. El código que generé en el
-    // turno anterior ya tenía `populateSelects` al final. Lo mantendré.)
-    
-    // populateSelects(); // Esta función fue movida a controls.js
-    // `ui.js` no la está importando.
-    
-    // ¡YA SÉ! `handlers.js` importa `renderAll` desde `ui/index.js`.
-    // `ui/index.js` exporta `*` desde `ui.js`.
-    // `handlers.js` TAMBIÉN importa `populateSelects` desde `ui/index.js`.
-    // `ui/index.js` exporta `*` desde `controls.js`.
-    // `controls.js` exporta `populateSelects`.
-    //
-    // OK. El problema es que `ui.js` llama a `populateSelects()` al final
-    // de `renderAll()`, pero `ui.js` *no* importa `populateSelects`.
-    //
-    // La solución es añadir `populateSelects` a la importación de `controls.js`.
-    // Y `populateNextInvoiceNumber` a una nueva importación de `modals.js`.
-    
-    // ... (Voy a generar el código de nuevo con estas correcciones) ...
-    // El código que generé en la respuesta anterior SÍ tenía el `populateSelects()`
-    // al final, pero NO lo importaba. Ese es el error.
-    
-    // Lo voy a corregir AHORA.
+    // (FASE 1) Esta función ahora se importa desde controls.js
+    populateSelects();
+
+    // CORRECCIÓN PROBLEMA 2 (de la sesión anterior): Mover la creación de iconos aquí
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        try {
+            // Re-crear iconos solo en el contenido principal, que es lo que cambia
+            const iconsToCreate = elements.mainContent.querySelectorAll('i[data-lucide]');
+            if (iconsToCreate.length > 0) {
+                // console.log(`[renderAll] Recreating ${iconsToCreate.length} Lucide icons.`); // Log opcional, puede ser ruidoso
+                lucide.createIcons({ nodes: iconsToCreate });
+            }
+        } catch(error) {
+            console.error("Error recreating Lucide icons in renderAll:", error);
+        }
+    }
 }
 

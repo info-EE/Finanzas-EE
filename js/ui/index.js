@@ -17,9 +17,8 @@ export { renderAll } from '../ui.js';
 export * from './modals.js';
 export * from './viewers.js';
 export * from './charts.js';
-// ---- (FASE 1) ----
-export * from './controls.js';
-// ---- FIN (FASE 1) ----
+export * from './controls.js'; // (de Fase 1)
+export * from './helpers.js'; // (NUEVO de Fase 3)
 
 // NOTA: A medida que muevas más funciones de 'ui.js' a módulos específicos
 // (como renderers, controls), deberás exportarlas explícitamente aquí
