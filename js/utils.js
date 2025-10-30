@@ -64,3 +64,4 @@ export function capitalizeNameFromEmail(email) {
     }
 }
 // --- FIN DE AÑADIDO ---
+

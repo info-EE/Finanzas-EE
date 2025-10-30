@@ -350,12 +350,26 @@ export function renderPendingInvoices() {
 export function renderInicioDashboard() {
     // --- INICIO DE CÓDIGO MODIFICADO ---
     const { currentUser } = getState();
-    if (elements.dashboardTitle && currentUser && currentUser.email) {
-        // Usamos el email completo directamente
-        const userEmail = currentUser.email;
-        elements.dashboardTitle.textContent = `Bienvenido, ${escapeHTML(userEmail)}`;
-        // Quitamos la clase 'uppercase' para que el email se vea bien
-        elements.dashboardTitle.classList.remove('uppercase');
+    if (currentUser && currentUser.email) {
+        // Título Principal (Bienvenido, Nombre)
+        if (elements.dashboardTitle) {
+            // Usamos la función de 'utils.js' para obtener el nombre
+            const userName = capitalizeNameFromEmail(currentUser.email);
+            elements.dashboardTitle.textContent = `Bienvenido, ${escapeHTML(userName)}`;
+            // Quitamos las clases que lo hacían "chocante"
+            elements.dashboardTitle.classList.remove('uppercase', 'tracking-wider');
+        }
+        // Subtítulo (Email)
+        if (elements.dashboardSubtitle) {
+            elements.dashboardSubtitle.textContent = escapeHTML(currentUser.email);
+        }
+    } else if (elements.dashboardTitle) {
+        // Fallback si no hay usuario
+        elements.dashboardTitle.textContent = 'Centro de Mando';
+        elements.dashboardTitle.classList.add('uppercase', 'tracking-wider');
+        if (elements.dashboardSubtitle) {
+            elements.dashboardSubtitle.textContent = ''; // Ocultar subtítulo
+        }
     }
     // --- FIN DE CÓDIGO MODIFICADO ---
 

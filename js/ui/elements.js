@@ -13,6 +13,7 @@ export const elements = {
 
     // --- AÑADIDO PARA SALUDO ---
     dashboardTitle: document.getElementById('dashboard-title'),
+    dashboardSubtitle: document.getElementById('dashboard-subtitle'), // --- AÑADIDO ---
 
     // Formularios de autenticación
     loginView: document.getElementById('login-view'),
@@ -90,3 +91,4 @@ export const elements = {
     permissionsModalSaveBtn: document.getElementById('permissions-modal-save-btn'),
     permissionsModalCancelBtn: document.getElementById('permissions-modal-cancel-btn'),
 };
+
