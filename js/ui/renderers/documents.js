@@ -1,16 +1,11 @@
 import * as actions from '../../actions.js';
-import {
-    elements,
-    switchPage,
-    populateNextInvoiceNumber,
-    showInvoiceViewer,
-    hidePaymentDetailsModal,
-    showPaymentDetailsModal,
-    showReceiptViewer,
-    showAlertModal,
-    showConfirmationModal,
-    renderAll
-} from '../index.js'; // Corregido (apunta a js/ui/index.js)
+// --- INICIO DE CORRECCIÓN POR DEPENDENCIA CIRCULAR ---
+import { elements } from '../elements.js';
+import { switchPage, renderAll } from '../../ui.js';
+import { populateNextInvoiceNumber } from '../controls.js';
+import { showInvoiceViewer, showReceiptViewer } from '../viewers.js';
+import { hidePaymentDetailsModal, showPaymentDetailsModal, showAlertModal, showConfirmationModal } from '../modals.js';
+// --- FIN DE CORRECCIÓN ---
 import { getState } from '../../store.js';
 import { escapeHTML } from '../../utils.js';
 import { withSpinner } from '../../handlers/helpers.js';
@@ -348,3 +343,4 @@ export function bindDocumentEvents() {
     if (elements.paymentDetailsForm) elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
     if (elements.paymentDetailsCancelBtn) elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
 }
+
