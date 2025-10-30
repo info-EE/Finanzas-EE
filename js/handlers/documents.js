@@ -2,22 +2,24 @@ import * as actions from '../actions.js';
 import {
     elements,
     switchPage,
-    // --- CORRECCIÓN ---
-    // Esta importación debe venir de 'controls.js', no del índice
-    // populateNextInvoiceNumber,
-    // --- FIN CORRECCIÓN ---
+    renderAll
+} from '../ui.js'; // Funciones principales de UI
+import {
+    populateNextInvoiceNumber
+} from '../ui/controls.js'; // Funciones de controles
+import {
     showInvoiceViewer,
+    hideInvoiceViewer,
+    printInvoice,
+    downloadInvoiceAsPDF,
+    showReceiptViewer
+} from '../ui/viewers.js'; // Funciones de visualizadores
+import {
     hidePaymentDetailsModal,
     showPaymentDetailsModal,
-    showReceiptViewer,
     showAlertModal,
-    showConfirmationModal,
-    renderAll
-} from '../ui/index.js';
-// --- CORRECCIÓN ---
-// Importar 'populateNextInvoiceNumber' desde su archivo correcto
-import { populateNextInvoiceNumber } from '../ui/controls.js';
-// --- FIN CORRECCIÓN ---
+    showConfirmationModal
+} from '../ui/modals.js'; // Funciones de modales
 import { getState } from '../store.js';
 import { escapeHTML } from '../utils.js';
 import { withSpinner } from './helpers.js';
@@ -68,18 +70,14 @@ function handleDocumentsTableClick(e) {
         withSpinner(() => actions.toggleDocumentStatus(statusBtn.dataset.id), 150)();
     }
     if (deleteBtn) {
-        // --- INICIO DE CORRECCIÓN ---
-        // Se añade async/await para asegurar que withSpinner complete su ejecución
-        // antes de que el modal intente hacer algo más.
+        const id = deleteBtn.dataset.id;
         showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento?', async () => {
-            await withSpinner(async () => {
-                actions.deleteDocument(deleteBtn.dataset.id);
-            })();
+            await withSpinner(() => actions.deleteDocument(id))();
         });
-        // --- FIN DE CORRECCIÓN ---
     }
     if (viewBtn) {
-        showInvoiceViewer(viewBtn.dataset.id);
+        // --- CORRECCIÓN: Usar getState() para pasar el estado al visualizador ---
+        showInvoiceViewer(viewBtn.dataset.id, getState());
     }
     if (receiptBtn) {
         showPaymentDetailsModal(receiptBtn.dataset.id);
@@ -229,6 +227,21 @@ function handleAeatConfigSave(e) {
     })();
 }
 
+// --- MANEJADORES DE MODAL AÑADIDOS ---
+function handlePrintInvoice() {
+    printInvoice();
+}
+
+function handleDownloadPDF() {
+    downloadInvoiceAsPDF();
+}
+
+function handleCloseInvoiceViewer() {
+    hideInvoiceViewer();
+}
+// --- FIN DE MANEJADORES AÑADIDOS ---
+
+
 // --- Invoice Item Calculation ---
 function updateInvoiceTotals() {
     const itemsContainer = elements.facturaItemsContainer;
@@ -373,5 +386,11 @@ export function bindDocumentEvents() {
     // Modal de Detalles de Pago
     if (elements.paymentDetailsForm) elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
     if (elements.paymentDetailsCancelBtn) elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
+
+    // --- LISTENERS DE MODAL AÑADIDOS ---
+    if (elements.closeInvoiceViewerBtn) elements.closeInvoiceViewerBtn.addEventListener('click', handleCloseInvoiceViewer);
+    if (elements.printInvoiceBtn) elements.printInvoiceBtn.addEventListener('click', handlePrintInvoice);
+    if (elements.pdfInvoiceBtn) elements.pdfInvoiceBtn.addEventListener('click', handleDownloadPDF);
+    // --- FIN DE LISTENERS AÑADIDOS ---
 }
 
