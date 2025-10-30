@@ -11,6 +11,9 @@ export const elements = {
     sidebarCloseBtn: document.getElementById('sidebar-close-btn'),
     sidebarToggleDesktopBtn: document.getElementById('sidebar-toggle-desktop'),
 
+    // --- AÑADIDO PARA SALUDO ---
+    dashboardTitle: document.getElementById('dashboard-title'),
+
     // Formularios de autenticación
     loginView: document.getElementById('login-view'),
     registerView: document.getElementById('register-view'),

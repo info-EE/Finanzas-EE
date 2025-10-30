@@ -41,3 +41,26 @@ export function getCurrencySymbol(currency) {
             return currency;
     }
 }
+
+// --- AÑADIDO: Nueva función para obtener nombre desde email ---
+/**
+ * Extrae el primer nombre de un email y lo capitaliza.
+ * @param {string} email - El email del usuario.
+ * @returns {string} El nombre capitalizado.
+ */
+export function capitalizeNameFromEmail(email) {
+    if (!email) return 'Usuario';
+    try {
+        // 1. Obtener la parte antes del @
+        const namePart = email.split('@')[0];
+        // 2. Tomar solo la primera parte si hay un punto o guion
+        const firstName = namePart.split(/[._-]/)[0];
+        if (!firstName) return 'Usuario';
+        // 3. Capitalizar
+        return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+    } catch (e) {
+        console.error("Error formatting email:", e);
+        return 'Usuario';
+    }
+}
+// --- FIN DE AÑADIDO ---

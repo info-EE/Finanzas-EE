@@ -2,7 +2,8 @@
  * Dashboard renderers (KPIs, charts aggregation, recent transactions)
  */
 import { elements } from '../elements.js';
-import { escapeHTML, formatCurrency, getCurrencySymbol } from '../../utils.js';
+// --- MODIFICADO: Importada la nueva función 'capitalizeNameFromEmail' ---
+import { escapeHTML, formatCurrency, getCurrencySymbol, capitalizeNameFromEmail } from '../../utils.js';
 import { getState } from '../../store.js';
 import { CHART_COLORS } from '../../config.js';
 // Importar los charts para poder destruirlos y crearlos
@@ -347,6 +348,16 @@ export function renderPendingInvoices() {
 
 // Recibe 'charts' para pasarlo a las funciones de gráficos
 export function renderInicioDashboard() {
+    // --- INICIO DE CÓDIGO AÑADIDO ---
+    const { currentUser } = getState();
+    if (elements.dashboardTitle && currentUser && currentUser.email) {
+        const userName = capitalizeNameFromEmail(currentUser.email);
+        elements.dashboardTitle.textContent = `Bienvenido, ${escapeHTML(userName)}`;
+        // Quitamos la clase 'uppercase' para que el nombre capitalizado se vea bien
+        elements.dashboardTitle.classList.remove('uppercase');
+    }
+    // --- FIN DE CÓDIGO AÑADIDO ---
+
     updateInicioKPIs(); // Usa getState()
     renderAnnualFlowChart();
     renderExpenseDistributionChart();
@@ -354,4 +365,3 @@ export function renderInicioDashboard() {
     renderPendingInvoices(); // Usa getState()
     renderRecentTransactions(); // Usa getState()
 }
-
