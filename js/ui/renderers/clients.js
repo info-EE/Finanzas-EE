@@ -3,6 +3,9 @@
  */
 import { elements } from '../elements.js';
 import { escapeHTML } from '../../utils.js';
+import { getState } from '../../store.js';
+import { charts } from '../charts.js'; // Importar charts
+import { CHART_COLORS } from '../../config.js'; // Importar CHART_COLORS
 
 function createClientRow(client, state) {
     const { permissions } = state;
@@ -26,7 +29,8 @@ function createClientRow(client, state) {
         </tr>`;
 }
 
-export function renderClients(state) {
+export function renderClients() {
+    const state = getState(); // Obtener estado
     const { clients, permissions } = state;
     const tbody = elements.clientsTableBody;
     if (!tbody || !permissions) return;
@@ -41,18 +45,18 @@ export function renderClients(state) {
         return;
     }
 
-    tbody.innerHTML = clients.map(c => createClientRow(c, state)).join('');
+    tbody.innerHTML = clients.map(c => createClientRow(c, state)).join(''); // Pasar estado
 }
 
-export function renderClientsChart(state) {
+export function renderClientsChart() {
+    const state = getState(); // Obtener estado
     const { documents } = state;
     const ctx = document.getElementById('clientsChart')?.getContext('2d');
     if (!ctx || !documents) return;
 
-    // destruir gráfico previo si existe
-    if (window.charts && window.charts.clientsChart) {
-        try { window.charts.clientsChart.destroy(); } catch (e) { /* ignore */ }
-        window.charts.clientsChart = null;
+    if (charts.clientsChart) {
+        try { charts.clientsChart.destroy(); } catch (e) { /* ignore */ }
+        charts.clientsChart = null;
     }
 
     const currencySelect = document.getElementById('clients-chart-currency');
@@ -81,15 +85,14 @@ export function renderClientsChart(state) {
         return;
     }
 
-    window.charts = window.charts || {};
-    window.charts.clientsChart = new Chart(ctx, {
+    charts.clientsChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
                 label: 'Total Facturado',
                 data: data,
-                backgroundColor: window.CHART_COLORS || [],
+                backgroundColor: CHART_COLORS || [],
                 borderColor: '#1e3a8a',
                 borderWidth: 1
             }]

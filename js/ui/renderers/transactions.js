@@ -8,7 +8,9 @@ import { getState } from '../../store.js';
 
 /** Helper that returns a row HTML for a transaction (pure function) */
 export function createTransactionRow(t, state) {
-    const { permissions, accounts } = state || getState();
+    // Usar el estado_pasado o el estado_global
+    const { permissions, accounts } = state.permissions ? state : getState();
+    
     // Asegurarse de que accounts es un array antes de usar find
     if (!Array.isArray(accounts) || accounts.length === 0) {
         console.warn(`createTransactionRow: No se encontraron cuentas válidas para la transacción ${t.id}`);
@@ -58,9 +60,11 @@ export function createTransactionRow(t, state) {
 }
 
 /** Render the transactions table */
-export function renderTransactions(state) {
-    const { transactions, accounts } = state || getState();
+export function renderTransactions() {
+    const state = getState(); // Obtener estado
+    const { transactions, accounts } = state;
     const tbody = elements.transactionsTableBody;
+    
     // Asegurarse de que accounts es un array
     if (!tbody || !transactions || !Array.isArray(accounts) || accounts.length === 0) {
         console.warn("renderTransactions: Faltan datos (tbody, transactions o accounts válidos)");
@@ -97,11 +101,3 @@ export function renderTransactions(state) {
         tbody.innerHTML = rowsHtmlArray.join('');
     }
 }
-
-// ---- ELIMINAR ESTA SECCIÓN DUPLICADA ----
-// /** Helper that returns a row HTML for a transaction (pure function) */
-// export function createTransactionRow(t, accounts = []) {
-//     // TODO: move implementation from ui.js
-//     return `<!-- transaction row for ${escapeHTML(t.id || 'unknown')} -->`;
-// }
-// ---- FIN DE SECCIÓN DUPLICADA ----

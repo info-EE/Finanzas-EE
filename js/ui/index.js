@@ -6,8 +6,9 @@
 export { elements } from './elements.js';
 
 // Reexportar el API estable que aún permanece en js/ui.js
+// Estas son las funciones clave que main.js y handlers.js necesitan
 export * from '../ui.js';
-// ---- NUEVO: Exportar explícitamente renderAll ----
+// ---- NUEVO: Exportar explícitamente renderAll (por si acaso) ----
 export { renderAll } from '../ui.js';
 // ---- FIN NUEVO ----
 
@@ -17,10 +18,9 @@ export { renderAll } from '../ui.js';
 export * from './modals.js';
 export * from './viewers.js';
 export * from './charts.js';
-export * from './controls.js'; // (de Fase 1)
-export * from './helpers.js'; // (NUEVO de Fase 3)
 
-// NOTA: A medida que muevas más funciones de 'ui.js' a módulos específicos
-// (como renderers, controls), deberás exportarlas explícitamente aquí
-// o desde sus propios módulos si se importan directamente.
+// --- AÑADIDO FASE 1 ---
+export * from './controls.js';
+// --- AÑADIDO FASE 3 ---
+export * from './helpers.js';
 

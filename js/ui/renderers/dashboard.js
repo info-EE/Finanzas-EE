@@ -5,6 +5,8 @@ import { elements } from '../elements.js';
 import { escapeHTML, formatCurrency, getCurrencySymbol } from '../../utils.js';
 import { getState } from '../../store.js';
 import { CHART_COLORS } from '../../config.js';
+// Importar los charts para poder destruirlos y crearlos
+import { charts } from '../charts.js';
 
 /**
  * Calcula los ingresos y egresos totales para un mes/año/moneda específicos.
@@ -16,7 +18,7 @@ import { CHART_COLORS } from '../../config.js';
  * @returns {object} - Un objeto { income: number, expense: number }.
  */
 function calculateMonthlyTotals(transactions, accounts, currency, month, year) {
-    console.log(`[calculateMonthlyTotals] Iniciando cálculo para Mes=${month}, Año=${year}, Moneda=${currency}`);
+    // console.log(`[calculateMonthlyTotals] Iniciando cálculo para Mes=${month}, Año=${year}, Moneda=${currency}`);
     let monthlyIncome = 0;
     let monthlyExpense = 0;
 
@@ -27,30 +29,21 @@ function calculateMonthlyTotals(transactions, accounts, currency, month, year) {
 
     transactions
         .filter(t => {
-            // Log de evaluación inicial dentro del filtro aislado
-            // console.log(`[Calc Filter Eval] Tx ID: ${t.id || 'N/A'}, Fecha Str: ${t.date}, Acc ID: ${t.accountId}`);
-
             if (!t.date || typeof t.date !== 'string') return false;
-            const tDate = new Date(t.date + 'T00:00:00'); // Interpretar fecha como LOCAL
+            // *** SOLUCIÓN PROBLEMA 1 (ZONA HORARIA) ***
+            const tDate = new Date(t.date + 'T00:00:00'); // Interpretar como local
             if (isNaN(tDate.getTime())) return false;
 
             const account = accounts.find(acc => acc.id === t.accountId);
             if (!account) return false;
 
             const isCorrectCurrency = account.currency === currency;
-            const transactionMonth = tDate.getMonth();
-            const transactionYear = tDate.getFullYear();
+            const transactionMonth = tDate.getMonth(); // Mes local
+            const transactionYear = tDate.getFullYear(); // Año local
             const isCorrectMonth = transactionMonth === month; // Comparar con el mes pasado como argumento
             const isCorrectYear = transactionYear === year;   // Comparar con el año pasado como argumento
 
-            const shouldInclude = isCorrectCurrency && isCorrectMonth && isCorrectYear;
-
-             // Log del resultado si es necesario depurar más
-             // if (t.date === '2025-10-09' || t.date === '2025-10-23'){ // Ajustar si es necesario
-             //     console.log(`[Calc Filter Result] Tx ID: ${t.id || 'N/A'} -> Include? ${shouldInclude} (Curr: ${isCorrectCurrency}, Month: ${isCorrectMonth}, Year: ${isCorrectYear})`);
-             // }
-
-            return shouldInclude;
+            return isCorrectCurrency && isCorrectMonth && isCorrectYear;
         })
         .forEach(t => {
             // Asegurarse que amount es un número antes de sumar
@@ -63,7 +56,7 @@ function calculateMonthlyTotals(transactions, accounts, currency, month, year) {
             }
         });
 
-    console.log(`[calculateMonthlyTotals] Cálculo finalizado: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}`);
+    // console.log(`[calculateMonthlyTotals] Cálculo finalizado: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}`);
     return { income: monthlyIncome, expense: monthlyExpense };
 }
 
@@ -82,32 +75,43 @@ export function updateInicioKPIs() {
         console.error("[updateInicioKPIs] Error crítico: Faltan elementos KPI o selector de moneda en el DOM.");
         return;
     }
+    
+    // Añadir chequeos más robustos
+    if(!transactions || !accounts || accounts.length === 0) {
+        console.warn("updateInicioKPIs: Faltan datos (transactions o accounts)");
+        // Poner KPIs a 0
+        const currency = currencySelect.value;
+        kpiIncomeEl.textContent = formatCurrency(0, currency);
+        kpiExpenseEl.textContent = formatCurrency(0, currency);
+        kpiProfitEl.textContent = formatCurrency(0, currency);
+        kpiTotalBalanceEl.textContent = formatCurrency(0, currency);
+        kpiProfitEl.classList.remove('text-red-400');
+        kpiProfitEl.classList.add('text-green-400'); // Default to green if 0
+        return;
+    }
 
     const currency = currencySelect.value;
     let monthlyProfit = 0;
     let totalBalance = 0;
 
     // Calcular Saldo Total (siempre que haya cuentas)
-    if (accounts && Array.isArray(accounts) && accounts.length > 0) {
-        totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
-    }
+    totalBalance = accounts.filter(a => a.currency === currency).reduce((sum, a) => sum + a.balance, 0);
 
     // Calcular Ingresos/Egresos usando la función aislada
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    console.log('[updateInicioKPIs] Llamando a calculateMonthlyTotals...');
-    // Pasar todos los datos necesarios a la función aislada
+    // console.log('[updateInicioKPIs] Llamando a calculateMonthlyTotals...');
     const totals = calculateMonthlyTotals(transactions, accounts, currency, currentMonth, currentYear);
-    console.log('[updateInicioKPIs] Resultado de calculateMonthlyTotals:', totals);
+    // console.log('[updateInicioKPIs] Resultado de calculateMonthlyTotals:', totals);
 
     const monthlyIncome = totals.income;
     const monthlyExpense = totals.expense;
     monthlyProfit = monthlyIncome - monthlyExpense;
 
     // Actualizar DOM
-    console.log(`[updateInicioKPIs] Actualizando DOM con: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}, Beneficio=${monthlyProfit}, Saldo=${totalBalance}`);
+    // console.log(`[updateInicioKPIs] Actualizando DOM con: Ingresos=${monthlyIncome}, Egresos=${monthlyExpense}, Beneficio=${monthlyProfit}, Saldo=${totalBalance}`);
     kpiIncomeEl.textContent = formatCurrency(monthlyIncome, currency);
     kpiExpenseEl.textContent = formatCurrency(monthlyExpense, currency);
     kpiProfitEl.textContent = formatCurrency(monthlyProfit, currency);
@@ -117,10 +121,7 @@ export function updateInicioKPIs() {
 }
 
 
-// --- El resto de funciones (renderAnnualFlowChart, etc.) se mantienen igual ---
-// --- Asegúrate de que también usan la interpretación LOCAL de fechas ---
-
-export function renderAnnualFlowChart(state, charts) {
+export function renderAnnualFlowChart() {
     const currentState = getState();
     const { transactions, accounts } = currentState;
     const annualCtx = document.getElementById('annualFlowChart')?.getContext('2d');
@@ -172,19 +173,15 @@ export function renderAnnualFlowChart(state, charts) {
     const incomeGradient = annualCtx.createLinearGradient(0,0,0,320); incomeGradient.addColorStop(0,'rgba(59,130,246,0.5)'); incomeGradient.addColorStop(1,'rgba(59,130,246,0)');
     const expenseGradient = annualCtx.createLinearGradient(0,0,0,320); expenseGradient.addColorStop(0,'rgba(239,68,68,0.5)'); expenseGradient.addColorStop(1,'rgba(239,68,68,0)');
 
-    if(charts) {
-        charts.annualFlowChart = new Chart(annualCtx, {
-            type: 'line',
-            data: { labels: months, datasets: [ { label: `Ingresos (${getCurrencySymbol(selectedCurrency)})`, data: incomeData, borderColor: 'rgba(59,130,246,1)', backgroundColor: incomeGradient, fill:true, tension:0.4 }, { label: `Egresos (${getCurrencySymbol(selectedCurrency)})`, data: expenseData, borderColor: 'rgba(239,68,68,1)', backgroundColor: expenseGradient, fill:true, tension:0.4 } ] },
-            options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } } }
-        });
-    } else {
-        console.error("[renderAnnualFlowChart] El objeto 'charts' no fue pasado correctamente.");
-    }
+    charts.annualFlowChart = new Chart(annualCtx, {
+        type: 'line',
+        data: { labels: months, datasets: [ { label: `Ingresos (${getCurrencySymbol(selectedCurrency)})`, data: incomeData, borderColor: 'rgba(59,130,246,1)', backgroundColor: incomeGradient, fill:true, tension:0.4 }, { label: `Egresos (${getCurrencySymbol(selectedCurrency)})`, data: expenseData, borderColor: 'rgba(239,68,68,1)', backgroundColor: expenseGradient, fill:true, tension:0.4 } ] },
+        options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } } }
+    });
 }
 
 
-export function renderExpenseDistributionChart(state, charts) {
+export function renderExpenseDistributionChart() {
     const currentState = getState();
     const { transactions, accounts } = currentState;
     const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
@@ -238,15 +235,11 @@ export function renderExpenseDistributionChart(state, charts) {
 
     const chartColors = typeof CHART_COLORS !== 'undefined' ? CHART_COLORS : ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
 
-    if (charts) {
-        charts.expenseDistributionChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: { labels: labels, datasets: [{ data: data, backgroundColor: chartColors, borderColor: '#0a0a0a', borderWidth:5, borderRadius:10 }] },
-            options: { responsive:true, maintainAspectRatio:false, cutout: '70%', plugins:{ legend:{ position:'bottom', labels:{ color:'#e0e0e0', boxWidth:12, padding:15 } } } }
-        });
-    } else {
-         console.error("[renderExpenseDistributionChart] El objeto 'charts' no fue pasado correctamente.");
-    }
+    charts.expenseDistributionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: chartColors, borderColor: '#0a0a0a', borderWidth:5, borderRadius:10 }] },
+        options: { responsive:true, maintainAspectRatio:false, cutout: '70%', plugins:{ legend:{ position:'bottom', labels:{ color:'#e0e0e0', boxWidth:12, padding:15 } } } }
+    });
 }
 
 
@@ -284,6 +277,29 @@ export function renderRecentTransactions() {
     container.innerHTML = `<table class="w-full text-left"><tbody>${rowsHtmlArray.join('')}</tbody></table>`;
 }
 
+export function renderMainBalances() {
+    const { accounts } = getState();
+    const container = document.getElementById('main-balances-container');
+    if (!container || !accounts) return;
+
+    const sortedAccounts = [...accounts].sort((a, b) => b.balance - a.balance).slice(0, 4);
+
+    if (sortedAccounts.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-500">No hay cuentas configuradas.</p>`;
+        return;
+    }
+
+    container.innerHTML = sortedAccounts.map(acc => `
+        <div class="flex justify-between items-center text-sm">
+            <div class="flex items-center gap-3">
+                ${acc.logoHtml || '<i data-lucide="wallet"></i>'}
+                <span>${escapeHTML(acc.name)}</span>
+            </div>
+            <span class="font-semibold">${formatCurrency(acc.balance, acc.currency)}</span>
+        </div>
+    `).join('');
+}
+
 
 export function renderPendingInvoices() {
     const currentState = getState();
@@ -314,12 +330,11 @@ export function renderPendingInvoices() {
 }
 
 // Recibe 'charts' para pasarlo a las funciones de gráficos
-export function renderInicioDashboard(state, charts) {
+export function renderInicioDashboard() {
     updateInicioKPIs(); // Usa getState()
-    // Pasar 'charts' a las funciones que renderizan gráficos
-    renderAnnualFlowChart(state, charts);
-    renderExpenseDistributionChart(state, charts);
+    renderAnnualFlowChart();
+    renderExpenseDistributionChart();
+    renderMainBalances(); // Usa getState()
     renderPendingInvoices(); // Usa getState()
     renderRecentTransactions(); // Usa getState()
 }
-

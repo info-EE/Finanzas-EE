@@ -3,7 +3,8 @@
  */
 import { elements } from '../elements.js';
 import { formatCurrency, escapeHTML } from '../../utils.js';
-import { renderSingleCurrencyChart } from '../charts.js';
+import { renderSingleCurrencyChart, charts } from '../charts.js'; // Importar charts
+import { getState } from '../../store.js'; // Importar getState
 
 function createAccountCard(account) {
     return `
@@ -19,41 +20,32 @@ function createAccountCard(account) {
         </div>`;
 }
 
-export function renderAccountsTab(state) {
-    const { accounts } = state;
+export function renderAccountsTab() {
+    const { accounts } = getState(); // Usar getState
     const accountsGrid = document.getElementById('accounts-grid');
     if (!accountsGrid) return;
+    
+    // Asegurarse de que accounts existe
+    if (!accounts || accounts.length === 0) {
+        accountsGrid.innerHTML = '<p class="text-gray-500 col-span-1 sm:col-span-2 lg:col-span-3 text-center">No hay cuentas configuradas.</p>';
+        return;
+    }
+    
     accountsGrid.innerHTML = accounts.map(createAccountCard).join('');
 }
 
-export function renderMainBalances(state) {
-    const { accounts } = state;
-    const container = document.getElementById('main-balances-container');
-    if (!container || !accounts) return;
+// --- renderMainBalances FUE ELIMINADO DE AQUÍ ---
+// --- Está correctamente en dashboard.js ---
 
-    const sortedAccounts = [...accounts].sort((a, b) => b.balance - a.balance).slice(0, 4);
-
-    if (sortedAccounts.length === 0) {
-        container.innerHTML = `<p class="text-center text-gray-500">No hay cuentas configuradas.</p>`;
-        return;
-    }
-
-    container.innerHTML = sortedAccounts.map(acc => `
-        <div class="flex justify-between items-center text-sm">
-            <div class="flex items-center gap-3">
-                ${acc.logoHtml || '<i data-lucide="wallet"></i>'}
-                <span>${escapeHTML(acc.name)}</span>
-            </div>
-            <span class="font-semibold">${formatCurrency(acc.balance, acc.currency)}</span>
-        </div>
-    `).join('');
-}
-
-export function renderBalanceLegendAndChart(state) {
-    const { accounts } = state;
+export function renderBalanceLegendAndChart() {
+    const { accounts } = getState(); // Usar getState
     const totalsContainer = document.getElementById('balance-totals');
+    
     if (!totalsContainer || !accounts || accounts.length === 0) {
         if (totalsContainer) totalsContainer.innerHTML = '';
+        // Destruir gráficos si existen
+        if (charts.accountsBalanceChartEUR) { charts.accountsBalanceChartEUR.destroy(); charts.accountsBalanceChartEUR = null; }
+        if (charts.accountsBalanceChartUSD) { charts.accountsBalanceChartUSD.destroy(); charts.accountsBalanceChartUSD = null; }
         document.getElementById('eur-chart-container')?.classList.add('hidden');
         document.getElementById('usd-chart-container')?.classList.add('hidden');
         return;

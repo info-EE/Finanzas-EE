@@ -13,14 +13,14 @@ export function createDocumentRow(doc, type, state) {
     const statusClass = doc.status === 'Cobrada' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300';
     let actionsHtml = '';
 
-    if (type === 'Factura') {
+    if (type === 'Factura' && safePermissions.view_documents) { // Añadido chequeo de permiso
         actionsHtml += `
         <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${doc.id}" title="Ver Factura">
             <i data-lucide="eye" class="w-4 h-4"></i>
         </button>`;
     }
 
-    if (type === 'Factura' && doc.status === 'Cobrada') {
+    if (type === 'Factura' && doc.status === 'Cobrada' && safePermissions.manage_invoices) { // Añadido chequeo de permiso
         actionsHtml += `
         <button class="generate-receipt-btn p-2 text-green-400 hover:text-green-300" data-id="${doc.id}" title="Generar Recibo">
             <i data-lucide="receipt" class="w-4 h-4"></i>
@@ -54,9 +54,11 @@ export function createDocumentRow(doc, type, state) {
         </tr>`;
 }
 
-export function renderDocuments(type, tableBody, searchInputId, state) {
-    const { documents, permissions } = state || getState();
+export function renderDocuments(type, tableBody, searchInputId) {
+    const state = getState(); // Obtener el estado completo
+    const { documents, permissions } = state;
     const searchInput = document.getElementById(searchInputId);
+    
     // Asegurarse de que permissions existe
     if (!tableBody || !searchInput || !permissions) {
          console.warn(`renderDocuments (${type}): Faltan elementos (tableBody=${!!tableBody}, searchInput=${!!searchInput}, permissions=${!!permissions})`);
@@ -80,7 +82,7 @@ export function renderDocuments(type, tableBody, searchInputId, state) {
     if (type === 'Factura' && createInvoiceTab) {
         createInvoiceTab.classList.toggle('hidden', !permissions.manage_invoices);
         // Si no tiene permiso y la pestaña activa es 'crear', cambiar a 'listado'
-        if (!permissions.manage_invoices && createInvoiceTab.classList.contains('active')) {
+        if (!permissions.manage_invoices && document.getElementById('facturacion-tab-crear')?.classList.contains('active')) {
              const listadoTab = document.getElementById('facturacion-tab-listado');
              if (listadoTab) listadoTab.click(); // Simular clic para cambiar de pestaña
         }
@@ -100,7 +102,8 @@ export function renderDocuments(type, tableBody, searchInputId, state) {
     // Renderizar tabla
     tableBody.innerHTML = '';
     if (displayDocs.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">No hay ${type.toLowerCase()}s que coincidan.</td></tr>`;
+        const message = searchTerm ? `No hay ${type.toLowerCase()}s que coincidan.` : `No hay ${type.toLowerCase()}s registradas.`;
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">${message}</td></tr>`;
     } else {
         // Ordenar y mapear, pasando el estado completo
         const rowsHtml = displayDocs
@@ -110,19 +113,3 @@ export function renderDocuments(type, tableBody, searchInputId, state) {
         tableBody.innerHTML = rowsHtml;
     }
 }
-
-
-// ---- ELIMINAR ESTA SECCIÓN DUPLICADA ----
-// export function renderDocuments(type, tableBody, searchInputId, state) {
-//     // TODO: move implementation from ui.js
-// }
-
-// export function renderFacturas(state) {
-//     // TODO: move implementation from ui.js
-// }
-
-// export function createDocumentRow(doc, type, permissions = {}) {
-//     // TODO
-//     return `<!-- document row ${escapeHTML(doc.id || '')} -->`;
-// }
-// ---- FIN DE SECCIÓN DUPLICADA ----

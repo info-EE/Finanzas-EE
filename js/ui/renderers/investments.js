@@ -3,9 +3,12 @@
  */
 import { elements } from '../elements.js';
 import { escapeHTML, formatCurrency } from '../../utils.js';
+import { getState } from '../../store.js'; // Importar getState
 
 export function createInvestmentRow(t, allAssets = [], state = {}) {
-    const { permissions, accounts } = state;
+    // Usar el estado_pasado o el estado_global
+    const { permissions, accounts } = state.permissions ? state : getState();
+    
     if (!permissions || !accounts || accounts.length === 0 || !allAssets) {
         console.warn(`createInvestmentRow: Faltan datos (permisos, cuentas o activos) para transacción ${t.id}`);
         return `
@@ -39,9 +42,11 @@ export function createInvestmentRow(t, allAssets = [], state = {}) {
         </tr>`;
 }
 
-export function renderInvestments(state) {
+export function renderInvestments() {
+    const state = getState(); // Obtener estado
     const { transactions, investmentAssets, permissions, accounts } = state;
     const tbody = elements.investmentsTableBody;
+    
     if (!tbody || !permissions || !accounts || accounts.length === 0 || !investmentAssets || !transactions) {
          console.warn("renderInvestments: Faltan datos.");
          if(tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Cargando datos o no hay cuentas/activos...</td></tr>`;
@@ -79,14 +84,15 @@ export function renderInvestments(state) {
     } else {
         const rowsHtmlArray = investmentsData
                        .sort((a, b) => new Date(b.date) - new Date(a.date))
-                       .map(t => createInvestmentRow(t, investmentAssets, state))
+                       // Pasar 'investmentAssets' y 'state' a la función creadora
+                       .map(t => createInvestmentRow(t, investmentAssets, state)) 
                        .filter(row => row !== '');
         tbody.innerHTML = rowsHtmlArray.join('');
     }
 }
 
-export function renderInvestmentAssetsList(state) {
-    const { investmentAssets } = state;
+export function renderInvestmentAssetsList() {
+    const { investmentAssets } = getState(); // Obtener estado
     const listEl = elements.investmentAssetsList;
     if (!listEl) return;
     listEl.innerHTML = '';
@@ -108,4 +114,3 @@ export function renderInvestmentAssetsList(state) {
         listEl.appendChild(div);
     });
 }
-    // TODO
