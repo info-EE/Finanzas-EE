@@ -6,6 +6,43 @@ import { elements } from './elements.js';
 import { getState } from '../store.js';
 import { escapeHTML, getCurrencySymbol } from '../utils.js';
 
+// --- INICIO DE FUNCIÓN MOVIDA DESDE UI.JS ---
+/**
+ * Rellena el campo de número de factura con el siguiente número disponible.
+ * Lógica: YYYY-NNNN. Se reinicia cada año.
+ */
+export function populateNextInvoiceNumber() {
+    const { settings } = getState();
+    const dateInput = document.getElementById('factura-fecha');
+    const numberInput = document.getElementById('factura-numero');
+    
+    if (!dateInput || !numberInput || !settings || !settings.invoiceCounter) {
+        console.warn("No se puede popular el número de factura, falta config o elementos.");
+        if(numberInput) numberInput.value = `${new Date().getFullYear()}-0001`; // Fallback
+        return;
+    }
+
+    const docDate = new Date(dateInput.value + 'T00:00:00Z'); // Usar UTC
+    if (isNaN(docDate.getTime())) {
+         if(numberInput) numberInput.value = `${new Date().getFullYear()}-ERROR`; // Fallback
+        return;
+    }
+    
+    const currentYear = docDate.getUTCFullYear();
+    const { nextInvoiceNumber, lastInvoiceYear } = settings.invoiceCounter;
+
+    let numberToUse;
+    if (currentYear > lastInvoiceYear) {
+        numberToUse = 1; // Reiniciar contador
+    } else {
+        numberToUse = nextInvoiceNumber || 1; // Usar el siguiente
+    }
+
+    numberInput.value = `${currentYear}-${String(numberToUse).padStart(4, '0')}`;
+}
+// --- FIN DE FUNCIÓN MOVIDA ---
+
+
 // --- Funciones de Control (Migradas de ui.js) ---
 
 function toggleIvaField() {
@@ -206,5 +243,6 @@ export {
     updateTransferFormUI,
     resetTransactionForm,
     toggleIvaField
+    // populateNextInvoiceNumber NO ES NECESARIO AQUÍ porque ya se exportó con "export function"
 };
 

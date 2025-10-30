@@ -1,8 +1,9 @@
 import * as actions from '../actions.js';
+// --- INICIO DE CORRECCIÓN POR DEPENDENCIA CIRCULAR ---
 import {
     elements,
     switchPage,
-    populateNextInvoiceNumber,
+    // populateNextInvoiceNumber, // <-- Eliminado de aquí
     showInvoiceViewer,
     hidePaymentDetailsModal,
     showPaymentDetailsModal,
@@ -11,6 +12,9 @@ import {
     showConfirmationModal,
     renderAll
 } from '../ui/index.js';
+// AÑADIR IMPORTACIÓN DIRECTA DE CONTROLS.JS
+import { populateNextInvoiceNumber } from '../ui/controls.js';
+// --- FIN DE CORRECCIÓN ---
 import { getState } from '../store.js';
 import { escapeHTML } from '../utils.js';
 import { withSpinner } from './helpers.js';
@@ -361,3 +365,4 @@ export function bindDocumentEvents() {
     if (elements.paymentDetailsForm) elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
     if (elements.paymentDetailsCancelBtn) elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
 }
+
