@@ -1,346 +1,159 @@
-import * as actions from '../../actions.js';
-// --- INICIO DE CORRECCIÓN POR DEPENDENCIA CIRCULAR ---
+/**
+ * Renderers for Documents (Proformas, Facturas)
+ * Este archivo se encarga de "dibujar" las tablas de documentos.
+ */
 import { elements } from '../elements.js';
-import { switchPage, renderAll } from '../../ui.js';
-import { populateNextInvoiceNumber } from '../controls.js';
-import { showInvoiceViewer, showReceiptViewer } from '../viewers.js';
-import { hidePaymentDetailsModal, showPaymentDetailsModal, showAlertModal, showConfirmationModal } from '../modals.js';
-// --- FIN DE CORRECCIÓN ---
 import { getState } from '../../store.js';
-import { escapeHTML } from '../../utils.js';
-import { withSpinner } from '../../handlers/helpers.js';
-
-// --- Funciones Manejadoras (Handlers) ---
-
-function handleDocumentSubmit(e, type) {
-    e.preventDefault();
-    const form = e.target;
-    const amount = parseFloat(form.querySelector(`#${type.toLowerCase()}-amount`).value);
-    const number = form.querySelector(`#${type.toLowerCase()}-number`).value.trim();
-
-    if (!number) {
-        showAlertModal('Campo Requerido', `El número de ${type.toLowerCase()} no puede estar vacío.`);
-        return;
-    }
-    if (isNaN(amount) || amount <= 0) {
-        showAlertModal('Valor Inválido', 'El monto debe ser un número positivo.');
-        return;
-    }
-
-    const docData = {
-        type: type,
-        date: form.querySelector(`#${type.toLowerCase()}-date`).value,
-        number: number,
-        client: form.querySelector(`#${type.toLowerCase()}-client`).value,
-        amount: amount,
-        currency: form.querySelector(`#${type.toLowerCase()}-currency`).value,
-        status: 'Adeudada',
-    };
-    withSpinner(() => {
-        actions.addDocument(docData);
-        form.reset();
-        // Set default date again after reset
-        const dateInput = form.querySelector(`#${type.toLowerCase()}-date`);
-        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
-    })();
-}
-
-
-function handleDocumentsTableClick(e) {
-    const statusBtn = e.target.closest('.status-btn');
-    const deleteBtn = e.target.closest('.delete-doc-btn');
-    const viewBtn = e.target.closest('.view-invoice-btn');
-    const receiptBtn = e.target.closest('.generate-receipt-btn');
-
-    if (statusBtn) {
-        withSpinner(() => actions.toggleDocumentStatus(statusBtn.dataset.id), 150)();
-    }
-    if (deleteBtn) {
-        showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento?', withSpinner(() => {
-            actions.deleteDocument(deleteBtn.dataset.id);
-        }));
-    }
-    if (viewBtn) {
-        showInvoiceViewer(viewBtn.dataset.id);
-    }
-    if (receiptBtn) {
-        showPaymentDetailsModal(receiptBtn.dataset.id);
-    }
-}
-
-
-function handleClientSelectionForInvoice(e) {
-    const clientId = e.target.value;
-    const form = elements.nuevaFacturaForm;
-    const nameInput = form.querySelector('#factura-cliente');
-    const nifInput = form.querySelector('#factura-nif');
-    const addressInput = form.querySelector('#factura-cliente-direccion');
-    const phoneInput = form.querySelector('#factura-cliente-telefono');
-
-    if (clientId) {
-        const { clients } = getState();
-        const client = clients.find(c => c.id === clientId);
-        if (client) {
-            nameInput.value = client.name;
-            nifInput.value = client.taxId;
-            addressInput.value = client.address;
-            phoneInput.value = `${client.phoneMobilePrefix} ${client.phoneMobile}`;
-        }
-    } else {
-        [nameInput, nifInput, addressInput, phoneInput].forEach(input => {
-            if (input) input.value = ''; // Check if input exists before setting value
-        });
-    }
-}
-
-function handleGenerateInvoice(e) {
-    e.preventDefault();
-    const form = e.target;
-
-    const items = [];
-    let parsingError = false;
-    form.querySelectorAll('.factura-item').forEach(itemEl => {
-        if (parsingError) return;
-
-        const description = itemEl.querySelector('.item-description').value;
-        const quantityRaw = itemEl.querySelector('.item-quantity').value;
-        const priceRaw = itemEl.querySelector('.item-price').value;
-
-        const quantity = parseFloat(quantityRaw.replace(',', '.'));
-        const price = parseFloat(priceRaw.replace(',', '.'));
-
-        if (description && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0) {
-            items.push({ description, quantity, price });
-        } else if (description || quantityRaw || priceRaw) {
-            showAlertModal('Valor Inválido', `Por favor, revise la línea con descripción "${description}". La cantidad y el precio deben ser números válidos.`);
-            parsingError = true;
-        }
-    });
-
-    if (parsingError) return;
-
-    if (items.length === 0) {
-        showAlertModal('Factura Vacía', 'Debes añadir al menos un concepto válido a la factura.');
-        return;
-    }
-
-    if (!form.querySelector('#factura-cliente').value.trim()) {
-        showAlertModal('Campo Requerido', 'El nombre del cliente es obligatorio.');
-        return;
-    }
-
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    const operationType = form.querySelector('#factura-operation-type').value;
-    const ivaRate = operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
-    const iva = subtotal * ivaRate;
-    const total = subtotal + iva;
-
-    const newInvoice = {
-        type: 'Factura',
-        date: form.querySelector('#factura-fecha').value,
-        number: form.querySelector('#factura-numero').value,
-        client: form.querySelector('#factura-cliente').value,
-        nif: form.querySelector('#factura-nif').value,
-        address: form.querySelector('#factura-cliente-direccion').value,
-        phone: form.querySelector('#factura-cliente-telefono').value,
-        amount: total,
-        currency: form.querySelector('#factura-currency').value,
-        status: 'Adeudada',
-        operationType,
-        items,
-        subtotal,
-        iva,
-        total,
-        ivaRate
-    };
-
-    withSpinner(() => {
-        actions.addDocument(newInvoice);
-
-        form.reset();
-        // Restore default date
-        const dateInput = form.querySelector('#factura-fecha');
-        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
-        elements.facturaItemsContainer.innerHTML = '';
-        // Add one empty item line back
-        const addItemButton = document.getElementById('factura-add-item-btn');
-        if (addItemButton) addItemButton.click();
-        // Update totals display
-        updateInvoiceTotals();
-
-        showAlertModal('Éxito', `La factura Nº ${escapeHTML(newInvoice.number)} ha sido creada.`);
-        switchPage('facturacion', 'listado');
-    })();
-}
-
-
-function handlePaymentDetailsSubmit(e) {
-    e.preventDefault();
-    const form = e.target;
-    const invoiceId = form.querySelector('#payment-details-invoice-id').value;
-
-    const paymentData = {
-        method: form.querySelector('#payment-method').value,
-        date: form.querySelector('#payment-date').value,
-        reference: form.querySelector('#payment-reference').value,
-    };
-
-    withSpinner(async () => { // Marcar como async para usar await
-        const updatedInvoice = await actions.savePaymentDetails(invoiceId, paymentData); // Usar await
-        if (updatedInvoice) {
-            hidePaymentDetailsModal();
-            showReceiptViewer(updatedInvoice);
-        } else {
-            showAlertModal('Error', 'No se pudo encontrar la factura para guardar los detalles del pago.');
-        }
-    })();
-}
-
-// --- handleAeatConfigSave FUE MOVIDO a settings.js ---
-
-
-// --- Invoice Item Calculation ---
-function updateInvoiceTotals() {
-    const itemsContainer = elements.facturaItemsContainer;
-    if (!itemsContainer) return;
-
-    let subtotal = 0;
-    itemsContainer.querySelectorAll('.factura-item').forEach(itemEl => {
-        const quantity = parseFloat(itemEl.querySelector('.item-quantity').value.replace(',', '.')) || 0;
-        const price = parseFloat(itemEl.querySelector('.item-price').value.replace(',', '.')) || 0;
-        subtotal += quantity * price;
-    });
-
-    const operationTypeEl = document.getElementById('factura-operation-type');
-    const operationType = operationTypeEl ? operationTypeEl.value : ''; // Valor por defecto
-    const ivaRate = operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
-    const iva = subtotal * ivaRate;
-    const total = subtotal + iva;
-    const currencyEl = document.getElementById('factura-currency');
-    const currency = currencyEl ? currencyEl.value : 'EUR'; // Valor por defecto
-    const symbol = currency === 'EUR' ? '€' : '$';
-
-    const subtotalEl = document.getElementById('factura-subtotal');
-    if (subtotalEl) subtotalEl.textContent = `${subtotal.toFixed(2)} ${symbol}`;
-    
-    const ivaLabelEl = document.getElementById('factura-iva-label');
-    if (ivaLabelEl) ivaLabelEl.textContent = `IVA (${(ivaRate * 100).toFixed(0)}%):`;
-    
-    const ivaEl = document.getElementById('factura-iva');
-    if (ivaEl) ivaEl.textContent = `${iva.toFixed(2)} ${symbol}`;
-    
-    const totalEl = document.getElementById('factura-total');
-    if (totalEl) totalEl.textContent = `${total.toFixed(2)} ${symbol}`;
-}
-
-
-// --- Función "Binder" ---
+import { escapeHTML, formatCurrency } from '../../utils.js';
 
 /**
- * Asigna los eventos de las secciones Proformas y Facturación.
+ * Crea el HTML para una sola fila de documento (Factura o Proforma).
+ * @param {object} doc - El objeto del documento.
+ * @param {object} state - El estado global (para permisos).
+ * @returns {string} El HTML de la fila.
  */
-export function bindDocumentEvents() {
-    console.log("Binding Document Events...");
+function createDocumentRow(doc, state) {
+    const { permissions } = state;
+    const { id, type, date, number, client, amount, currency, status } = doc;
 
-    // Proformas
-    if (elements.proformaForm) elements.proformaForm.addEventListener('submit', (e) => handleDocumentSubmit(e, 'Proforma'));
+    let statusClass, statusText, statusIcon;
     
-    // Re-bind proformasTableBody para evitar duplicados
-    if (elements.proformasTableBody) {
-        const newTbody = elements.proformasTableBody.cloneNode(false);
-        elements.proformasTableBody.parentNode.replaceChild(newTbody, elements.proformasTableBody);
-        elements.proformasTableBody = newTbody;
-        elements.proformasTableBody.addEventListener('click', handleDocumentsTableClick);
+    if (status === 'Cobrada') {
+        statusClass = 'bg-green-600/20 text-green-300';
+        statusText = 'Cobrada';
+        statusIcon = 'check-circle';
+    } else {
+        statusClass = 'bg-yellow-600/20 text-yellow-300';
+        statusText = 'Adeudada';
+        statusIcon = 'clock';
     }
+
+    const actionsHtml = [];
     
-    const proformasSearch = document.getElementById('proformas-search');
-    if (proformasSearch) proformasSearch.addEventListener('input', () => renderAll());
+    // Botón de ver (para Facturas)
+    if (type === 'Factura' && permissions.view_documents) {
+         actionsHtml.push(`
+            <button class="view-invoice-btn p-2 text-blue-400 hover:text-blue-300" data-id="${id}" title="Ver Factura">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+         `);
+    }
 
-    // Invoicing Section (Tabs)
-    const crearTab = document.getElementById('facturacion-tab-crear');
-    if (crearTab) crearTab.addEventListener('click', () => {
-        switchPage('facturacion', 'crear');
-        populateNextInvoiceNumber();
-    });
-    const listadoTab = document.getElementById('facturacion-tab-listado');
-    if (listadoTab) listadoTab.addEventListener('click', () => switchPage('facturacion', 'listado'));
-    const configTab = document.getElementById('facturacion-tab-config');
-    if (configTab) configTab.addEventListener('click', () => switchPage('facturacion', 'config'));
+    // Botón de estado (si tiene permiso de cambiar)
+    if (permissions.change_document_status) {
+        actionsHtml.push(`
+            <button class="status-btn p-2 rounded-lg ${statusClass} hover:opacity-80 flex items-center gap-1 text-xs" data-id="${id}" title="Cambiar Estado">
+                <i data-lucide="${statusIcon}" class="w-3 h-3"></i> ${statusText}
+            </button>
+        `);
+    } else {
+         actionsHtml.push(`
+            <span class="p-2 rounded-lg ${statusClass} flex items-center gap-1 text-xs cursor-default">
+                <i data-lucide="${statusIcon}" class="w-3 h-3"></i> ${statusText}
+            </span>
+         `);
+    }
 
-    // Invoicing Section (Form)
-    if (elements.facturaAddItemBtn) elements.facturaAddItemBtn.addEventListener('click', () => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'grid grid-cols-12 gap-2 items-center factura-item';
-        itemDiv.innerHTML = `
-            <div class="col-span-6"><input type="text" class="form-input item-description" placeholder="Descripción" required></div>
-            <div class="col-span-2"><input type="text" inputmode="decimal" value="1" class="form-input item-quantity text-right" required></div>
-            <div class="col-span-3"><input type="text" inputmode="decimal" placeholder="0.00" class="form-input item-price text-right" required></div>
-            <div class="col-span-1 flex justify-center"><button type="button" class="remove-item-btn p-2 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
-        elements.facturaItemsContainer.appendChild(itemDiv);
+    // Botón de recibo (para Facturas Cobradas)
+    if (type === 'Factura' && status === 'Cobrada' && permissions.view_documents) {
+         actionsHtml.push(`
+            <button class="generate-receipt-btn p-2 text-cyan-400 hover:text-cyan-300" data-id="${id}" title="Generar Recibo">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+            </button>
+         `);
+    }
+
+    // Botón de eliminar
+    const canDelete = (type === 'Factura' && permissions.manage_invoices) || (type === 'Proforma' && permissions.manage_proformas);
+    if (canDelete) {
+         actionsHtml.push(`
+            <button class="delete-doc-btn p-2 text-red-400 hover:text-red-300" data-id="${id}" title="Eliminar">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+         `);
+    }
+
+    // Determinar la columna de acciones
+    let actionsColspan = 1;
+    let statusColspan = 1;
+    // Si no hay permisos de "change_document_status", el estado se muestra en la columna de acciones
+    if (!permissions.change_document_status) {
+        statusColspan = 0; // Ocultar la columna de estado
+        actionsColspan = 2; // La columna de acciones ocupa más espacio
+    }
+
+    // Nombres de columna diferentes para Factura vs Proforma
+    const numberColName = (type === 'Factura') ? "N° Factura" : "N° Proforma";
+    const statusColHtml = (statusColspan > 0) ? `<th class="py-2 px-3 text-center">Estado</th>` : '';
+
+    return `
+        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+            <td class="py-3 px-3">${date}</td>
+            <td class="py-3 px-3">${escapeHTML(number)}</td>
+            <td class="py-3 px-3">${escapeHTML(client)}</td>
+            <td class="py-3 px-3 text-right">${formatCurrency(amount, currency)}</td>
+            ${(statusColspan > 0) ? `<td class="py-3 px-3 text-center">${actionsHtml.shift()}</td>` : ''}
+            <td class="py-3 px-3" colspan="${actionsColspan}">
+                <div class="flex items-center justify-center gap-2">
+                    ${actionsHtml.join('')}
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * Renderiza la tabla de documentos (Facturas o Proformas).
+ * @param {string} type - 'Factura' o 'Proforma'.
+ * @param {HTMLElement} tbody - El elemento <tbody> de la tabla.
+ * @param {string} searchInputId - El ID del input de búsqueda.
+ */
+export function renderDocuments(type, tbody, searchInputId) {
+    const state = getState();
+    const { documents, permissions } = state;
+    
+    if (!tbody || !documents || !permissions) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Cargando datos...</td></tr>`;
+        return;
+    }
+
+    // Actualizar encabezados de tabla (para Proforma vs Factura)
+    const thead = tbody.previousElementSibling;
+    if (thead) {
+        const numberCol = thead.querySelector('th:nth-child(2)');
+        if (numberCol) numberCol.textContent = (type === 'Factura') ? "N° Factura" : "N° Proforma";
         
-        const newIcon = itemDiv.querySelector('i[data-lucide]');
-        if (newIcon && typeof lucide !== 'undefined') {
-            lucide.createIcons({ nodes: [newIcon] });
+        const statusCol = thead.querySelector('th:nth-child(5)');
+        if (statusCol) {
+            statusCol.classList.toggle('hidden', !permissions.change_document_status);
         }
-         // Add listeners to new quantity/price inputs
-         itemDiv.querySelector('.item-quantity').addEventListener('input', updateInvoiceTotals);
-         itemDiv.querySelector('.item-price').addEventListener('input', updateInvoiceTotals);
-         updateInvoiceTotals(); // Recalculate totals
-    });
-
-    if (elements.facturaItemsContainer) {
-        // Limpiar listeners antiguos clonando
-        const newContainer = elements.facturaItemsContainer.cloneNode(false);
-        // Volver a añadir los items existentes (si los hubiera, aunque el reset los borra)
-        elements.facturaItemsContainer.querySelectorAll('.factura-item').forEach(item => newContainer.appendChild(item.cloneNode(true)));
-        elements.facturaItemsContainer.parentNode.replaceChild(newContainer, elements.facturaItemsContainer);
-        elements.facturaItemsContainer = newContainer;
-        
-        // Asignar listener de delegado para remover items
-        elements.facturaItemsContainer.addEventListener('click', (e) => {
-            const removeBtn = e.target.closest('.remove-item-btn');
-            if (removeBtn) {
-                removeBtn.closest('.factura-item').remove();
-                updateInvoiceTotals(); // Recalculate after removing
-            }
-        });
-        
-        // Asignar listeners delegados para inputs (más eficiente)
-        elements.facturaItemsContainer.addEventListener('input', (e) => {
-            if (e.target.classList.contains('item-quantity') || e.target.classList.contains('item-price')) {
-                updateInvoiceTotals();
-            }
-        });
+        const actionsCol = thead.querySelector('th:nth-child(6)');
+         if (actionsCol) {
+            actionsCol.setAttribute('colspan', permissions.change_document_status ? '1' : '2');
+         }
     }
 
-    // Listeners de cálculo de totales
-    const facturaCurrencySelect = document.getElementById('factura-currency');
-    if (facturaCurrencySelect) facturaCurrencySelect.addEventListener('change', updateInvoiceTotals);
-    const facturaOperationTypeSelect = document.getElementById('factura-operation-type');
-    if(facturaOperationTypeSelect) facturaOperationTypeSelect.addEventListener('change', updateInvoiceTotals);
 
-    // Formulario principal de Factura
-    if (elements.facturaSelectCliente) elements.facturaSelectCliente.addEventListener('change', handleClientSelectionForInvoice);
-    if (elements.nuevaFacturaForm) elements.nuevaFacturaForm.addEventListener('submit', handleGenerateInvoice);
-    const facturaFecha = document.getElementById('factura-fecha');
-    if (facturaFecha) facturaFecha.addEventListener('change', populateNextInvoiceNumber);
+    let filteredDocs = documents.filter(doc => doc.type === type);
     
-    // Tabla de listado de facturas
-    if (elements.facturasTableBody) {
-        // Limpiar listeners antiguos clonando
-        const newTbody = elements.facturasTableBody.cloneNode(false);
-        elements.facturasTableBody.parentNode.replaceChild(newTbody, elements.facturasTableBody);
-        elements.facturasTableBody = newTbody;
-        elements.facturasTableBody.addEventListener('click', handleDocumentsTableClick);
+    const searchInput = document.getElementById(searchInputId);
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+    if (searchTerm) {
+        filteredDocs = filteredDocs.filter(doc => 
+            (doc.number && doc.number.toLowerCase().includes(searchTerm)) ||
+            (doc.client && doc.client.toLowerCase().includes(searchTerm))
+        );
     }
 
-    const facturasSearch = document.getElementById('facturas-search');
-    if (facturasSearch) facturasSearch.addEventListener('input', () => renderAll());
-    
-    // --- Configuración AEAT FUE MOVIDO a settings.js ---
-    
-    // Modal de Detalles de Pago
-    if (elements.paymentDetailsForm) elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
-    if (elements.paymentDetailsCancelBtn) elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
+    if (filteredDocs.length === 0) {
+        const message = searchTerm ? "No hay documentos que coincidan con la búsqueda." : `No hay ${type.toLowerCase()}s registradas.`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">${message}</td></tr>`;
+    } else {
+        tbody.innerHTML = filteredDocs
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .map(doc => createDocumentRow(doc, state))
+            .join('');
+    }
 }
 
