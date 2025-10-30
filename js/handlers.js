@@ -36,10 +36,14 @@ import { bindAuthEvents, bindUserManagementEvents } from './handlers/auth.js';
 // --- Importaciones de Módulos (Fase 2) ---
 import { bindCashflowEvents } from './handlers/cashflow.js';
 
+// --- Importaciones de Módulos (Fase 3) ---
+import { bindDocumentEvents } from './handlers/documents.js';
+
 
 // --- Funciones Manejadoras (Handlers) ---
 // (Las funciones de Auth y User Management se han movido a js/handlers/auth.js)
 // (Las funciones de Cashflow se han movido a js/handlers/cashflow.js)
+// (Las funciones de Documentos/Facturas se han movido a js/handlers/documents.js)
 
 function handleAddAccount(e) {
     e.preventDefault();
@@ -47,9 +51,47 @@ function handleAddAccount(e) {
     const form = e.target;
     const name = form.querySelector('#new-account-name').value.trim();
 // ... (existing code) ...
+    const balance = parseFloat(form.querySelector('#new-account-balance').value);
+    const { logoCatalog } = getState();
+// ... (existing code) ...
+    const logoKey = elements.newAccountLogoSelect.value;
+    const logoHtml = logoCatalog[logoKey];
+
+    if (!name) {
+// ... (existing code) ...
+        showAlertModal('Campo Requerido', 'El nombre de la cuenta no puede estar vacío.');
+        return;
+// ... (existing code) ...
+    }
+    if (isNaN(balance)) {
+        showAlertModal('Valor Inválido', 'El saldo inicial debe ser un número.');
+// ... (existing code) ...
+        return;
+    }
+
+    const { accounts } = getState();
+// ... (existing code) ...
+    if (accounts.some(acc => acc.name.toLowerCase() === name.toLowerCase())) {
+        showAlertModal('Error', 'Ya existe una cuenta con ese nombre.');
+// ... (existing code) ...
+        return;
+    }
+
+    const accountData = {
+// ... (existing code) ...
+        name: name,
+        currency: form.querySelector('#new-account-currency').value,
+// ... (existing code) ...
+        balance: balance || 0,
+        logoHtml: logoHtml,
+// ... (existing code) ...
+    };
+
     withSpinner(() => {
+// ... (existing code) ...
         actions.addAccount(accountData);
         form.reset();
+// ... (existing code) ...
     })();
 }
 
@@ -63,6 +105,7 @@ function handleSettingsAccountsListClick(e) {
 // ... (existing code) ...
         showConfirmationModal('Eliminar Cuenta', `¿Seguro que quieres eliminar la cuenta "${escapeHTML(accountName)}"? Esta acción no se puede deshacer y puede causar inconsistencias si hay transacciones asociadas.`, withSpinner(() => {
             actions.deleteAccount(accountId);
+// ... (existing code) ...
         }));
     }
 }
@@ -250,278 +293,6 @@ function handleClientsTableClick(e) {
             actions.deleteClient(id);
         }));
     }
-}
-
-function handleDocumentSubmit(e, type) {
-// ... (existing code) ...
-    e.preventDefault();
-    const form = e.target;
-// ... (existing code) ...
-    const amount = parseFloat(form.querySelector(`#${type.toLowerCase()}-amount`).value);
-    const number = form.querySelector(`#${type.toLowerCase()}-number`).value.trim();
-
-// ... (existing code) ...
-    if (!number) {
-        showAlertModal('Campo Requerido', `El número de ${type.toLowerCase()} no puede estar vacío.`);
-// ... (existing code) ...
-        return;
-    }
-    if (isNaN(amount) || amount <= 0) {
-// ... (existing code) ...
-        showAlertModal('Valor Inválido', 'El monto debe ser un número positivo.');
-        return;
-// ... (existing code) ...
-    }
-
-    const docData = {
-// ... (existing code) ...
-        type: type,
-        date: form.querySelector(`#${type.toLowerCase()}-date`).value,
-// ... (existing code) ...
-        number: number,
-        client: form.querySelector(`#${type.toLowerCase()}-client`).value,
-// ... (existing code) ...
-        amount: amount,
-        currency: form.querySelector(`#${type.toLowerCase()}-currency`).value,
-// ... (existing code) ...
-        status: 'Adeudada',
-    };
-    withSpinner(() => {
-// ... (existing code) ...
-        actions.addDocument(docData);
-        form.reset();
-// ... (existing code) ...
-        // Set default date again after reset
-        const dateInput = form.querySelector(`#${type.toLowerCase()}-date`);
-// ... (existing code) ...
-        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
-    })();
-}
-
-
-function handleDocumentsTableClick(e) {
-// ... (existing code) ...
-    const statusBtn = e.target.closest('.status-btn');
-    const deleteBtn = e.target.closest('.delete-doc-btn');
-// ... (existing code) ...
-    const viewBtn = e.target.closest('.view-invoice-btn');
-    const receiptBtn = e.target.closest('.generate-receipt-btn');
-
-    if (statusBtn) {
-// ... (existing code) ...
-        withSpinner(() => actions.toggleDocumentStatus(statusBtn.dataset.id), 150)();
-    }
-    if (deleteBtn) {
-// ... (existing code) ...
-        showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento?', withSpinner(() => {
-            actions.deleteDocument(deleteBtn.dataset.id);
-// ... (existing code) ...
-        }));
-    }
-    if (viewBtn) {
-// ... (existing code) ...
-        showInvoiceViewer(viewBtn.dataset.id);
-    }
-    if (receiptBtn) {
-// ... (existing code) ...
-        showPaymentDetailsModal(receiptBtn.dataset.id);
-    }
-}
-
-
-function handleClientSelectionForInvoice(e) {
-// ... (existing code) ...
-    const clientId = e.target.value;
-    const form = elements.nuevaFacturaForm;
-// ... (existing code) ...
-    const nameInput = form.querySelector('#factura-cliente');
-    const nifInput = form.querySelector('#factura-nif');
-// ... (existing code) ...
-    const addressInput = form.querySelector('#factura-cliente-direccion');
-    const phoneInput = form.querySelector('#factura-cliente-telefono');
-
-    if (clientId) {
-// ... (existing code) ...
-        const { clients } = getState();
-        const client = clients.find(c => c.id === clientId);
-// ... (existing code) ...
-        if (client) {
-            nameInput.value = client.name;
-// ... (existing code) ...
-            nifInput.value = client.taxId;
-            addressInput.value = client.address;
-// ... (existing code) ...
-            phoneInput.value = `${client.phoneMobilePrefix} ${client.phoneMobile}`;
-        }
-    } else {
-// ... (existing code) ...
-        [nameInput, nifInput, addressInput, phoneInput].forEach(input => {
-            if (input) input.value = ''; // Check if input exists before setting value
-// ... (existing code) ...
-        });
-    }
-}
-
-function handleGenerateInvoice(e) {
-// ... (existing code) ...
-    e.preventDefault();
-    const form = e.target;
-
-    const items = [];
-// ... (existing code) ...
-    let parsingError = false;
-    form.querySelectorAll('.factura-item').forEach(itemEl => {
-// ... (existing code) ...
-        if (parsingError) return;
-
-        const description = itemEl.querySelector('.item-description').value;
-// ... (existing code) ...
-        const quantityRaw = itemEl.querySelector('.item-quantity').value;
-        const priceRaw = itemEl.querySelector('.item-price').value;
-
-        const quantity = parseFloat(quantityRaw.replace(',', '.'));
-// ... (existing code) ...
-        const price = parseFloat(priceRaw.replace(',', '.'));
-
-        if (description && !isNaN(quantity) && quantity > 0 && !isNaN(price) && price >= 0) {
-// ... (existing code) ...
-            items.push({ description, quantity, price });
-        } else if (description || quantityRaw || priceRaw) {
-// ... (existing code) ...
-            showAlertModal('Valor Inválido', `Por favor, revise la línea con descripción "${description}". La cantidad y el precio deben ser números válidos.`);
-            parsingError = true;
-// ... (existing code) ...
-        }
-    });
-
-    if (parsingError) return;
-
-    if (items.length === 0) {
-// ... (existing code) ...
-        showAlertModal('Factura Vacía', 'Debes añadir al menos un concepto válido a la factura.');
-        return;
-// ... (existing code) ...
-    }
-
-    if (!form.querySelector('#factura-cliente').value.trim()) {
-// ... (existing code) ...
-        showAlertModal('Campo Requerido', 'El nombre del cliente es obligatorio.');
-        return;
-// ... (existing code) ...
-    }
-
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-// ... (existing code) ...
-    const operationType = form.querySelector('#factura-operation-type').value;
-    const ivaRate = operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
-// ... (existing code) ...
-    const iva = subtotal * ivaRate;
-    const total = subtotal + iva;
-
-    const newInvoice = {
-// ... (existing code) ...
-        type: 'Factura',
-        date: form.querySelector('#factura-fecha').value,
-// ... (existing code) ...
-        number: form.querySelector('#factura-numero').value,
-        client: form.querySelector('#factura-cliente').value,
-// ... (existing code) ...
-        nif: form.querySelector('#factura-nif').value,
-        address: form.querySelector('#factura-cliente-direccion').value,
-// ... (existing code) ...
-        phone: form.querySelector('#factura-cliente-telefono').value,
-        amount: total,
-// ... (existing code) ...
-        currency: form.querySelector('#factura-currency').value,
-        status: 'Adeudada',
-// ... (existing code) ...
-        operationType,
-        items,
-// ... (existing code) ...
-        subtotal,
-        iva,
-// ... (existing code) ...
-        total,
-        ivaRate
-// ... (existing code) ...
-    };
-
-    withSpinner(() => {
-// ... (existing code) ...
-        actions.addDocument(newInvoice);
-
-        form.reset();
-// ... (existing code) ...
-        // Restore default date
-        const dateInput = form.querySelector('#factura-fecha');
-// ... (existing code) ...
-        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
-        elements.facturaItemsContainer.innerHTML = '';
-// ... (existing code) ...
-        // Add one empty item line back
-        const addItemButton = document.getElementById('factura-add-item-btn');
-// ... (existing code) ...
-        if (addItemButton) addItemButton.click();
-        // Update totals display
-// ... (existing code) ...
-        updateInvoiceTotals();
-
-        showAlertModal('Éxito', `La factura Nº ${escapeHTML(newInvoice.number)} ha sido creada.`);
-// ... (existing code) ...
-        switchPage('facturacion', 'listado');
-    })();
-}
-
-
-function handlePaymentDetailsSubmit(e) {
-// ... (existing code) ...
-    e.preventDefault();
-    const form = e.target;
-// ... (existing code) ...
-    const invoiceId = form.querySelector('#payment-details-invoice-id').value;
-
-    const paymentData = {
-// ... (existing code) ...
-        method: form.querySelector('#payment-method').value,
-        date: form.querySelector('#payment-date').value,
-// ... (existing code) ...
-        reference: form.querySelector('#payment-reference').value,
-    };
-
-    withSpinner(async () => { // Marcar como async para usar await
-// ... (existing code) ...
-        const updatedInvoice = await actions.savePaymentDetails(invoiceId, paymentData); // Usar await
-        if (updatedInvoice) {
-// ... (existing code) ...
-            hidePaymentDetailsModal();
-            showReceiptViewer(updatedInvoice);
-// ... (existing code) ...
-        } else {
-            showAlertModal('Error', 'No se pudo encontrar la factura para guardar los detalles del pago.');
-// ... (existing code) ...
-        }
-    })();
-}
-
-function handleAeatConfigSave(e) {
-// ... (existing code) ...
-    e.preventDefault();
-    const form = e.target;
-// ... (existing code) ...
-    const aeatConfig = {
-        certPath: form.querySelector('#aeat-cert-path').value,
-// ... (existing code) ...
-        certPass: form.querySelector('#aeat-cert-pass').value,
-        endpoint: form.querySelector('#aeat-endpoint').value,
-// ... (existing code) ...
-        apiKey: form.querySelector('#aeat-api-key').value,
-    };
-    withSpinner(() => {
-// ... (existing code) ...
-        actions.saveAeatConfig(aeatConfig);
-        showAlertModal('Éxito', 'La configuración de AEAT ha sido guardada.');
-// ... (existing code) ...
-    })();
 }
 
 function handleFiscalParamsSave(e) {
@@ -797,43 +568,9 @@ function handleInvestmentsTableClick(e) {
     }
 }
 
-// --- Invoice Item Calculation ---
-function updateInvoiceTotals() {
-// ... (existing code) ...
-    const itemsContainer = elements.facturaItemsContainer;
-    if (!itemsContainer) return;
-
-    let subtotal = 0;
-// ... (existing code) ...
-    itemsContainer.querySelectorAll('.factura-item').forEach(itemEl => {
-        const quantity = parseFloat(itemEl.querySelector('.item-quantity').value.replace(',', '.')) || 0;
-// ... (existing code) ...
-        const price = parseFloat(itemEl.querySelector('.item-price').value.replace(',', '.')) || 0;
-        subtotal += quantity * price;
-// ... (existing code) ...
-    });
-
-    const operationType = document.getElementById('factura-operation-type').value;
-// ... (existing code) ...
-    const ivaRate = operationType.toLowerCase().includes('exportación') ? 0 : 0.21;
-    const iva = subtotal * ivaRate;
-// ... (existing code) ...
-    const total = subtotal + iva;
-    const currency = document.getElementById('factura-currency').value;
-// ... (existing code) ...
-    const symbol = currency === 'EUR' ? '€' : '$';
-
-    document.getElementById('factura-subtotal').textContent = `${subtotal.toFixed(2)} ${symbol}`;
-// ... (existing code) ...
-    document.getElementById('factura-iva-label').textContent = `IVA (${(ivaRate * 100).toFixed(0)}%):`;
-    document.getElementById('factura-iva').textContent = `${iva.toFixed(2)} ${symbol}`;
-// ... (existing code) ...
-    document.getElementById('factura-total').textContent = `${total.toFixed(2)} ${symbol}`;
-}
-
-
-// --- NUEVO: Vinculación de Eventos de Autenticación (se llama al cargar la página) ---
+// --- Vinculación de Eventos de Autenticación (se llama al cargar la página) ---
 export function bindAuthEventListeners() {
+// ... (existing code) ...
     // Fase 1: Llama al "binder" de autenticación
     bindAuthEvents();
 }
@@ -923,6 +660,9 @@ export function bindEventListeners() {
     // --- (Fase 2) Asignar eventos de Cash Flow ---
     bindCashflowEvents();
 
+    // --- (Fase 3) Asignar eventos de Documentos ---
+    bindDocumentEvents();
+
 
     // --- Event Listeners for App Sections ---
 
@@ -943,13 +683,7 @@ export function bindEventListeners() {
 // ... (existing code) ...
     // Transfers (movido a bindCashflowEvents)
 
-    // Proformas
-// ... (existing code) ...
-    if (elements.proformaForm) elements.proformaForm.addEventListener('submit', (e) => handleDocumentSubmit(e, 'Proforma'));
-    if (elements.proformasTableBody) elements.proformasTableBody.addEventListener('click', handleDocumentsTableClick);
-// ... (existing code) ...
-    const proformasSearch = document.getElementById('proformas-search');
-    if (proformasSearch) proformasSearch.addEventListener('input', () => renderAll());
+    // Proformas (movido a bindDocumentEvents)
 
     // Settings
 // ... (existing code) ...
@@ -992,104 +726,9 @@ export function bindEventListeners() {
     }
     if (elements.clientsTableBody) elements.clientsTableBody.addEventListener('click', handleClientsTableClick);
 
-    // Invoicing Section
-// ... (existing code) ...
-    const crearTab = document.getElementById('facturacion-tab-crear');
-    if (crearTab) crearTab.addEventListener('click', () => {
-// ... (existing code) ...
-        switchPage('facturacion', 'crear');
-        populateNextInvoiceNumber();
-// ... (existing code) ...
-    });
-    const listadoTab = document.getElementById('facturacion-tab-listado');
-// ... (existing code) ...
-    if (listadoTab) listadoTab.addEventListener('click', () => switchPage('facturacion', 'listado'));
-    const configTab = document.getElementById('facturacion-tab-config');
-// ... (existing code) ...
-    if (configTab) configTab.addEventListener('click', () => switchPage('facturacion', 'config'));
+    // Invoicing Section (movido a bindDocumentEvents)
 
-    if (elements.facturaAddItemBtn) elements.facturaAddItemBtn.addEventListener('click', () => {
-// ... (existing code) ...
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'grid grid-cols-12 gap-2 items-center factura-item';
-// ... (existing code) ...
-        // Added placeholders and ensured type="text" with inputmode for numbers
-        itemDiv.innerHTML = `
-            <div class="col-span-6"><input type="text" class="form-input item-description" placeholder="Descripción" required></div>
-// ... (existing code) ...
-            <div class="col-span-2"><input type="text" inputmode="decimal" value="1" class="form-input item-quantity text-right" required></div>
-            <div class="col-span-3"><input type="text" inputmode="decimal" placeholder="0.00" class="form-input item-price text-right" required></div>
-// ... (existing code) ...
-            <div class="col-span-1 flex justify-center"><button type="button" class="remove-item-btn p-2 text-red-400 hover:text-red-300"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div>`;
-        elements.facturaItemsContainer.appendChild(itemDiv);
-// ... (existing code) ...
-        // ✅ Crear icono solo para el botón nuevo
-    const newIcon = itemDiv.querySelector('i[data-lucide]');
-// ... (existing code) ...
-    if (newIcon) {
-        lucide.createIcons({ nodes: [newIcon] });
-// ... (existing code) ...
-    }
-         // Add listeners to new quantity/price inputs
-// ... (existing code) ...
-         itemDiv.querySelector('.item-quantity').addEventListener('input', updateInvoiceTotals);
-         itemDiv.querySelector('.item-price').addEventListener('input', updateInvoiceTotals);
-// ... (existing code) ...
-         updateInvoiceTotals(); // Recalculate totals
-    });
-
-    if (elements.facturaItemsContainer) elements.facturaItemsContainer.addEventListener('click', (e) => {
-// ... (existing code) ...
-        const removeBtn = e.target.closest('.remove-item-btn');
-        if (removeBtn) {
-// ... (existing code) ...
-            removeBtn.closest('.factura-item').remove();
-            updateInvoiceTotals(); // Recalculate after removing
-// ... (existing code) ...
-        }
-    });
-     // Add event listeners to initial quantity/price inputs if they exist on page load
-// ... (existing code) ...
-    elements.facturaItemsContainer.querySelectorAll('.item-quantity, .item-price').forEach(input => {
-        input.addEventListener('input', updateInvoiceTotals);
-// ... (existing code) ...
-    });
-     // Also trigger calculation when currency changes
-    const facturaCurrencySelect = document.getElementById('factura-currency');
-// ... (existing code) ...
-    if (facturaCurrencySelect) facturaCurrencySelect.addEventListener('change', updateInvoiceTotals);
-    const facturaOperationTypeSelect = document.getElementById('factura-operation-type');
-// ... (existing code) ...
-    if(facturaOperationTypeSelect) facturaOperationTypeSelect.addEventListener('change', updateInvoiceTotals);
-
-
-    if (elements.facturaSelectCliente) elements.facturaSelectCliente.addEventListener('change', handleClientSelectionForInvoice);
-// ... (existing code) ...
-    if (elements.nuevaFacturaForm) elements.nuevaFacturaForm.addEventListener('submit', handleGenerateInvoice);
-    const facturaFecha = document.getElementById('factura-fecha');
-// ... (existing code) ...
-    if (facturaFecha) facturaFecha.addEventListener('change', populateNextInvoiceNumber);
-    if (elements.facturasTableBody) elements.facturasTableBody.addEventListener('click', handleDocumentsTableClick);
-// ... (existing code) ...
-    const facturasSearch = document.getElementById('facturas-search');
-    if (facturasSearch) facturasSearch.addEventListener('input', () => renderAll());
-// ... (existing code) ...
-    if (elements.aeatConfigForm) elements.aeatConfigForm.addEventListener('submit', handleAeatConfigSave);
-    if (elements.aeatToggleContainer) elements.aeatToggleContainer.addEventListener('click', (e) => {
-// ... (existing code) ...
-        if (e.target.closest('.aeat-toggle-btn')) {
-            withSpinner(() => actions.toggleAeatModule(), 150)();
-// ... (existing code) ...
-        }
-    });
-    if (elements.fiscalParamsForm) elements.fiscalParamsForm.addEventListener('submit', handleFiscalParamsSave);
-
-    // Invoice Viewer Modal
-// ... (existing code) ...
-    if (elements.closeInvoiceViewerBtn) elements.closeInvoiceViewerBtn.addEventListener('click', hideInvoiceViewer);
-    if (elements.printInvoiceBtn) elements.printInvoiceBtn.addEventListener('click', printInvoice);
-// ... (existing code) ...
-    if (elements.pdfInvoiceBtn) elements.pdfInvoiceBtn.addEventListener('click', downloadInvoiceAsPDF);
+    // Invoice Viewer Modal (movido a bindDocumentEvents)
 
     // Reports Section
 // ... (existing code) ...
@@ -1110,10 +749,7 @@ export function bindEventListeners() {
     const closeYearBtn = document.getElementById('close-year-btn');
     if (closeYearBtn) closeYearBtn.addEventListener('click', handleCloseYear);
 
-    // Payment Details Modal
-// ... (existing code) ...
-    if (elements.paymentDetailsForm) elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
-    if (elements.paymentDetailsCancelBtn) elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
+    // Payment Details Modal (movido a bindDocumentEvents)
 
     // IVA Section
 // ... (existing code) ...
