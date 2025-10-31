@@ -28,9 +28,14 @@ export function createTransactionRow(t, state) {
         </tr>`;
     }
 
-    const account = accounts.find(acc => acc.id === t.accountId);
-    const accountName = account ? account.name : `Cuenta Borrada (ID: ${t.accountId})`;
-    const currency = account ? account.currency : 'EUR'; // Usar EUR como fallback
+    // --- INICIO DE CORRECCIÓN (Retrocompatibilidad) ---
+    // Buscar por ID y, si falla, por nombre de cuenta (datos antiguos)
+    const account = accounts.find(acc => acc.id === t.accountId) || accounts.find(acc => acc.name === t.account);
+    // Usar t.account (nombre antiguo) como fallback si la cuenta no se encuentra
+    const accountName = account ? account.name : (t.account || `Cuenta Borrada (ID: ${t.accountId})`);
+    const currency = account ? account.currency : (t.currency || 'EUR'); // Usar t.currency como fallback
+    // --- FIN DE CORRECCIÓN ---
+
 
     const amountColor = t.type === 'Ingreso' ? 'text-green-400' : 'text-red-400';
     const sign = t.type === 'Ingreso' ? '+' : '-';
@@ -78,8 +83,11 @@ export function renderTransactions() {
 
     if (searchTerm) {
         filteredTransactions = filteredTransactions.filter(t => {
-            const account = accounts.find(acc => acc.id === t.accountId);
-            const accountName = account ? account.name.toLowerCase() : '';
+            // --- INICIO DE CORRECCIÓN (Retrocompatibilidad en Búsqueda) ---
+            const account = accounts.find(acc => acc.id === t.accountId) || accounts.find(acc => acc.name === t.account);
+            const accountName = account ? account.name.toLowerCase() : (t.account ? t.account.toLowerCase() : '');
+            // --- FIN DE CORRECCIÓN ---
+            
             const categoryName = t.category ? t.category.toLowerCase() : '';
             // Asegurarse de que description existe antes de llamar a toLowerCase
             const descriptionLower = t.description ? t.description.toLowerCase() : '';
