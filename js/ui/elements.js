@@ -11,9 +11,8 @@ export const elements = {
     sidebarCloseBtn: document.getElementById('sidebar-close-btn'),
     sidebarToggleDesktopBtn: document.getElementById('sidebar-toggle-desktop'),
 
-    // --- AÑADIDO PARA SALUDO ---
-    dashboardTitle: document.getElementById('dashboard-title'),
-    dashboardSubtitle: document.getElementById('dashboard-subtitle'), // --- AÑADIDO ---
+    // --- MODIFICADO: 'dashboardTitle' eliminado ---
+    dashboardSubtitle: document.getElementById('dashboard-subtitle'), // Subtítulo para el email
 
     // Formularios de autenticación
     loginView: document.getElementById('login-view'),

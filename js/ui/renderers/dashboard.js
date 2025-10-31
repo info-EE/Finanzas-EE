@@ -2,8 +2,8 @@
  * Dashboard renderers (KPIs, charts aggregation, recent transactions)
  */
 import { elements } from '../elements.js';
-// --- MODIFICADO: Importada la nueva función 'capitalizeNameFromEmail' ---
-import { escapeHTML, formatCurrency, getCurrencySymbol, capitalizeNameFromEmail } from '../../utils.js';
+// --- MODIFICADO: 'capitalizeNameFromEmail' ya no se importa ---
+import { escapeHTML, formatCurrency, getCurrencySymbol } from '../../utils.js';
 import { getState } from '../../store.js';
 import { CHART_COLORS } from '../../config.js';
 // Importar los charts para poder destruirlos y crearlos
@@ -351,25 +351,14 @@ export function renderInicioDashboard() {
     // --- INICIO DE CÓDIGO MODIFICADO ---
     const { currentUser } = getState();
     if (currentUser && currentUser.email) {
-        // Título Principal (Bienvenido, Nombre)
-        if (elements.dashboardTitle) {
-            // Usamos la función de 'utils.js' para obtener el nombre
-            const userName = capitalizeNameFromEmail(currentUser.email);
-            elements.dashboardTitle.textContent = `Bienvenido, ${escapeHTML(userName)}`;
-            // Quitamos las clases que lo hacían "chocante"
-            elements.dashboardTitle.classList.remove('uppercase', 'tracking-wider');
-        }
-        // Subtítulo (Email)
+        // El título "Bienvenido" es estático en el HTML.
+        // Solo rellenamos el subtítulo con el email.
         if (elements.dashboardSubtitle) {
             elements.dashboardSubtitle.textContent = escapeHTML(currentUser.email);
         }
-    } else if (elements.dashboardTitle) {
-        // Fallback si no hay usuario
-        elements.dashboardTitle.textContent = 'Centro de Mando';
-        elements.dashboardTitle.classList.add('uppercase', 'tracking-wider');
-        if (elements.dashboardSubtitle) {
-            elements.dashboardSubtitle.textContent = ''; // Ocultar subtítulo
-        }
+    } else if (elements.dashboardSubtitle) {
+        // Ocultar subtítulo si no hay usuario
+        elements.dashboardSubtitle.textContent = '';
     }
     // --- FIN DE CÓDIGO MODIFICADO ---
 
