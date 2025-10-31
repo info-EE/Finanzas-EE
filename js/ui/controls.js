@@ -145,7 +145,8 @@ function populateSelects() {
     const { accounts } = getState();
     if (!accounts) return;
     const optionsHtml = accounts.map(acc => `<option value="${escapeHTML(acc.name)}">${escapeHTML(acc.name)}</option>`).join('');
-    ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select', 'investment-account'].forEach(id => {
+    // --- MODIFICADO: Añadido 'payment-account' a la lista de desplegables de cuentas ---
+    ['transaction-account', 'transfer-from', 'transfer-to', 'update-account-select', 'investment-account', 'payment-account'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.innerHTML = optionsHtml;
     });

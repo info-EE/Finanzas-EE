@@ -67,6 +67,7 @@ export const elements = {
     investmentsTableBody: document.getElementById('investments-table-body'),
     paymentDetailsModal: document.getElementById('payment-details-modal'),
     paymentDetailsForm: document.getElementById('payment-details-form'),
+    paymentDetailsAccount: document.getElementById('payment-account'), // <-- AÑADIDO
     paymentDetailsCancelBtn: document.getElementById('payment-details-cancel-btn'),
     transactionIvaContainer: document.getElementById('transaction-iva-container'),
     ivaMonthInput: document.getElementById('iva-month'),
@@ -90,4 +91,3 @@ export const elements = {
     permissionsModalSaveBtn: document.getElementById('permissions-modal-save-btn'),
     permissionsModalCancelBtn: document.getElementById('permissions-modal-cancel-btn'),
 };
-
