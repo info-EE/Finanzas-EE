@@ -67,31 +67,11 @@ function handleDocumentsTableClick(e) {
     const receiptBtn = e.target.closest('.generate-receipt-btn');
 
     if (statusBtn) {
-        const id = statusBtn.dataset.id;
-        // --- MODIFICACIÓN: Lógica de confirmación para 'Adeudada' ---
-        const { documents } = getState();
-        const doc = documents.find(d => d.id === id);
-        
-        if (doc && doc.status === 'Cobrada') {
-            // Si está "Cobrada" y se quiere pasar a "Adeudada"
-            showConfirmationModal(
-                'Revertir Cobro', 
-                `¿Estás seguro de que quieres marcar esta factura como "Adeudada"? Esto buscará y eliminará el ingreso asociado en el Flujo de Caja.`,
-                () => {
-                    withSpinner(() => actions.toggleDocumentStatus(id), 150)();
-                }
-            );
-        } else if (doc && doc.status === 'Adeudada') {
-            // Si está "Adeudada" y se quiere pasar a "Cobrada"
-            // Forzar el modal de pago.
-            showPaymentDetailsModal(id);
-            // No llamamos a toggleDocumentStatus directamente, el modal lo hará.
-        }
-        // --- FIN MODIFICACIÓN ---
+        withSpinner(() => actions.toggleDocumentStatus(statusBtn.dataset.id), 150)();
     }
     if (deleteBtn) {
         const id = deleteBtn.dataset.id;
-        showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento? Si estaba cobrado, también se eliminará el ingreso asociado.', async () => {
+        showConfirmationModal('Eliminar Documento', '¿Seguro que quieres eliminar este documento?', async () => {
             await withSpinner(() => actions.deleteDocument(id))();
         });
     }
@@ -100,8 +80,6 @@ function handleDocumentsTableClick(e) {
         showInvoiceViewer(viewBtn.dataset.id, getState());
     }
     if (receiptBtn) {
-        // Si la factura ya está cobrada, igual mostramos el modal
-        // para permitir *modificar* el pago.
         showPaymentDetailsModal(receiptBtn.dataset.id);
     }
 }
@@ -181,7 +159,7 @@ function handleGenerateInvoice(e) {
         nif: form.querySelector('#factura-nif').value,
         address: form.querySelector('#factura-cliente-direccion').value,
         phone: form.querySelector('#factura-cliente-telefono').value,
-        amount: total, // 'amount' y 'total' son iguales
+        amount: total,
         currency: form.querySelector('#factura-currency').value,
         status: 'Adeudada',
         operationType,
@@ -212,93 +190,27 @@ function handleGenerateInvoice(e) {
 }
 
 
-// --- MODIFICACIÓN: Esta es la función principal del plan ---
-async function handlePaymentDetailsSubmit(e) {
+function handlePaymentDetailsSubmit(e) {
     e.preventDefault();
     const form = e.target;
     const invoiceId = form.querySelector('#payment-details-invoice-id').value;
 
-    // 1. Obtener datos del modal (incluyendo la nueva cuenta)
     const paymentData = {
         method: form.querySelector('#payment-method').value,
         date: form.querySelector('#payment-date').value,
         reference: form.querySelector('#payment-reference').value,
     };
-    // Este es el 'select' que añadimos en index.html y elements.js
-    const paymentAccountName = document.getElementById('payment-account').value;
 
-    // 2. Validar la cuenta
-    if (!paymentAccountName) {
-        showAlertModal('Error', 'Debe seleccionar una cuenta de ingreso válida.');
-        return;
-    }
-
-    // 3. Obtener los datos de la factura (la necesitamos para el monto y número)
-    const { documents, transactions } = getState();
-    const invoice = documents.find(doc => doc.id === invoiceId);
-    if (!invoice) {
-        showAlertModal('Error', 'No se pudo encontrar la factura (ID: ' + invoiceId + ').');
-        return;
-    }
-    
-    // 4. (Lógica de Modificación) Verificar si ya existe un ingreso vinculado
-    // Esto permite al usuario "volver a generar" el recibo para cambiar la cuenta o fecha,
-    // y en lugar de crear un duplicado, actualiza el ingreso original.
-    const existingTx = transactions.find(t => t.linkedInvoiceId === invoiceId || t.id === invoice.linkedTransactionId);
-
-    // Iniciar spinner
-    withSpinner(async () => {
-        let newOrUpdatedTransactionId = null;
-        
-        // 5. Preparar los datos de la transacción de INGRESO
-        const transactionData = {
-            date: paymentData.date,
-            description: `Cobro Factura ${invoice.number || ''}`,
-            type: 'Ingreso',
-            part: 'A', // Asumimos 'A' para ingresos de facturas
-            account: paymentAccountName, // El nombre de la cuenta del modal
-            category: 'Ventas', // Categoría por defecto para cobros
-            amount: invoice.total, // Usamos el TOTAL de la factura
-            iva: 0, // El IVA ya está incluido en el 'total' de la factura. El ingreso es por el total.
-            linkedInvoiceId: invoiceId // El vínculo clave
-        };
-        
-        if (existingTx) {
-            // --- Lógica de ACTUALIZACIÓN (si se equivocó) ---
-            console.log(`Actualizando transacción existente ${existingTx.id} para factura ${invoiceId}`);
-            // saveTransaction (con ID) se encarga de revertir saldos viejos y aplicar nuevos
-            await actions.saveTransaction(transactionData, existingTx.id);
-            newOrUpdatedTransactionId = existingTx.id;
-            
-        } else {
-            // --- Lógica de CREACIÓN (normal) ---
-            console.log(`Creando nueva transacción para factura ${invoiceId}`);
-            // 6. Guardar la transacción (nos devuelve la tx con su ID)
-            const newTransaction = await actions.saveTransaction(transactionData, null); // null para nuevo
-            
-            if (!newTransaction || !newTransaction.id) {
-                showAlertModal('Error Crítico', 'No se pudo crear el ingreso en el Cash Flow. El recibo no fue generado.');
-                throw new Error("Fallo al crear la transacción vinculada.");
-            }
-            newOrUpdatedTransactionId = newTransaction.id;
-        }
-
-        // 7. Guardar los detalles del pago y el ID de la transacción en la Factura
-        // (La acción 'savePaymentDetails' ya la modificamos para que acepte el ID)
-        const updatedInvoice = await actions.savePaymentDetails(invoiceId, paymentData, newOrUpdatedTransactionId);
-        
-        // 8. Mostrar el recibo
+    withSpinner(async () => { // Marcar como async para usar await
+        const updatedInvoice = await actions.savePaymentDetails(invoiceId, paymentData); // Usar await
         if (updatedInvoice) {
             hidePaymentDetailsModal();
             showReceiptViewer(updatedInvoice);
         } else {
-            showAlertModal('Error', 'Se creó el ingreso, pero no se pudo actualizar la factura.');
+            showAlertModal('Error', 'No se pudo encontrar la factura para guardar los detalles del pago.');
         }
-        
-    })(); // Fin de withSpinner
+    })();
 }
-// --- FIN DE MODIFICACIÓN ---
-
 
 function handleAeatConfigSave(e) {
     e.preventDefault();
@@ -471,24 +383,9 @@ export function bindDocumentEvents() {
     // Configuración AEAT
     if (elements.aeatConfigForm) elements.aeatConfigForm.addEventListener('submit', handleAeatConfigSave);
     
-    // --- MODIFICACIÓN: Asegurarse de que el listener del formulario de pago esté asignado ---
     // Modal de Detalles de Pago
-    if (elements.paymentDetailsForm) {
-        // Re-clonar el formulario para limpiar listeners antiguos y evitar duplicados
-        const newForm = elements.paymentDetailsForm.cloneNode(true);
-        elements.paymentDetailsForm.parentNode.replaceChild(newForm, elements.paymentDetailsForm);
-        elements.paymentDetailsForm = newForm;
-        // Asignar el nuevo manejador
-        elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit); 
-        
-        // Volver a asignar el botón de cancelar al nuevo formulario
-        const newCancelBtn = newForm.querySelector('#payment-details-cancel-btn');
-        if (newCancelBtn) {
-            newCancelBtn.addEventListener('click', hidePaymentDetailsModal);
-            elements.paymentDetailsCancelBtn = newCancelBtn; // Actualizar referencia global
-        }
-    }
-    // --- FIN MODIFICACIÓN ---
+    if (elements.paymentDetailsForm) elements.paymentDetailsForm.addEventListener('submit', handlePaymentDetailsSubmit);
+    if (elements.paymentDetailsCancelBtn) elements.paymentDetailsCancelBtn.addEventListener('click', hidePaymentDetailsModal);
 
     // --- LISTENERS DE MODAL AÑADIDOS ---
     if (elements.closeInvoiceViewerBtn) elements.closeInvoiceViewerBtn.addEventListener('click', handleCloseInvoiceViewer);
@@ -496,3 +393,4 @@ export function bindDocumentEvents() {
     if (elements.pdfInvoiceBtn) elements.pdfInvoiceBtn.addEventListener('click', handleDownloadPDF);
     // --- FIN DE LISTENERS AÑADIDOS ---
 }
+

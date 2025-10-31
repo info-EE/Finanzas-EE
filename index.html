@@ -1,258 +1,259 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La Maquina Logistica SL</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Se mantiene la versión de unpkg y el data-stop-auto-replace -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" data-stop-auto-replace="true"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- *** CÓDIGO AÑADIDO: Librería html2canvas (requerida por jsPDF) *** -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="flex min-h-screen bg-black text-gray-200">
-
-    <!-- Auth Overlay -->
-    <div id="auth-container" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90">
-        <div class="card w-full max-w-sm p-8">
-            <!-- Login Form -->
-            <div id="login-view">
-                <h2 class="text-2xl font-bold text-center text-white mb-6">Iniciar Sesión</h2>
-                <form id="login-form" class="space-y-4">
-                    <div>
-                        <label for="login-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
-                        <input type="email" id="login-email" class="form-input" required autocomplete="email">
-                    </div>
-                    <div>
-                        <label for="login-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
-                        <div class="relative">
-                            <input type="password" id="login-password" class="form-input pr-10" required autocomplete="current-password">
-                            <button type="button" id="toggle-login-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white focus:outline-none">
-                                <i data-lucide="eye" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                        Ingresar
-                    </button>
-                </form>
-                <p class="text-center text-sm text-gray-400 mt-4">
-                    ¿No tienes una cuenta? <a href="#" id="show-register-view" class="font-medium text-blue-400 hover:underline">Regístrate</a>
-                </p>
-            </div>
-
-            <!-- Register Form -->
-            <div id="register-view" class="hidden">
-                <h2 class="text-2xl font-bold text-center text-white mb-6">Crear Cuenta</h2>
-                <form id="register-form" class="space-y-4">
-                    <div>
-                        <label for="register-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
-                        <input type="email" id="register-email" class="form-input" required autocomplete="email">
-                    </div>
-                    <div>
-                        <label for="register-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
-                        <div class="relative">
-                            <input type="password" id="register-password" class="form-input pr-10" required autocomplete="new-password">
-                            <button type="button" id="toggle-register-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white focus:outline-none">
-                                <i data-lucide="eye" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
-                        Registrarse
-                    </button>
-                </form>
-                <p class="text-center text-sm text-gray-400 mt-4">
-                    ¿Ya tienes una cuenta? <a href="#" id="show-login-view" class="font-medium text-blue-400 hover:underline">Inicia Sesión</a>
-                </p>
-            </div>
-             <div id="auth-error" class="mt-4 text-center text-sm text-red-400"></div>
-        </div>
-    </div>
-
-    <!-- Sidebar Overlay (for mobile) -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden"></div>
-
-    <!-- Sidebar -->
-    <aside id="sidebar" class="fixed inset-y-0 left-0 bg-black/50 p-4 flex-col h-full
-                           transform -translate-x-full md:translate-x-0
-                           w-64
-                           transition-all duration-300 ease-in-out z-40 flex">
-
-        <!-- Close button (mobile) -->
-        <button id="sidebar-close-btn" class="md:hidden absolute top-4 right-4 text-gray-400 hover:text-white">
-            <i data-lucide="x" class="w-6 h-6"></i>
-        </button>
-
-        <!-- Logo / Desktop Toggle -->
-        <div id="sidebar-toggle-desktop" class="hidden md:flex items-center justify-center gap-3 mb-10 cursor-pointer">
-            <div class="flex items-center gap-3 overflow-hidden">
-                <!-- *** CORRECCIÓN INTELIGENTE: Reemplazado SVG problemático por icono Lucide *** -->
-                <i data-lucide="package" class="flex-shrink-0 text-blue-500 w-6 h-6"></i>
-                <span class="text-xl font-bold text-white whitespace-nowrap nav-text">Finanzas EE</span>
-            </div>
-        </div>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>La Maquina Logistica SL</title>
         
-        <!-- Mobile Header (Logo only) -->
-        <div class="flex md:hidden items-center justify-center gap-3 mb-10">
-             <!-- *** CORRECCIÓN INTELIGENTE: Reemplazado SVG problemático por icono Lucide *** -->
-             <i data-lucide="package" class="flex-shrink-0 text-blue-500 w-6 h-6"></i>
-             <span class="text-xl font-bold text-white whitespace-nowrap">Finanzas EE</span>
-        </div>
-
-        <nav class="flex flex-col gap-2 flex-grow">
-            <a href="#" id="nav-inicio" class="nav-link active flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="layout-dashboard"></i> <span class="nav-text">Inicio</span>
-            </a>
-            <a href="#" id="nav-cashflow" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="arrow-left-right"></i> <span class="nav-text">Cash Flow</span>
-            </a>
-            <a href="#" id="nav-iva" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="percent-circle"></i> <span class="nav-text">Control IVA</span>
-            </a>
-            <a href="#" id="nav-cuentas" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="landmark"></i> <span class="nav-text">Cuentas & Bancos</span>
-            </a>
-            <a href="#" id="nav-proformas" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="file-check-2"></i> <span class="nav-text">Proformas</span>
-            </a>
-            <a href="#" id="nav-reportes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="file-line-chart"></i> <span class="nav-text">Reportes</span>
-            </a>
-            <a href="#" id="nav-archivos" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="archive"></i> <span class="nav-text">Archivos</span>
-            </a>
-            <a href="#" id="nav-ajustes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="settings"></i> <span class="nav-text">Ajustes</span>
-            </a>
-            <hr class="border-gray-700 my-2">
-            <a href="#" id="nav-facturacion" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="file-text"></i> <span class="nav-text">Facturación</span>
-            </a>
-            <a href="#" id="nav-inversiones" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="trending-up"></i> <span class="nav-text">Inversiones</span>
-            </a>
-            <a href="#" id="nav-clientes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
-                <i data-lucide="contact"></i> <span class="nav-text">Clientes</span>
-            </a>
-        </nav>
-
-        <!-- Logout Button -->
-        <a href="#" id="logout-btn" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg mt-4 text-red-400 hover:bg-red-500/10 hover:border-red-500">
-            <i data-lucide="log-out"></i> <span class="nav-text">Cerrar Sesión</span>
-        </a>
-
-        <!-- Connection Status Indicator -->
-        <div id="connection-status" class="mt-auto p-2 flex items-center justify-center gap-2 text-xs text-gray-400 opacity-0 transition-opacity duration-300">
-            <span id="status-icon"></span>
-            <span id="status-text" class="nav-text"></span>
-        </div>
-    </aside>
-
-    <main id="main-content" class="flex-1 md:ml-64 p-4 md:p-8 main-content transition-all duration-300 ease-in-out">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <!-- Se mantiene la versión de unpkg y el data-stop-auto-replace -->
+        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" data-stop-auto-replace="true"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
         
-        <header class="md:hidden flex justify-between items-center mb-6">
-             <button id="sidebar-open-btn" class="text-gray-300 hover:text-white">
-                <i data-lucide="menu" class="w-6 h-6"></i>
-             </button>
-             <h1 class="text-xl font-bold text-white">Finanzas EE</h1>
-             <div></div> <!-- Spacer -->
-        </header>
-
-        <div id="page-inicio" class="page-content">
-            <div class="hidden md:flex justify-between items-center mb-6">
-                <!-- --- MODIFICADO: Contenedor para el nuevo título --- -->
-                <div>
-                    <h2 id="dashboard-title" class="text-3xl font-bold text-white uppercase tracking-wider">Bienvenido</h2>
-                    <p id="dashboard-subtitle" class="text-sm text-blue-400 -mt-1"></p>
-                </div>
-                <!-- --- FIN DE LA MODIFICACIÓN --- -->
-                <div class="flex items-center gap-2">
-                    <button id="quick-add-income" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Ingreso
-                    </button>
-                    <button id="quick-add-expense" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
-                        <i data-lucide="minus-circle" class="w-4 h-4"></i> Egreso
-                    </button>
-                </div>
-            </div>
-
-            <!-- KPIs Mensuales -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="card p-4 rounded-xl">
-                    <p class="text-sm text-gray-400">Ingresos (Mes Actual)</p>
-                    <p id="kpi-monthly-income" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
-                </div>
-                <div class="card p-4 rounded-xl">
-                    <p class="text-sm text-gray-400">Egresos (Mes Actual)</p>
-                    <p id="kpi-monthly-expense" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
-                </div>
-                <div class="card p-4 rounded-xl">
-                    <p class="text-sm text-gray-400">Beneficio Neto (Mes Actual)</p>
-                    <p id="kpi-monthly-profit" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
-                </div>
-                <div class="card p-4 rounded-xl">
-                    <p class="text-sm text-gray-400">Saldo Total Disponible</p>
-                    <p id="kpi-total-balance" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
-                </div>
-            </div>
-
-            <!-- Layout Principal -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Columna Izquierda -->
-                <div class="lg:col-span-2 space-y-6">
-                    <div class="card p-6 rounded-xl">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-                            <h3 class="font-semibold">Flujo de Caja Anual</h3>
-                            <div>
-                                <label for="inicio-chart-currency" class="text-sm text-gray-400 mr-2">Moneda:</label>
-                                <select id="inicio-chart-currency" class="form-input !p-2 !w-auto !text-sm bg-gray-900">
-                                    <option value="EUR">EUR (€)</option>
-                                    <option value="USD">USD ($)</option>
-                                </select>
+        <!-- *** CÓDIGO AÑADIDO: Librería html2canvas (requerida por jsPDF) *** -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body class="flex min-h-screen bg-black text-gray-200">
+    
+        <!-- Auth Overlay -->
+        <div id="auth-container" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-90">
+            <div class="card w-full max-w-sm p-8">
+                <!-- Login Form -->
+                <div id="login-view">
+                    <h2 class="text-2xl font-bold text-center text-white mb-6">Iniciar Sesión</h2>
+                    <form id="login-form" class="space-y-4">
+                        <div>
+                            <label for="login-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                            <input type="email" id="login-email" class="form-input" required autocomplete="email">
+                        </div>
+                        <div>
+                            <label for="login-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
+                            <div class="relative">
+                                <input type="password" id="login-password" class="form-input pr-10" required autocomplete="current-password">
+                                <button type="button" id="toggle-login-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="h-80"><canvas id="annualFlowChart"></canvas></div>
-                    </div>
-                    <div class="card p-6 rounded-xl">
-                        <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
-                        <div id="recent-transactions-container" class="overflow-x-auto">
-                            <!-- Contenido se generará dinámicamente -->
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                            Ingresar
+                        </button>
+                    </form>
+                    <p class="text-center text-sm text-gray-400 mt-4">
+                        ¿No tienes una cuenta? <a href="#" id="show-register-view" class="font-medium text-blue-400 hover:underline">Regístrate</a>
+                    </p>
+                </div>
+    
+                <!-- Register Form -->
+                <div id="register-view" class="hidden">
+                    <h2 class="text-2xl font-bold text-center text-white mb-6">Crear Cuenta</h2>
+                    <form id="register-form" class="space-y-4">
+                        <div>
+                            <label for="register-email" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                            <input type="email" id="register-email" class="form-input" required autocomplete="email">
                         </div>
+                        <div>
+                            <label for="register-password" class="block text-sm font-medium text-gray-400 mb-1">Contraseña</label>
+                            <div class="relative">
+                                <input type="password" id="register-password" class="form-input pr-10" required autocomplete="new-password">
+                                <button type="button" id="toggle-register-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+                            Registrarse
+                        </button>
+                    </form>
+                    <p class="text-center text-sm text-gray-400 mt-4">
+                        ¿Ya tienes una cuenta? <a href="#" id="show-login-view" class="font-medium text-blue-400 hover:underline">Inicia Sesión</a>
+                    </p>
+                </div>
+                 <div id="auth-error" class="mt-4 text-center text-sm text-red-400"></div>
+            </div>
+        </div>
+    
+        <!-- Sidebar Overlay (for mobile) -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden"></div>
+    
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 bg-black/50 p-4 flex-col h-full
+                               transform -translate-x-full md:translate-x-0
+                               w-64
+                               transition-all duration-300 ease-in-out z-40 flex">
+    
+            <!-- Close button (mobile) -->
+            <button id="sidebar-close-btn" class="md:hidden absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+    
+            <!-- Logo / Desktop Toggle -->
+            <div id="sidebar-toggle-desktop" class="hidden md:flex items-center justify-center gap-3 mb-10 cursor-pointer">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <!-- *** CORRECCIÓN INTELIGENTE: Reemplazado SVG problemático por icono Lucide *** -->
+                    <i data-lucide="package" class="flex-shrink-0 text-blue-500 w-6 h-6"></i>
+                    <span class="text-xl font-bold text-white whitespace-nowrap nav-text">Finanzas EE</span>
+                </div>
+            </div>
+            
+            <!-- Mobile Header (Logo only) -->
+            <div class="flex md:hidden items-center justify-center gap-3 mb-10">
+                 <!-- *** CORRECCIÓN INTELIGENTE: Reemplazado SVG problemático por icono Lucide *** -->
+                 <i data-lucide="package" class="flex-shrink-0 text-blue-500 w-6 h-6"></i>
+                 <span class="text-xl font-bold text-white whitespace-nowrap">Finanzas EE</span>
+            </div>
+    
+            <nav class="flex flex-col gap-2 flex-grow">
+                <a href="#" id="nav-inicio" class="nav-link active flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="layout-dashboard"></i> <span class="nav-text">Inicio</span>
+                </a>
+                <a href="#" id="nav-cashflow" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="arrow-left-right"></i> <span class="nav-text">Cash Flow</span>
+                </a>
+                <a href="#" id="nav-iva" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="percent-circle"></i> <span class="nav-text">Control IVA</span>
+                </a>
+                <a href="#" id="nav-cuentas" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="landmark"></i> <span class="nav-text">Cuentas & Bancos</span>
+                </a>
+                <a href="#" id="nav-proformas" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="file-check-2"></i> <span class="nav-text">Proformas</span>
+                </a>
+                <a href="#" id="nav-reportes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="file-line-chart"></i> <span class="nav-text">Reportes</span>
+                </a>
+                <a href="#" id="nav-archivos" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="archive"></i> <span class="nav-text">Archivos</span>
+                </a>
+                <a href="#" id="nav-ajustes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="settings"></i> <span class="nav-text">Ajustes</span>
+                </a>
+                <hr class="border-gray-700 my-2">
+                <a href="#" id="nav-facturacion" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="file-text"></i> <span class="nav-text">Facturación</span>
+                </a>
+                <a href="#" id="nav-inversiones" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="trending-up"></i> <span class="nav-text">Inversiones</span>
+                </a>
+                <a href="#" id="nav-clientes" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg">
+                    <i data-lucide="contact"></i> <span class="nav-text">Clientes</span>
+                </a>
+            </nav>
+    
+            <!-- Logout Button -->
+            <a href="#" id="logout-btn" class="nav-link flex items-center justify-center md:justify-start gap-3 p-3 rounded-lg mt-4 text-red-400 hover:bg-red-500/10 hover:border-red-500">
+                <i data-lucide="log-out"></i> <span class="nav-text">Cerrar Sesión</span>
+            </a>
+    
+            <!-- Connection Status Indicator -->
+            <div id="connection-status" class="mt-auto p-2 flex items-center justify-center gap-2 text-xs text-gray-400 opacity-0 transition-opacity duration-300">
+                <span id="status-icon"></span>
+                <span id="status-text" class="nav-text"></span>
+            </div>
+        </aside>
+    
+        <main id="main-content" class="flex-1 md:ml-64 p-4 md:p-8 main-content transition-all duration-300 ease-in-out">
+            
+            <header class="md:hidden flex justify-between items-center mb-6">
+                 <button id="sidebar-open-btn" class="text-gray-300 hover:text-white">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                 </button>
+                 <h1 class="text-xl font-bold text-white">Finanzas EE</h1>
+                 <div></div> <!-- Spacer -->
+            </header>
+    
+            <div id="page-inicio" class="page-content">
+                <div class="hidden md:flex justify-between items-center mb-6">
+                    <!-- --- INICIO DE MODIFICACIÓN: Título estático y Subtítulo --- -->
+                    <div>
+                        <h2 id="dashboard-title" class="text-3xl font-bold text-white">Bienvenido</h2>
+                        <p id="dashboard-subtitle" class="text-sm text-blue-400 mt-1"></p> <!-- Color azul -->
+                    </div>
+                    <!-- --- FIN DE MODIFICACIÓN --- -->
+                    <div class="flex items-center gap-2">
+                        <button id="quick-add-income" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> Ingreso
+                        </button>
+                        <button id="quick-add-expense" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                            <i data-lucide="minus-circle" class="w-4 h-4"></i> Egreso
+                        </button>
                     </div>
                 </div>
-
-                <!-- Columna Derecha -->
-                <div class="space-y-6">
-                    <div class="card p-6 rounded-xl">
-                        <h3 class="font-semibold mb-4">Distribución de Gastos (Mes)</h3>
-                        <div class="h-64"><canvas id="expenseDistributionChart"></canvas></div>
+    
+                <!-- KPIs Mensuales -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="card p-4 rounded-xl">
+                        <p class="text-sm text-gray-400">Ingresos (Mes Actual)</p>
+                        <p id="kpi-monthly-income" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
                     </div>
-                    <div class="card p-6 rounded-xl">
-                        <h3 class="font-semibold mb-4">Saldos Principales</h3>
-                        <div id="main-balances-container" class="space-y-3">
-                            <!-- Contenido se generará dinámicamente -->
+                    <div class="card p-4 rounded-xl">
+                        <p class="text-sm text-gray-400">Egresos (Mes Actual)</p>
+                        <p id="kpi-monthly-expense" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    </div>
+                    <div class="card p-4 rounded-xl">
+                        <p class="text-sm text-gray-400">Beneficio Neto (Mes Actual)</p>
+                        <p id="kpi-monthly-profit" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    </div>
+                    <div class="card p-4 rounded-xl">
+                        <p class="text-sm text-gray-400">Saldo Total Disponible</p>
+                        <p id="kpi-total-balance" class="text-3xl font-bold kpi-value mt-1">€0.00</p>
+                    </div>
+                </div>
+    
+                <!-- Layout Principal -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Columna Izquierda -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="card p-6 rounded-xl">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                                <h3 class="font-semibold">Flujo de Caja Anual</h3>
+                                <div>
+                                    <label for="inicio-chart-currency" class="text-sm text-gray-400 mr-2">Moneda:</label>
+                                    <select id="inicio-chart-currency" class="form-input !p-2 !w-auto !text-sm bg-gray-900">
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="USD">USD ($)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="h-80"><canvas id="annualFlowChart"></canvas></div>
+                        </div>
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
+                            <div id="recent-transactions-container" class="overflow-x-auto">
+                                <!-- Contenido se generará dinámicamente -->
+                            </div>
                         </div>
                     </div>
-                    <div class="card p-6 rounded-xl">
-                        <h3 class="font-semibold mb-4">Facturas Pendientes</h3>
-                        <div id="pending-invoices-container">
-                            <!-- Contenido se generará dinámicamente -->
+    
+                    <!-- Columna Derecha -->
+                    <div class="space-y-6">
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Distribución de Gastos (Mes)</h3>
+                            <div class="h-64"><canvas id="expenseDistributionChart"></canvas></div>
+                        </div>
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Saldos Principales</h3>
+                            <div id="main-balances-container" class="space-y-3">
+                                <!-- Contenido se generará dinámicamente -->
+                            </div>
+                        </div>
+                        <div class="card p-6 rounded-xl">
+                            <h3 class="font-semibold mb-4">Facturas Pendientes</h3>
+                            <div id="pending-invoices-container">
+                                <!-- Contenido se generará dinámicamente -->
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-
+    
+    
             <div id="page-cashflow" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Flujo de Caja (Cash Flow)</h2>
                 <div class="grid grid-cols-1 gap-6">
@@ -315,7 +316,7 @@
                             </div>
                         </form>
                     </div>
-
+    
                     <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4 text-lg">Transferencia entre Cuentas</h3>
                         <form id="transfer-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -359,7 +360,7 @@
                             </div>
                         </form>
                     </div>
-
+    
                     <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
                         <div class="mb-4">
@@ -386,7 +387,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="page-iva" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Control Mensual de IVA</h2>
                 <div class="card p-6 rounded-xl mb-6">
@@ -403,8 +404,8 @@
                     <!-- El contenido del reporte de IVA se generará aquí -->
                 </div>
             </div>
-
-
+    
+    
             <div id="page-cuentas" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Cuentas y Bancos</h2>
                 <div id="accounts-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -435,7 +436,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="page-proformas" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Proformas</h2>
                 <div class="grid grid-cols-1 gap-6">
@@ -495,7 +496,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="page-reportes" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Centro de Reportes</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -594,7 +595,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="page-archivos" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Archivos Anuales</h2>
                 <div class="card p-6 rounded-xl">
@@ -613,7 +614,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="page-ajustes" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Ajustes</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -624,7 +625,7 @@
                             <!-- La lista de usuarios se generará aquí -->
                         </div>
                     </div>
-
+    
                     <div id="aeat-settings-card" class="card p-6 rounded-xl lg:col-span-2 hidden">
                         <h3 class="font-semibold text-lg mb-4">Configuración de Facturación Electrónica (AEAT)</h3>
                         <div class="bg-gray-800/50 p-4 rounded-lg">
@@ -638,7 +639,7 @@
                             </div>
                         </div>
                     </div>
-
+    
                     <div class="card p-6 rounded-xl lg:col-span-2">
                         <h3 class="font-semibold text-lg mb-4">Parámetros Fiscales</h3>
                         <form id="fiscal-params-form" class="max-w-md">
@@ -651,7 +652,7 @@
                             </div>
                         </form>
                     </div>
-
+    
                     <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold text-lg mb-4">Gestión de Cuentas</h3>
                         <form id="add-account-form" class="space-y-4 mb-6">
@@ -742,7 +743,7 @@
                             </button>
                         </form>
                     </div>
-
+    
                     <!-- Nueva tarjeta para gestión de activos de inversión -->
                     <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold text-lg mb-4">Gestión de Activos de Inversión</h3>
@@ -766,7 +767,7 @@
                             <!-- La lista se generará aquí -->
                         </div>
                     </div>
-
+    
                     <div class="card p-6 rounded-xl bg-red-900/20 border-red-500/30 lg:col-span-2">
                         <h3 class="font-semibold text-lg mb-4 text-red-300">Cierre Anual</h3>
                         <p class="text-sm text-red-200 mb-4">Esta acción archivará todos los movimientos y documentos dentro del rango de fechas seleccionado. Esta acción no se puede deshacer.</p>
@@ -786,7 +787,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="page-facturacion" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Facturación Electrónica</h2>
                 
@@ -797,7 +798,7 @@
                         <button id="facturacion-tab-config" class="tab-button-inner whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500 font-medium text-sm transition">Configuración AEAT (Backend)</button>
                     </nav>
                 </div>
-
+    
                 <div id="facturacion-content-crear">
                     <div class="grid lg:grid-cols-5 gap-6">
                         <div class="lg:col-span-3">
@@ -885,7 +886,7 @@
                         </div>
                     </div>
                 </div>
-
+    
                 <div id="facturacion-content-listado" class="hidden">
                     <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Listado de Facturas</h3>
@@ -910,7 +911,7 @@
                         </div>
                     </div>
                 </div>
-
+    
                 <div id="facturacion-content-config" class="hidden">
                     <div class="card p-6 rounded-xl max-w-4xl mx-auto">
                         <h3 class="font-semibold text-lg mb-4">Configuración del Backend</h3>
@@ -1068,7 +1069,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="page-inversiones" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Inversiones</h2>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1151,7 +1152,7 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="invoice-viewer-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black/80">
                 <div class="card rounded-xl p-0 z-10 w-full max-w-4xl max-h-[90vh] flex flex-col">
                     <div class="flex justify-between items-center p-4 border-b border-gray-700">
@@ -1166,7 +1167,7 @@
                         </div>
                 </div>
             </div>
-
+    
             <div id="alert-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
                 <div id="alert-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
                 <div class="card rounded-xl p-8 z-10 w-full max-w-md">
@@ -1177,24 +1178,14 @@
                     </div>
                 </div>
             </div>
-
+    
             <div id="payment-details-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
                 <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
                 <div class="card rounded-xl p-8 z-10 w-full max-w-md">
                     <h3 class="text-xl font-bold text-white mb-4">Detalles del Pago</h3>
-                    <p class="text-gray-300 mb-6">Completa la información del pago para generar el recibo y el ingreso en Cash Flow.</p>
+                    <p class="text-gray-300 mb-6">Completa la información del pago para generar el recibo.</p>
                     <form id="payment-details-form" class="space-y-4">
                         <input type="hidden" id="payment-details-invoice-id">
-                        
-                        <!-- --- AÑADIDO: Campo para seleccionar la cuenta --- -->
-                        <div>
-                            <label for="payment-account-select" class="block text-sm font-medium text-gray-400 mb-1">Cuenta de Ingreso</label>
-                            <select id="payment-account-select" class="form-input" required>
-                                <!-- Las opciones se rellenarán dinámicamente -->
-                            </select>
-                        </div>
-                        <!-- --- FIN DEL CAMPO AÑADIDO --- -->
-
                         <div>
                             <label for="payment-method" class="block text-sm font-medium text-gray-400 mb-1">Método de Pago</label>
                             <select id="payment-method" class="form-input" required>
@@ -1240,7 +1231,7 @@
             </div>
             <!-- END MODALS -->
         </main>
-
+    
         <!-- Global Loading Overlay -->
         <div id="loading-overlay" class="fixed inset-0 z-[100] items-center justify-center hidden bg-black/70 backdrop-blur-sm">
             <div class="spinner" role="status"></div>
@@ -1250,7 +1241,8 @@
         <!-- Asegúrate de que tu main.js tiene el código completo ahora -->
         <script type="module" src="js/main.js?v=3"></script> 
         <!-- Ya no se necesita el bloque script aquí -->
-
+    
     </body>
     </html>
+    
 

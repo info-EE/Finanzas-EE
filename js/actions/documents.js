@@ -5,8 +5,6 @@ import {
     deleteDocFromCollection,
     saveSettings 
 } from '../api.js';
-// --- MODIFICACIÓN: Importar deleteTransaction ---
-import { deleteTransaction } from './cashflow.js';
 
 export async function addDocument(docData) { // Lógica del contador revisada
     const { settings } = getState();
@@ -66,89 +64,26 @@ export async function addDocument(docData) { // Lógica del contador revisada
 }
 
 export async function toggleDocumentStatus(docId) { 
-    // --- MODIFICACIÓN: Cargar documents y transactions ---
-    const { documents, transactions } = getState();
+    const { documents } = getState();
     const doc = documents.find(d => d.id === docId);
     if (doc) {
         const newStatus = doc.status === 'Adeudada' ? 'Cobrada' : 'Adeudada';
-        
-        // --- INICIO DE NUEVA LÓGICA ---
-        if (newStatus === 'Adeudada') {
-            // Se está revirtiendo una factura "Cobrada" a "Adeudada"
-            // Buscar y eliminar la transacción de ingreso vinculada.
-            
-            // 1. Buscar la transacción vinculada en el estado
-            // Usamos el ID de la factura (docId) o el ID guardado en la factura (doc.linkedTransactionId)
-            const linkedTx = transactions.find(t => t.linkedInvoiceId === docId || t.id === doc.linkedTransactionId);
-            
-            if (linkedTx) {
-                console.log(`Factura ${doc.number} marcada como Adeudada. Eliminando transacción vinculada ${linkedTx.id}`);
-                // 2. Llamar a deleteTransaction (esto ya revierte el saldo)
-                await deleteTransaction(linkedTx.id);
-                
-                // 3. Actualizar la factura para quitar el ID de la transacción y el estado
-                await updateDocInCollection('documents', docId, { 
-                    status: newStatus,
-                    paymentDetails: null, // Borrar detalles de pago
-                    linkedTransactionId: null // Borrar ID de transacción
-                });
-                
-            } else {
-                // No se encontró tx vinculada, solo cambiar el estado
-                console.log(`Factura ${doc.number} marcada como Adeudada. No se encontró transacción vinculada.`);
-                await updateDocInCollection('documents', docId, { status: newStatus });
-            }
-            
-        } else {
-            // Cambiando de 'Adeudada' a 'Cobrada'.
-            // NO hacemos nada aquí. La lógica de CREAR la transacción
-            // se manejará en el modal "Detalles del Pago" (handler).
-            // Aquí solo actualizamos el estado (esto es por si se hace click manual sin pasar por el modal).
-            await updateDocInCollection('documents', docId, { status: newStatus }); 
-        }
-        // --- FIN DE NUEVA LÓGICA ---
+        await updateDocInCollection('documents', docId, { status: newStatus }); 
     }
 }
-
 
 export async function deleteDocument(docId) { 
-    // --- MODIFICACIÓN: Si se borra una factura, borrar también el ingreso asociado ---
-    const { documents, transactions } = getState();
-    const doc = documents.find(d => d.id === docId);
-
-    if (doc && (doc.status === 'Cobrada' || doc.linkedTransactionId)) {
-        // Si la factura estaba cobrada, buscar y borrar el ingreso
-        const linkedTx = transactions.find(t => t.linkedInvoiceId === docId || t.id === doc.linkedTransactionId);
-        if (linkedTx) {
-            console.log(`Eliminando factura ${doc.number}. Eliminando también la transacción vinculada ${linkedTx.id}`);
-            await deleteTransaction(linkedTx.id);
-        }
-    }
-    // Borrar el documento de factura
     await deleteDocFromCollection('documents', docId); 
-    // --- FIN MODIFICACIÓN ---
 }
 
-export async function savePaymentDetails(invoiceId, paymentData, linkedTransactionId) { 
+export async function savePaymentDetails(invoiceId, paymentData) { 
     const { documents } = getState();
     const invoice = documents.find(doc => doc.id === invoiceId);
     if (!invoice) return null;
-
-    // --- MODIFICACIÓN: Añadir el linkedTransactionId y forzar estado 'Cobrada' ---
-    const updates = {
-        paymentDetails: paymentData,
-        status: 'Cobrada', // Asegurarse de que esté marcada como Cobrada
-        ...(linkedTransactionId && { linkedTransactionId: linkedTransactionId })
-    };
-    
-    await updateDocInCollection('documents', invoiceId, updates); 
-    // --- FIN MODIFICACIÓN ---
-
+    await updateDocInCollection('documents', invoiceId, { paymentDetails: paymentData }); 
     const updatedInvoiceFromState = getState().documents.find(doc => doc.id === invoiceId); 
-    // Simular la actualización localmente para el retorno inmediato
-    return updatedInvoiceFromState || { ...invoice, ...updates }; 
+    return updatedInvoiceFromState || { ...invoice, paymentDetails: paymentData }; 
 }
-
 
 export async function saveAeatConfig(aeatConfig) { 
     const { settings } = getState();
@@ -174,3 +109,4 @@ export async function saveFiscalParams(fiscalParams) {
         // Podríamos lanzar un error aquí
     }
 }
+

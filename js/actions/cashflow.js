@@ -36,9 +36,7 @@ export async function saveTransaction(transactionData, transactionId) {
         accountId: accountId, // Guardamos SOLO el ID
         isInitialBalance: false,
         // Añadimos investmentAssetId si existe en transactionData (para inversiones)
-        ...(transactionData.investmentAssetId && { investmentAssetId: transactionData.investmentAssetId }),
-        // --- MODIFICACIÓN: Añadir el ID de la factura vinculada si existe ---
-        ...(transactionData.linkedInvoiceId && { linkedInvoiceId: transactionData.linkedInvoiceId })
+        ...(transactionData.investmentAssetId && { investmentAssetId: transactionData.investmentAssetId })
     };
 
     // 3. Calcular el monto a aplicar al saldo
@@ -90,9 +88,6 @@ export async function saveTransaction(transactionData, transactionId) {
         
         // 2. Actualizar el saldo
         await incrementAccountBalance(accountId, amountToApply);
-        
-        // --- MODIFICACIÓN: Devolver la transacción creada ---
-        return addedTransaction; // Devolvemos la transacción con su ID
     }
 }
 

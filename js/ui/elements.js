@@ -67,9 +67,6 @@ export const elements = {
     investmentsTableBody: document.getElementById('investments-table-body'),
     paymentDetailsModal: document.getElementById('payment-details-modal'),
     paymentDetailsForm: document.getElementById('payment-details-form'),
-    // --- NUEVO ELEMENTO AÑADIDO (Esta era la modificación original) ---
-    paymentAccountSelect: document.getElementById('payment-account'),
-    // --- FIN NUEVO ELEMENTO ---
     paymentDetailsCancelBtn: document.getElementById('payment-details-cancel-btn'),
     transactionIvaContainer: document.getElementById('transaction-iva-container'),
     ivaMonthInput: document.getElementById('iva-month'),
