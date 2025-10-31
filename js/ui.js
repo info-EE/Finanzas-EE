@@ -238,6 +238,7 @@ export function renderAll() {
     updateActionElementsVisibility(state.permissions);
 
     // 2. Rellenar selects (se necesita en casi todas las páginas)
+    // ESTA ES LA LLAMADA QUE FALLABA
     populateSelects();
 
     // 3. Renderizar la página activa
@@ -312,4 +313,3 @@ export function renderAll() {
     }
     console.log("[renderAll] Ciclo de renderizado completo.");
 }
-
