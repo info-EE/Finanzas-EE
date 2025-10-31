@@ -1,3 +1,9 @@
+/* --- AÑADIDO: Reduce el tamaño base de la fuente para todo el sitio --- */
+html {
+    font-size: 15px; /* El estándar es 16px. Esto reduce todo ~6% */
+}
+/* --- FIN DE LA MODIFICACIÓN --- */
+
 /* Estilo personalizado para un look "neon" y moderno */
 body {
     background-color: #0a0a0a;
