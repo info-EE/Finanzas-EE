@@ -235,7 +235,11 @@
                     <div class="space-y-6">
                         <div class="card p-6 rounded-xl">
                             <h3 class="font-semibold mb-4">Distribución de Gastos (Mes)</h3>
-                            <div class="h-64"><canvas id="expenseDistributionChart"></canvas></div>
+                            <!-- INICIO DE MODIFICACIÓN: Se quitó h-64 y se añadió un ID y min-h al contenedor -->
+                            <div id="expense-distribution-container" class="min-h-[250px]">
+                                <canvas id="expenseDistributionChart"></canvas>
+                            </div>
+                            <!-- FIN DE MODIFICACIÓN -->
                         </div>
                         <div class="card p-6 rounded-xl">
                             <h3 class="font-semibold mb-4">Saldos Principales</h3>
@@ -1245,4 +1249,3 @@
     </body>
     </html>
     
-

@@ -194,21 +194,22 @@ export function renderAnnualFlowChart() {
 export function renderExpenseDistributionChart() {
     const currentState = getState();
     const { transactions, accounts } = currentState;
-    const ctx = document.getElementById('expenseDistributionChart')?.getContext('2d');
+    
+    // --- INICIO DE MODIFICACIÓN: Cambiar el objetivo al contenedor ---
+    const chartContainer = document.getElementById('expense-distribution-container');
 
     if (charts && charts.expenseDistributionChart) {
         try { charts.expenseDistributionChart.destroy(); } catch(e){}
         charts.expenseDistributionChart = null;
     }
 
-    if (!ctx || !transactions || !accounts || accounts.length === 0) {
-        if (ctx) {
-            ctx.clearRect(0,0,ctx.canvas.width, ctx.canvas.height);
-            ctx.fillStyle='#6b7280'; ctx.textAlign='center';
-            ctx.fillText('No hay datos para mostrar.', ctx.canvas.width/2, ctx.canvas.height/2);
+    if (!chartContainer || !transactions || !accounts || accounts.length === 0) {
+        if (chartContainer) {
+            chartContainer.innerHTML = `<div class="flex items-center justify-center h-full min-h-[200px]"><p class="text-gray-500">No hay datos para mostrar.</p></div>`;
         }
         return;
     }
+    // --- FIN DE MODIFICACIÓN 1 ---
 
     const currencySelect = document.getElementById('inicio-chart-currency');
     if (!currencySelect) return;
@@ -243,18 +244,77 @@ export function renderExpenseDistributionChart() {
     const data = Object.values(expenseByCategory);
 
     if (labels.length === 0) {
-        ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-        ctx.fillStyle = '#6b7280'; ctx.textAlign='center'; ctx.fillText(`No hay gastos en ${currency} este mes.`, ctx.canvas.width/2, ctx.canvas.height/2);
+        // --- INICIO DE MODIFICACIÓN 2: Escribir en el container ---
+        chartContainer.innerHTML = `<div class="flex items-center justify-center h-full min-h-[200px]"><p class="text-gray-500">No hay gastos en ${currency} este mes.</p></div>`;
         return;
+        // --- FIN DE MODIFICACIÓN 2 ---
     }
 
     const chartColors = typeof CHART_COLORS !== 'undefined' ? CHART_COLORS : ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+    const totalExpenses = data.reduce((a, b) => a + b, 0);
 
-    charts.expenseDistributionChart = new Chart(ctx, {
+    // --- INICIO DE MODIFICACIÓN 3: Crear el HTML de la leyenda personalizada ---
+    const legendHtml = Object.entries(expenseByCategory)
+        .sort(([,a], [,b]) => b - a) // Ordenar de mayor a menor gasto
+        .map(([label, amount], index) => {
+            const color = chartColors[index % chartColors.length];
+            const percentage = totalExpenses > 0 ? ((amount / totalExpenses) * 100).toFixed(1) : 0;
+            return `
+                <div class="flex items-center justify-between py-2 text-sm border-b border-gray-800 last:border-b-0">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: ${color};"></span>
+                        <span class="truncate" title="${escapeHTML(label)}">${escapeHTML(label)}</span>
+                    </div>
+                    <div class="text-right flex-shrink-0 ml-2">
+                        <span class="font-semibold">${formatCurrency(amount, currency)}</span>
+                        <span class="text-xs text-gray-400 block">${percentage}%</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    // --- FIN DE MODIFICACIÓN 3 ---
+
+    // --- INICIO DE MODIFICACIÓN 4: Inyectar la nueva estructura (flex) ---
+    chartContainer.innerHTML = `
+        <div class="flex flex-col lg:flex-row gap-6 items-center">
+            <div class="w-full lg:w-1/2 h-48 md:h-56">
+                <canvas id="expenseDistributionChartCanvas"></canvas>
+            </div>
+            <div class="w-full lg:w-1/2 max-h-[250px] overflow-y-auto pr-2">
+                ${legendHtml}
+            </div>
+        </div>
+    `;
+    // --- FIN DE MODIFICACIÓN 4 ---
+
+    // --- INICIO DE MODIFICACIÓN 5: Obtener el NUEVO canvas y renderizar el gráfico ---
+    const newCtx = document.getElementById('expenseDistributionChartCanvas')?.getContext('2d');
+    if (!newCtx) return;
+
+    charts.expenseDistributionChart = new Chart(newCtx, {
         type: 'doughnut',
-        data: { labels: labels, datasets: [{ data: data, backgroundColor: chartColors, borderColor: '#0a0a0a', borderWidth:5, borderRadius:10 }] },
-        options: { responsive:true, maintainAspectRatio:false, cutout: '70%', plugins:{ legend:{ position:'bottom', labels:{ color:'#e0e0e0', boxWidth:12, padding:15 } } } }
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                data: data, 
+                backgroundColor: chartColors, 
+                borderColor: '#0a0a0a', 
+                borderWidth: 5, 
+                borderRadius: 10 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            cutout: '70%', 
+            plugins: { 
+                legend: { 
+                    display: false // Deshabilitar la leyenda original
+                } 
+            } 
+        }
     });
+    // --- FIN DE MODIFICACIÓN 5 ---
 }
 
 
@@ -369,4 +429,3 @@ export function renderInicioDashboard() {
     renderPendingInvoices(); // Usa getState()
     renderRecentTransactions(); // Usa getState()
 }
-
