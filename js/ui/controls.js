@@ -9,7 +9,7 @@ import { escapeHTML, getCurrencySymbol } from '../utils.js';
 // --- INICIO DE FUNCIÓN MOVIDA DESDE UI.JS ---
 /**
  * Rellena el campo de número de factura con el siguiente número disponible.
- * Lógica: YYYY-NNNN. Se reinicia cada año.
+ * Lógica: YYYY-NNNN. El NNNN es consecutivo y no se reinicia con el año.
  */
 export function populateNextInvoiceNumber() {
     const { settings } = getState();
@@ -18,7 +18,8 @@ export function populateNextInvoiceNumber() {
     
     if (!dateInput || !numberInput || !settings || !settings.invoiceCounter) {
         console.warn("No se puede popular el número de factura, falta config o elementos.");
-        if(numberInput) numberInput.value = `${new Date().getFullYear()}-0001`; // Fallback
+        // --- CORRECCIÓN 2: Quitar padding de ceros (0001 -> 1) ---
+        if(numberInput) numberInput.value = `${new Date().getFullYear()}-1`; // Fallback
         return;
     }
 
@@ -29,16 +30,15 @@ export function populateNextInvoiceNumber() {
     }
     
     const currentYear = docDate.getUTCFullYear();
-    const { nextInvoiceNumber, lastInvoiceYear } = settings.invoiceCounter;
 
-    let numberToUse;
-    if (currentYear > lastInvoiceYear) {
-        numberToUse = 1; // Reiniciar contador
-    } else {
-        numberToUse = nextInvoiceNumber || 1; // Usar el siguiente
-    }
+    // --- INICIO DE CORRECCIÓN: Numeración consecutiva ---
+    // Ignorar 'lastInvoiceYear', usar siempre el siguiente número consecutivo
+    const { nextInvoiceNumber } = settings.invoiceCounter;
+    const numberToUse = nextInvoiceNumber || 1; // Usar el siguiente
+    // --- FIN DE CORRECCIÓN ---
 
-    numberInput.value = `${currentYear}-${String(numberToUse).padStart(4, '0')}`;
+    // --- CORRECCIÓN 2: Quitar padding de ceros (0093 -> 93) ---
+    numberInput.value = `${currentYear}-${String(numberToUse)}`;
 }
 // --- FIN DE FUNCIÓN MOVIDA ---
 

@@ -18,44 +18,38 @@ export async function addDocument(docData) { // Lógica del contador revisada
         const docDate = docData.date ? new Date(docData.date + 'T00:00:00Z') : new Date(); // Usar UTC
         const currentYear = docDate.getUTCFullYear();
         
-        // Inicializar si falta algún valor
+        // --- INICIO DE CORRECCIÓN: Numeración consecutiva ---
+        // La numeración es siempre consecutiva, ignorar 'lastInvoiceYear'
         let nextNumber = currentCounter.nextInvoiceNumber || 1; 
-        let lastYear = currentCounter.lastInvoiceYear || currentYear -1; // Asumir año anterior si no existe
-
-        if (currentYear > lastYear) {
-            nextNumber = 1; // Reiniciar contador para el nuevo año
-            lastYear = currentYear;
-            settingsChanged = true;
-        } else if (currentYear === lastYear) {
-             // Asignar el número actual antes de incrementar para el próximo
-             docData.number = `${currentYear}-${String(nextNumber).padStart(4, '0')}`;
-             nextNumber++; // Incrementar para la siguiente factura
-             settingsChanged = true;
-        } else {
-            // Fecha anterior al último año registrado, no se actualiza contador
-            // Se usa el número que viene en docData (si lo hay) o se genera uno temporal
-             if (!docData.number) {
-                docData.number = `${currentYear}-MANUAL`; // Indicar que requiere revisión
-             }
-             console.warn(`Factura (${docData.number}) con fecha (${docData.date}) anterior al último año registrado (${lastYear}). El contador no se actualizará.`);
-        }
-
+        
+        // --- CORRECCIÓN 2: Quitar padding de ceros (0093 -> 93) ---
+        // Asignar el número actual (YYYY-N)
+        docData.number = `${currentYear}-${String(nextNumber)}`;
+        
+        // Incrementar el contador para la *próxima* factura
+        nextNumber++; 
+        settingsChanged = true;
+        
         if (settingsChanged) {
             updatedSettings.invoiceCounter = {
-                nextInvoiceNumber: nextNumber,
-                lastInvoiceYear: lastYear
+                ...currentCounter, // Preservar otras claves (si las hubiera)
+                nextInvoiceNumber: nextNumber
+                // 'lastInvoiceYear' se ignora y se sobrescribirá
             };
             await saveSettings(updatedSettings); 
         }
+        // --- FIN DE CORRECCIÓN ---
+
     } else if (docData.type === 'Factura' && !updatedSettings.invoiceCounter) {
-        // Si no hay contador, inicializarlo y asignar número 1
+        // Si no hay contador, inicializarlo (esta lógica es correcta)
         console.warn("Inicializando contador de facturas...");
         const docDate = docData.date ? new Date(docData.date + 'T00:00:00Z') : new Date();
         const currentYear = docDate.getUTCFullYear();
-        docData.number = `${currentYear}-0001`;
+        // --- CORRECCIÓN 2: Quitar padding de ceros (0001 -> 1) ---
+        docData.number = `${currentYear}-1`;
         updatedSettings.invoiceCounter = {
-            nextInvoiceNumber: 2,
-            lastInvoiceYear: currentYear
+            nextInvoiceNumber: 2
+            // No guardamos 'lastInvoiceYear'
         };
          await saveSettings(updatedSettings); 
     }
@@ -123,3 +117,4 @@ export async function saveFiscalParams(fiscalParams) {
         // Podríamos lanzar un error aquí
     }
 }
+
