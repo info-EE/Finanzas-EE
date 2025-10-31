@@ -9,7 +9,7 @@ import { escapeHTML, getCurrencySymbol } from '../utils.js';
 // --- INICIO DE FUNCIÓN MOVIDA DESDE UI.JS ---
 /**
  * Rellena el campo de número de factura con el siguiente número disponible.
- * Lógica: YYYY-NNNN. El NNNN es consecutivo y no se reinicia con el año.
+ * Lógica: NNNN. El NNNN es consecutivo y no se reinicia con el año.
  */
 export function populateNextInvoiceNumber() {
     const { settings } = getState();
@@ -18,27 +18,27 @@ export function populateNextInvoiceNumber() {
     
     if (!dateInput || !numberInput || !settings || !settings.invoiceCounter) {
         console.warn("No se puede popular el número de factura, falta config o elementos.");
-        // --- CORRECCIÓN 2: Quitar padding de ceros (0001 -> 1) ---
-        if(numberInput) numberInput.value = `${new Date().getFullYear()}-1`; // Fallback
+        // --- CORRECCIÓN 3: Quitar el prefijo del año ---
+        if(numberInput) numberInput.value = "1"; // Fallback
         return;
     }
 
     const docDate = new Date(dateInput.value + 'T00:00:00Z'); // Usar UTC
     if (isNaN(docDate.getTime())) {
-         if(numberInput) numberInput.value = `${new Date().getFullYear()}-ERROR`; // Fallback
+         // --- CORRECCIÓN 3: Quitar el prefijo del año ---
+         if(numberInput) numberInput.value = "ERROR"; // Fallback
         return;
     }
     
-    const currentYear = docDate.getUTCFullYear();
+    // --- CORRECCIÓN 3: 'currentYear' ya no se usa para el número ---
+    // const currentYear = docDate.getUTCFullYear();
 
-    // --- INICIO DE CORRECCIÓN: Numeración consecutiva ---
     // Ignorar 'lastInvoiceYear', usar siempre el siguiente número consecutivo
     const { nextInvoiceNumber } = settings.invoiceCounter;
     const numberToUse = nextInvoiceNumber || 1; // Usar el siguiente
-    // --- FIN DE CORRECCIÓN ---
 
-    // --- CORRECCIÓN 2: Quitar padding de ceros (0093 -> 93) ---
-    numberInput.value = `${currentYear}-${String(numberToUse)}`;
+    // --- CORRECCIÓN 3: Quitar el prefijo del año ---
+    numberInput.value = String(numberToUse);
 }
 // --- FIN DE FUNCIÓN MOVIDA ---
 
