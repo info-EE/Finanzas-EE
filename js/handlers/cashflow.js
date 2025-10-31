@@ -88,9 +88,26 @@ function handleTransactionsTableClick(e) {
             form.querySelector('#transaction-iva').value = transaction.iva || '';
             updateCurrencySymbol(); // Update symbol based on selected account
 
-            form.querySelector('#form-submit-button-text').textContent = 'Actualizar';
-            form.querySelector('#form-cancel-button').classList.remove('hidden');
-            form.querySelector('#form-title').textContent = 'Editar Movimiento';
+            // --- INICIO DE CORRECCIÓN (Punto 3) ---
+            // El título del formulario (H3) NO está dentro del <form>, sino fuera.
+            // Debemos buscarlo desde 'document' en lugar de 'form'.
+            const formTitle = document.getElementById('form-title');
+            if (formTitle) {
+                formTitle.textContent = 'Editar Movimiento';
+            }
+            
+            // Los botones SÍ están dentro del form, por lo que 'form.querySelector' es correcto aquí.
+            const submitText = form.querySelector('#form-submit-button-text');
+            if (submitText) {
+                submitText.textContent = 'Actualizar';
+            }
+            
+            const cancelBtn = form.querySelector('#form-cancel-button');
+            if (cancelBtn) {
+                cancelBtn.classList.remove('hidden');
+            }
+            // --- FIN DE CORRECCIÓN ---
+
             form.scrollIntoView({ behavior: 'smooth' });
         }
     }
