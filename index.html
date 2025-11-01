@@ -367,9 +367,19 @@
     
                     <div class="card p-6 rounded-xl">
                         <h3 class="font-semibold mb-4">Últimos Movimientos</h3>
-                        <div class="mb-4">
-                            <input type="text" id="cashflow-search" class="form-input" placeholder="Buscar por descripción, cuenta o categoría...">
+                        
+                        <!-- *** CÓDIGO MODIFICADO: Añadido filtro de mes y reestructurado con la búsqueda *** -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="cashflow-month-filter" class="block text-sm font-medium text-gray-400 mb-1">Mostrar Mes</label>
+                                <input type="month" id="cashflow-month-filter" class="form-input">
+                            </div>
+                            <div class="md:pt-7"> <!-- pt-7 para alinear con el label del input de mes -->
+                                <input type="text" id="cashflow-search" class="form-input" placeholder="Buscar por descripción, cuenta o categoría...">
+                            </div>
                         </div>
+                        <!-- *** FIN DE CÓDIGO MODIFICADO *** -->
+                        
                         <div class="overflow-x-auto">
                             <table class="w-full text-left min-w-[700px]">
                                 <thead>
@@ -1101,7 +1111,7 @@
                                  <div>
                                     <label for="investment-description" class="block text-sm font-medium text-gray-400 mb-1">Descripción (Opcional)</label>
                                     <input type="text" id="investment-description" class="form-input" placeholder="Compra inicial">
-                                </div>
+                                 </div>
                                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">
                                     Guardar Inversión
                                 </button>
@@ -1248,4 +1258,3 @@
     
     </body>
     </html>
-    

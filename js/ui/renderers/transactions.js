@@ -77,11 +77,32 @@ export function renderTransactions() {
         return;
     }
 
-    let filteredTransactions = transactions.filter(t => t.category !== 'Inversión' && !t.isInitialBalance);
+    // *** CÓDIGO AÑADIDO: Obtener el filtro de mes ***
+    // Usamos document.getElementById directamente para no tener que modificar elements.js
+    const monthFilterInput = document.getElementById('cashflow-month-filter');
+    // Si el filtro existe y tiene valor, úsalo. Si no, usa el mes actual como 'YYYY-MM'.
+    const selectedMonth = monthFilterInput && monthFilterInput.value 
+        ? monthFilterInput.value 
+        : new Date().toISOString().slice(0, 7);
+    // *** FIN DE CÓDIGO AÑADIDO ***
+
+
+    // *** LÓGICA MODIFICADA: Filtrar por mes ANTES de filtrar por búsqueda ***
+    let filteredTransactions = transactions.filter(t => {
+        if (!t.date || t.category === 'Inversión' || t.isInitialBalance) {
+            return false;
+        }
+        // Comparamos el inicio del string de fecha (ej: "2024-10-15")
+        // con el valor del filtro de mes (ej: "2024-10")
+        return t.date.startsWith(selectedMonth);
+    });
+    // *** FIN DE LÓGICA MODIFICADA ***
+
     const searchInput = document.getElementById('cashflow-search');
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
     if (searchTerm) {
+        // Aplicar la búsqueda SOBRE la lista ya filtrada por mes
         filteredTransactions = filteredTransactions.filter(t => {
             // --- INICIO DE CORRECCIÓN (Retrocompatibilidad en Búsqueda) ---
             const account = accounts.find(acc => acc.id === t.accountId) || accounts.find(acc => acc.name === t.account);
@@ -98,8 +119,12 @@ export function renderTransactions() {
     }
 
     if (filteredTransactions.length === 0) {
-        const message = searchTerm ? "No hay movimientos que coincidan con la búsqueda." : "No hay movimientos registrados.";
+        // *** CÓDIGO MODIFICADO: Mensaje contextual ***
+        const message = searchTerm 
+            ? "No hay movimientos que coincidan con la búsqueda en este mes." 
+            : "No hay movimientos registrados para este mes.";
         tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-gray-500">${message}</td></tr>`;
+        // *** FIN DE CÓDIGO MODIFICADO ***
     } else {
         // Ordenar y mapear, pasando el estado completo a createTransactionRow
         const rowsHtmlArray = filteredTransactions

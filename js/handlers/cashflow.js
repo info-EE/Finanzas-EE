@@ -230,8 +230,15 @@ export function bindCashflowEvents() {
         elements.transactionsTableBody = newTbody; // Actualizar referencia
         elements.transactionsTableBody.addEventListener('click', handleTransactionsTableClick);
     }
+    
+    // *** CÓDIGO MODIFICADO: Añadido listener para el filtro de mes ***
     const cashflowSearch = document.getElementById('cashflow-search');
     if (cashflowSearch) cashflowSearch.addEventListener('input', () => renderAll());
+
+    const cashflowMonthFilter = document.getElementById('cashflow-month-filter');
+    if (cashflowMonthFilter) cashflowMonthFilter.addEventListener('input', () => renderAll());
+    // *** FIN DE CÓDIGO MODIFICADO ***
+
 
     // Transfers
     if (elements.transferForm) {

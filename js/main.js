@@ -273,12 +273,16 @@ console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userPro
         const el = document.getElementById(id);
         if (el) el.value = today;
     });
+    
     // Valor por defecto para mes actual
     const currentMonth = new Date().toISOString().slice(0, 7);
-    ['report-month', 'iva-month'].forEach(id => {
+    // *** CÓDIGO MODIFICADO: Añadido 'cashflow-month-filter' ***
+    ['report-month', 'iva-month', 'cashflow-month-filter'].forEach(id => {
         const monthInput = document.getElementById(id);
         if (monthInput) monthInput.value = currentMonth;
     });
+    // *** FIN DE CÓDIGO MODIFICADO ***
+
     // Valor por defecto para año actual
     const currentYear = new Date().getFullYear();
     ['report-year', 'report-year-sociedades'].forEach(id => { // Añadido report-year-sociedades
@@ -298,4 +302,3 @@ console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userPro
 
 // 6. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
-
