@@ -28,6 +28,12 @@ let db;
 let currentUserId = null;
 let dataListeners = []; // (de Fase 1)
 
+// --- INICIO DE MODIFICACIÓN: Ruta de datos compartida ---
+// Esta es la ruta principal donde se guardarán TODOS los datos (cuentas, transacciones, etc.)
+// Es compartida por todos los usuarios.
+let sharedDataPath; 
+// --- FIN DE MODIFICACIÓN ---
+
 /**
  * Devuelve un objeto con todos los permisos del sistema establecidos en 'false'.
  * @returns {Object} El objeto de permisos por defecto.
@@ -65,6 +71,11 @@ export function initFirebaseServices(firebaseApp, firebaseAuth, firestoreDb) {
     app = firebaseApp;
     auth = firebaseAuth;
     db = firestoreDb;
+    
+    // --- INICIO DE MODIFICACIÓN: Definir la ruta de datos compartida ---
+    // Todos los datos de la empresa vivirán bajo este documento
+    sharedDataPath = doc(db, 'datos_empresa', 'main');
+    // --- FIN DE MODIFICACIÓN ---
 }
 
 // Funciones para que otros módulos puedan acceder a las instancias si es necesario
@@ -99,6 +110,8 @@ function translateAuthError(errorCode) {
     }
 }
 
+// --- INICIO DE MODIFICACIÓN: Las funciones de usuarios (permisos) siguen siendo privadas ---
+// Estas funciones NO cambian, ya que la gestión de usuarios sí es por usuario (colección 'usuarios')
 export async function getUserProfile(uid) {
     if (!uid) return null;
     try {
@@ -143,7 +156,8 @@ export async function getAllUsers() {
 }
 
 export function listenForAllUsersChanges(onUsersUpdate) {
-    if (!currentUserId) return;
+    // Esta función no necesita 'currentUserId' porque un admin escucha a 'usuarios'
+    // if (!currentUserId) return; // (Quitamos esta línea por si acaso)
 
     const usersCollection = collection(db, 'usuarios');
     const q = query(usersCollection); // (de Fase 1)
@@ -171,12 +185,6 @@ export async function updateUserStatus(uid, newStatus) {
     }
 }
 
-/**
- * Actualiza los campos de un usuario en la base de datos.
- * @param {string} uid - El ID del usuario.
- * @param {object} updates - Un objeto con los campos a actualizar (ej: { permisos: {...}, status: 'activo' }).
- * @returns {boolean} - True si la operación fue exitosa, false en caso contrario.
- */
 export async function updateUserPermissions(uid, updates) {
     if (!uid) return false;
     try {
@@ -188,6 +196,8 @@ export async function updateUserPermissions(uid, updates) {
         return false;
     }
 }
+// --- FIN DE SECCIÓN DE USUARIOS (SIN CAMBIOS) ---
+
 
 export async function registerUser(email, password) {
     try {
@@ -238,17 +248,19 @@ export async function logoutUser() {
 
 
 // --- Funciones de Base de Datos (Modificadas en Fase 1) ---
+// --- INICIO DE MODIFICACIÓN: Todas las rutas de datos ahora usan 'sharedDataPath' ---
 
 /**
- * Carga todos los documentos de una colección específica del usuario.
+ * Carga todos los documentos de una colección compartida.
  * @param {string} collectionName - El nombre de la colección (ej. 'accounts').
  * @returns {Promise<Array>} Una promesa que se resuelve con un array de documentos.
  */
 export async function loadCollection(collectionName) {
-    if (!currentUserId) return [];
+    if (!currentUserId) return []; // Aún requiere un usuario logueado para intentar
     // --- ELIMINADO: updateConnectionStatus('loading', `Cargando ${collectionName}...`); ---
     try {
-        const colRef = collection(db, 'usuarios', currentUserId, collectionName);
+        // MODIFICADO: Usa la ruta compartida, no la del usuario
+        const colRef = collection(sharedDataPath, collectionName);
         const snapshot = await getDocs(colRef);
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         console.log(`Datos de '${collectionName}' cargados:`, data.length);
@@ -262,14 +274,15 @@ export async function loadCollection(collectionName) {
 }
 
 /**
- * Carga el documento de configuración del usuario.
+ * Carga el documento de configuración compartido.
  * @returns {Promise<Object|null>} Una promesa que se resuelve con el objeto de settings o null.
  */
 export async function loadSettings() {
     if (!currentUserId) return null;
     // --- ELIMINADO: updateConnectionStatus('loading', 'Cargando configuración...'); ---
     try {
-        const settingsDocRef = doc(db, 'usuarios', currentUserId, 'settings', 'appSettings');
+        // MODIFICADO: Usa la ruta compartida, no la del usuario
+        const settingsDocRef = doc(sharedDataPath, 'settings', 'appSettings');
         const docSnap = await getDoc(settingsDocRef);
         if (docSnap.exists()) {
             console.log("Configuración cargada.");
@@ -288,7 +301,7 @@ export async function loadSettings() {
 }
 
 /**
- * Añade un nuevo documento a una colección del usuario.
+ * Añade un nuevo documento a una colección compartida.
  * @param {string} collectionName - El nombre de la colección.
  * @param {Object} data - El objeto de datos a añadir.
  * @returns {Promise<string>} El ID del nuevo documento.
@@ -297,8 +310,8 @@ export async function addDocToCollection(collectionName, data) {
     if (!currentUserId) throw new Error("Usuario no autenticado.");
     // --- ELIMINADO: updateConnectionStatus('loading', 'Guardando...'); ---
     try {
-        // Generamos un ID local para consistencia
-        const newDocRef = doc(collection(db, 'usuarios', currentUserId, collectionName));
+        // MODIFICADO: Usa la ruta compartida
+        const newDocRef = doc(collection(sharedDataPath, collectionName));
         const dataWithId = { ...data, id: newDocRef.id };
 
         await setDoc(newDocRef, dataWithId); // Usamos setDoc con el ID pre-generado
@@ -314,7 +327,7 @@ export async function addDocToCollection(collectionName, data) {
 }
 
 /**
- * Actualiza un documento existente en una colección del usuario.
+ * Actualiza un documento existente en una colección compartida.
  * @param {string} collectionName - El nombre de la colección.
  * @param {string} docId - El ID del documento a actualizar.
  * @param {Object} updates - Un objeto con los campos a actualizar.
@@ -323,7 +336,8 @@ export async function updateDocInCollection(collectionName, docId, updates) {
     if (!currentUserId) throw new Error("Usuario no autenticado.");
     // --- ELIMINADO: updateConnectionStatus('loading', 'Actualizando...'); ---
     try {
-        const docRef = doc(db, 'usuarios', currentUserId, collectionName, docId);
+        // MODIFICADO: Usa la ruta compartida
+        const docRef = doc(sharedDataPath, collectionName, docId);
         await updateDoc(docRef, updates);
         console.log(`Documento '${docId}' en '${collectionName}' actualizado.`);
         // --- ELIMINADO: setTimeout(() => updateConnectionStatus('success', 'Actualizado'), 1000); ---
@@ -335,7 +349,7 @@ export async function updateDocInCollection(collectionName, docId, updates) {
 }
 
 /**
- * Elimina un documento de una colección del usuario.
+ * Elimina un documento de una colección compartida.
  * @param {string} collectionName - El nombre de la colección.
  * @param {string} docId - El ID del documento a eliminar.
  */
@@ -343,7 +357,8 @@ export async function deleteDocFromCollection(collectionName, docId) {
     if (!currentUserId) throw new Error("Usuario no autenticado.");
     // --- ELIMINADO: updateConnectionStatus('loading', 'Eliminando...'); ---
     try {
-        const docRef = doc(db, 'usuarios', currentUserId, collectionName, docId);
+        // MODIFICADO: Usa la ruta compartida
+        const docRef = doc(sharedDataPath, collectionName, docId);
         await deleteDoc(docRef);
         console.log(`Documento '${docId}' eliminado de '${collectionName}'.`);
         // --- ELIMINADO: setTimeout(() => updateConnectionStatus('success', 'Eliminado'), 1000); ---
@@ -355,14 +370,15 @@ export async function deleteDocFromCollection(collectionName, docId) {
 }
 
 /**
- * Guarda el documento de configuración del usuario.
+ * Guarda el documento de configuración compartido.
  * @param {Object} settings - El objeto de configuración a guardar.
  */
 export async function saveSettings(settings) {
     if (!currentUserId) throw new Error("Usuario no autenticado.");
     // --- ELIMINADO: updateConnectionStatus('loading', 'Guardando config...'); ---
     try {
-        const settingsDocRef = doc(db, 'usuarios', currentUserId, 'settings', 'appSettings');
+        // MODIFICADO: Usa la ruta compartida
+        const settingsDocRef = doc(sharedDataPath, 'settings', 'appSettings');
         await setDoc(settingsDocRef, settings, { merge: true });
         console.log("Configuración guardada.");
         // --- ELIMINADO: setTimeout(() => updateConnectionStatus('success', 'Guardado'), 1000); ---
@@ -386,7 +402,8 @@ export async function incrementAccountBalance(accountId, amount) {
     }
     if (amount === 0) return; // No hacer nada si el monto es 0
 
-    const accountDocRef = doc(db, 'usuarios', currentUserId, 'accounts', accountId);
+    // MODIFICADO: Usa la ruta compartida
+    const accountDocRef = doc(sharedDataPath, 'accounts', accountId);
 
     try {
         // Usamos 'increment' para una actualización atómica.
@@ -401,14 +418,15 @@ export async function incrementAccountBalance(accountId, amount) {
 // --- FIN DE NUEVA FUNCIÓN FASE 2 ---
 
 /**
- * Escucha cambios en tiempo real en una colección del usuario.
+ * Escucha cambios en tiempo real en una colección compartida.
  * @param {string} collectionName - El nombre de la colección.
  * @param {Function} onUpdate - Callback que se ejecuta con los datos actualizados.
  */
 export function listenForCollectionChanges(collectionName, onUpdate) {
     if (!currentUserId) return;
 
-    const colRef = collection(db, 'usuarios', currentUserId, collectionName);
+    // MODIFICADO: Usa la ruta compartida
+    const colRef = collection(sharedDataPath, collectionName);
     const q = query(colRef);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -425,13 +443,14 @@ export function listenForCollectionChanges(collectionName, onUpdate) {
 }
 
 /**
- * Escucha cambios en tiempo real en el documento de configuración.
+ * Escucha cambios en tiempo real en el documento de configuración compartido.
  * @param {Function} onUpdate - Callback que se ejecuta con los datos actualizados.
  */
 export function listenForSettingsChanges(onUpdate) {
     if (!currentUserId) return;
 
-    const settingsDocRef = doc(db, 'usuarios', currentUserId, 'settings', 'appSettings');
+    // MODIFICADO: Usa la ruta compartida
+    const settingsDocRef = doc(sharedDataPath, 'settings', 'appSettings');
 
     const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -455,3 +474,4 @@ export function clearAllListeners() {
     dataListeners.forEach(unsubscribe => unsubscribe());
     dataListeners = [];
 }
+// --- FIN DE MODIFICACIÓN: Rutas de datos ---
