@@ -12,7 +12,8 @@ import { getState } from './store.js';
 import { withSpinner } from './handlers/helpers.js';
 
 // --- Importaciones de Módulos (Fase 1-5) ---
-import { bindAuthEvents, bindUserManagementEvents } from './handlers/auth.js';
+// --- MODIFICADO: Importamos 'handleLogout' ---
+import { bindAuthEvents, bindUserManagementEvents, handleLogout } from './handlers/auth.js';
 import { bindCashflowEvents } from './handlers/cashflow.js';
 import { bindDocumentEvents } from './handlers/documents.js';
 import { bindClientEvents } from './handlers/clients.js';
@@ -83,8 +84,18 @@ export function bindEventListeners() {
     elements.navLinks.forEach(link => {
         link.replaceWith(link.cloneNode(true));
     });
+    
+    // --- INICIO DE MODIFICACIÓN ---
+    // El bucle ahora asigna TODOS los links, incluido el de logout
     document.querySelectorAll('.nav-link').forEach(link => {
-         if (link.id !== 'logout-btn') {
+         if (link.id === 'logout-btn') {
+            // Asignamos el handler de logout aquí, después de la clonación
+             link.addEventListener('click', (e) => {
+                 e.preventDefault();
+                 handleLogout(); // Usamos la función importada
+             });
+         } else {
+            // Asignamos el handler de cambio de página
              link.addEventListener('click', (e) => {
                  e.preventDefault();
                  const pageId = link.id.replace('nav-', '');
@@ -92,5 +103,8 @@ export function bindEventListeners() {
              });
          }
     });
-     // El logout-btn es asignado en bindAuthEvents()
+    // --- FIN DE MODIFICACIÓN ---
+    
+    // --- ELIMINADO: Este comentario ya no es correcto ---
+    // El logout-btn es asignado en bindAuthEvents()
 }

@@ -83,7 +83,8 @@ function handleRegisterSubmit(e) {
     })();
 }
 
-function handleLogout() {
+// --- MODIFICADO: Añadido 'export' para que handlers.js pueda usar esta función ---
+export function handleLogout() {
     withSpinner(async () => {
         await api.logoutUser();
         resetState(); // Limpiamos el estado local al cerrar sesión
@@ -194,8 +195,8 @@ export function bindAuthEvents() {
     const toggleRegisterPassword = document.getElementById('toggle-register-password');
     if (toggleRegisterPassword) toggleRegisterPassword.addEventListener('click', handleTogglePassword);
     
-    // Asignar el evento de Logout también
-    if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', handleLogout);
+    // --- ELIMINADO: El evento de Logout ya no se asigna aquí ---
+    // if (elements.logoutBtn) elements.logoutBtn.addEventListener('click', handleLogout);
 }
 
 /**
