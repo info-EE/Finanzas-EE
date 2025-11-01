@@ -20,7 +20,7 @@ import { getState, resetState } from '../store.js';
 import { escapeHTML } from '../utils.js';
 import { withSpinner } from './helpers.js';
 
-// *** CÓDIGO ELIMINADO: El diccionario de permisos ya no es necesario en la UI ***
+    // *** CÓDIGO ELIMINADO: El diccionario de permisos ya no es necesario en la UI ***
 // export const PERMISSION_DESCRIPTIONS = { ... };
 
 // --- Función para traducir errores de Auth ---
@@ -151,21 +151,23 @@ function handleUserManagementClick(e) {
 function handleTogglePassword(e) {
     const button = e.currentTarget;
     const input = button.previousElementSibling;
-    const icon = button.querySelector('i[data-lucide]'); // Select the icon element directly
 
-    if (!input || !icon) return; // Exit if elements are not found
+    if (!input) return; // Salir si no se encuentra el input
 
     if (input.type === 'password') {
         input.type = 'text';
-        icon.setAttribute('data-lucide', 'eye-off');
+        // Establecer el HTML interno al NUEVO icono que queremos
+        button.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
     } else {
         input.type = 'password';
-        icon.setAttribute('data-lucide', 'eye');
+        // Establecer el HTML interno al NUEVO icono que queremos
+        button.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
     }
-    // Recreate icons specifically for the updated element
+    
+    // Volver a crear los iconos para los NUEVOS hijos del botón
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons({
-            nodes: [icon]
+            nodes: button.querySelectorAll('i[data-lucide]') // Encontrar la nueva etiqueta <i>
         });
     }
 }
@@ -225,3 +227,4 @@ export function bindUserManagementEvents() {
     // if (elements.permissionsModalCancelBtn) elements.permissionsModalCancelBtn.addEventListener('click', hidePermissionsModal);
     // if (elements.permissionsModalSaveBtn) elements.permissionsModalSaveBtn.addEventListener('click', handlePermissionsSave);
 }
+
