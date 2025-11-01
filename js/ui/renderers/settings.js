@@ -45,10 +45,13 @@ function renderUserManagement() {
         return;
     }
 
+    // *** CÓDIGO MODIFICADO: Lógica de botones simplificada ***
     listEl.innerHTML = otherUsers.map(user => {
         const status = user.status || 'pendiente';
         let statusColor, statusText, actionsHtml;
-        let baseActions = `
+
+        // Botón base de eliminación
+        const deleteButton = `
             <button class="delete-user-btn p-2 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-300" data-id="${user.id}" title="Eliminar Usuario">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
@@ -58,32 +61,26 @@ function renderUserManagement() {
             statusColor = 'text-green-400';
             statusText = 'Activo';
             actionsHtml = `
-                <button class="manage-permissions-btn p-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300" data-id="${user.id}" title="Gestionar Permisos">
-                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                <button class="deactivate-btn p-2 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300 flex items-center gap-1 text-xs" data-id="${user.id}" data-status="activo" title="Desactivar">
+                    <i data-lucide="user-x" class="w-4 h-4"></i> Desactivar
                 </button>
-                <button class="deactivate-btn p-2 rounded-lg bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-300" data-id="${user.id}" title="Desactivar">
-                    <i data-lucide="user-x" class="w-4 h-4"></i>
-                </button>
-                ${baseActions}
+                ${deleteButton}
             `;
         } else { // pendiente
             statusColor = 'text-yellow-400';
             statusText = 'Pendiente';
             actionsHtml = `
-                <button class="activate-basic-btn p-2 rounded-lg bg-green-600/20 hover:bg-green-600/40 text-green-300 text-xs flex items-center gap-1" data-id="${user.id}" title="Activar Acceso Básico">
-                    <i data-lucide="user-check" class="w-3 h-3"></i> Básico
+                <button class="activate-btn p-2 rounded-lg bg-green-600/20 hover:bg-green-600/40 text-green-300 flex items-center gap-1 text-xs" data-id="${user.id}" data-status="pendiente" title="Activar Acceso">
+                    <i data-lucide="user-check" class="w-4 h-4"></i> Activar
                 </button>
-                <button class="activate-full-btn p-2 rounded-lg bg-green-600/20 hover:bg-green-600/40 text-green-300 text-xs flex items-center gap-1" data-id="${user.id}" title="Activar Acceso Completo">
-                    <i data-lucide="user-check" class="w-3 h-3"></i> Completo
-                </button>
-                ${baseActions}
+                ${deleteButton}
             `;
         }
 
         return `
             <div class="flex items-center justify-between bg-gray-800/50 p-3 rounded text-sm">
                 <div>
-                    <p class="font-semibold">${escapeHTML(user.email)}</p>
+                    <p class="font-semibold">${escapeHTML(user.email || 'Usuario sin email')}</p>
                     <p class="text-xs ${statusColor} capitalize">${escapeHTML(statusText)}</p>
                 </div>
                 <div class="flex items-center gap-2">
@@ -92,6 +89,7 @@ function renderUserManagement() {
             </div>
         `;
     }).join('');
+    // *** FIN DE CÓDIGO MODIFICADO ***
 }
 
 

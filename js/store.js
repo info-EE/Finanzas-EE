@@ -18,6 +18,8 @@ const LOGO_CATALOG = {
     default: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-500"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`
 };
 
+// *** CÓDIGO MODIFICADO: Permisos de Super-Administrador ***
+// El Super-Admin puede gestionar usuarios
 function getAdminPermissions() {
     return {
         view_dashboard: true, view_accounts: true, view_cashflow: true, manage_cashflow: true,
@@ -25,20 +27,27 @@ function getAdminPermissions() {
         change_document_status: true, view_clients: true, manage_clients: true, view_reports: true,
         view_iva_control: true, view_archives: true, view_investments: true, manage_investments: true,
         manage_accounts: true, manage_categories: true, execute_balance_adjustment: true,
-        execute_year_close: true, manage_fiscal_settings: true, manage_users: true,
+        execute_year_close: true, manage_fiscal_settings: true, 
+        manage_users: true, // <-- Esta es la única diferencia
     };
 }
 
-function getReadOnlyPermissions() {
+// *** CÓDIGO AÑADIDO: Permisos de Usuario Estándar ***
+// El Usuario estándar puede hacer todo, EXCEPTO gestionar usuarios
+function getUserPermissions() {
     return {
-        view_dashboard: true, view_accounts: true, view_cashflow: true, manage_cashflow: false,
-        execute_transfers: false, view_documents: true, manage_invoices: false, manage_proformas: false,
-        change_document_status: false, view_clients: true, manage_clients: false, view_reports: true,
-        view_iva_control: true, view_archives: true, view_investments: true, manage_investments: false,
-        manage_accounts: false, manage_categories: false, execute_balance_adjustment: false,
-        execute_year_close: false, manage_fiscal_settings: false, manage_users: false,
+        view_dashboard: true, view_accounts: true, view_cashflow: true, manage_cashflow: true,
+        execute_transfers: true, view_documents: true, manage_invoices: true, manage_proformas: true,
+        change_document_status: true, view_clients: true, manage_clients: true, view_reports: true,
+        view_iva_control: true, view_archives: true, view_investments: true, manage_investments: true,
+        manage_accounts: true, manage_categories: true, execute_balance_adjustment: true,
+        execute_year_close: true, manage_fiscal_settings: true, 
+        manage_users: false, // <-- Esta es la única diferencia
     };
 }
+
+// *** CÓDIGO ELIMINADO: getReadOnlyPermissions() ya no se usa ***
+// function getReadOnlyPermissions() { ... }
 
 export function getDefaultState() {
     return {
@@ -56,8 +65,10 @@ export function getDefaultState() {
         activeReport: { type: null, data: [], title: '', columns: [] },
         activeIvaReport: null,
         settings: {
-            adminUids: ['gjsYFFm1QmfpdGodTBXFExrQiRz1'],
-            adminEmails: ['info@europaenvios.com'],
+            // *** CÓDIGO MODIFICADO: Actualizado el email del admin y limpiado UID viejo ***
+            adminUids: [], // Limpiamos UIDs, nos basamos solo en el email
+            adminEmails: ['edgardopadilla5@gmail.com'], // <-- Tu email de Super-Admin
+            // *** FIN DE CÓDIGO MODIFICADO ***
             blockedUserIds: [],
             invoiceCounter: {
                 nextInvoiceNumber: 1,
@@ -126,21 +137,19 @@ export async function initState() {
             const userProfile = await getUserProfile(currentUser.uid);
             console.log('[Store] User profile loaded:', userProfile);
 
-            if (defaultState.settings.adminUids.includes(currentUser.uid) || defaultState.settings.adminEmails.includes(currentUser.email)) {
+            // *** CÓDIGO MODIFICADO: Lógica de asignación de permisos simplificada ***
+            if (defaultState.settings.adminEmails.includes(currentUser.email)) {
                 console.warn("[Store] Admin user detected. Granting all permissions.");
-                finalState.permissions = getAdminPermissions();
+                finalState.permissions = getAdminPermissions(); // <-- Permisos de Super-Admin
             } else if (userProfile && userProfile.status === 'activo') {
-                const hasDefinedPermissions = userProfile.permisos && Object.keys(userProfile.permisos).length > 0 && Object.values(userProfile.permisos).some(p => p === true);
-                if (hasDefinedPermissions) {
-                    console.log("[Store] Active user with specific permissions found.");
-                    finalState.permissions = { ...getReadOnlyPermissions(), ...userProfile.permisos };
-                } else {
-                    console.log(`[Store] Active user without specific permissions. Assigning default read-only permissions.`);
-                    finalState.permissions = getReadOnlyPermissions();
-                }
+                console.log("[Store] Active user found. Granting full user permissions.");
+                finalState.permissions = getUserPermissions(); // <-- Permisos de Usuario Estándar
             } else {
                  console.log(`[Store] User not admin, not active, or profile missing. No permissions assigned.`);
+                 // Se queda con permisos vacíos (todo en false)
             }
+            // *** FIN DE CÓDIGO MODIFICADO ***
+
 
             const canReadData = Object.values(finalState.permissions).some(p => p === true);
             console.log(`[Store] User can read data: ${canReadData}`);
