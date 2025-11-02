@@ -26,9 +26,44 @@ import { withSpinner } from './helpers.js';
 
 // --- Funciones Manejadoras (Handlers) ---
 
+// --- INICIO DE MODIFICACIÓN: Añadir reseteo de formulario ---
+/**
+ * Limpia el formulario de proformas y restaura los textos.
+ */
+function resetProformaForm() {
+    const form = elements.proformaForm;
+    if (!form) return;
+
+    form.reset();
+    
+    const idInput = form.querySelector('#proforma-id');
+    if (idInput) idInput.value = '';
+
+    const title = document.getElementById('proforma-form-title');
+    if (title) title.textContent = 'Agregar Nueva Proforma';
+
+    const submitText = document.getElementById('proforma-form-submit-text');
+    if (submitText) submitText.textContent = 'Agregar Proforma';
+
+    const cancelBtn = document.getElementById('proforma-form-cancel-btn');
+    if (cancelBtn) cancelBtn.classList.add('hidden');
+    
+    // Set default date again after reset
+    const dateInput = form.querySelector(`#proforma-date`);
+    if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+}
+// --- FIN DE MODIFICACIÓN ---
+
+
 function handleDocumentSubmit(e, type) {
     e.preventDefault();
     const form = e.target;
+
+    // --- INICIO DE MODIFICACIÓN: Obtener ID para editar ---
+    // Busca el ID del formulario (ej. #proforma-id)
+    const id = form.querySelector(`#${type.toLowerCase()}-id`)?.value;
+    // --- FIN DE MODIFICACIÓN ---
+    
     const amount = parseFloat(form.querySelector(`#${type.toLowerCase()}-amount`).value);
     const number = form.querySelector(`#${type.toLowerCase()}-number`).value.trim();
 
@@ -48,15 +83,22 @@ function handleDocumentSubmit(e, type) {
         client: form.querySelector(`#${type.toLowerCase()}-client`).value,
         amount: amount,
         currency: form.querySelector(`#${type.toLowerCase()}-currency`).value,
-        status: 'Adeudada',
+        status: 'Adeudada', // Al crear o editar, se resetea a 'Adeudada' (lógica simple)
+        // Si quisiéramos mantener el estado al editar, necesitaríamos un campo de estado en el form
     };
+
+    // --- INICIO DE MODIFICACIÓN: Lógica de Guardar o Actualizar ---
     withSpinner(() => {
-        actions.addDocument(docData);
-        form.reset();
-        // Set default date again after reset
-        const dateInput = form.querySelector(`#${type.toLowerCase()}-date`);
-        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+        if (id) {
+            // Es una edición
+            actions.updateDocument(id, docData);
+        } else {
+            // Es uno nuevo
+            actions.addDocument(docData);
+        }
+        resetProformaForm(); // Usar la nueva función de reseteo
     })();
+    // --- FIN DE MODIFICACIÓN ---
 }
 
 
@@ -65,6 +107,42 @@ function handleDocumentsTableClick(e) {
     const deleteBtn = e.target.closest('.delete-doc-btn');
     const viewBtn = e.target.closest('.view-invoice-btn');
     const receiptBtn = e.target.closest('.generate-receipt-btn');
+
+    // --- INICIO DE MODIFICACIÓN: Añadir handler de editar ---
+    const editBtn = e.target.closest('.edit-doc-btn');
+
+    if (editBtn) {
+        const id = editBtn.dataset.id;
+        const { documents } = getState();
+        const doc = documents.find(d => d.id === id);
+
+        // Solo actuar si encontramos el documento y es una Proforma
+        if (doc && doc.type === 'Proforma') { 
+            const form = elements.proformaForm;
+            if (!form) return;
+
+            // Llenar el formulario
+            form.querySelector('#proforma-id').value = doc.id;
+            form.querySelector('#proforma-date').value = doc.date;
+            form.querySelector('#proforma-number').value = doc.number;
+            form.querySelector('#proforma-client').value = doc.client;
+            form.querySelector('#proforma-amount').value = doc.amount;
+            form.querySelector('#proforma-currency').value = doc.currency;
+
+            // Actualizar UI del formulario
+            const title = document.getElementById('proforma-form-title');
+            if (title) title.textContent = 'Editar Proforma';
+
+            const submitText = document.getElementById('proforma-form-submit-text');
+            if (submitText) submitText.textContent = 'Actualizar';
+
+            const cancelBtn = document.getElementById('proforma-form-cancel-btn');
+            if (cancelBtn) cancelBtn.classList.remove('hidden');
+
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+    // --- FIN DE MODIFICACIÓN ---
 
     if (statusBtn) {
         withSpinner(() => actions.toggleDocumentStatus(statusBtn.dataset.id), 150)();
@@ -288,6 +366,13 @@ export function bindDocumentEvents() {
     // Proformas
     if (elements.proformaForm) elements.proformaForm.addEventListener('submit', (e) => handleDocumentSubmit(e, 'Proforma'));
     
+    // --- INICIO DE MODIFICACIÓN: Añadir listener al botón de cancelar ---
+    const proformaCancelBtn = document.getElementById('proforma-form-cancel-btn');
+    if (proformaCancelBtn) {
+        proformaCancelBtn.addEventListener('click', resetProformaForm);
+    }
+    // --- FIN DE MODIFICACIÓN ---
+    
     // Re-bind proformasTableBody para evitar duplicados
     if (elements.proformasTableBody) {
         const newTbody = elements.proformasTableBody.cloneNode(false);
@@ -393,4 +478,3 @@ export function bindDocumentEvents() {
     if (elements.pdfInvoiceBtn) elements.pdfInvoiceBtn.addEventListener('click', handleDownloadPDF);
     // --- FIN DE LISTENERS AÑADIDOS ---
 }
-

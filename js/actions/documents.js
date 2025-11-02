@@ -63,6 +63,25 @@ export async function addDocument(docData) { // Lógica del contador revisada
     await addDocToCollection('documents', docData); 
 }
 
+// --- INICIO DE MODIFICACIÓN: Añadir función updateDocument ---
+/**
+ * Actualiza un documento existente (Proforma o Factura).
+ * @param {string} docId - El ID del documento a actualizar.
+ * @param {object} docData - Los nuevos datos para el documento.
+ */
+export async function updateDocument(docId, docData) {
+    // Asegurar montos como números antes de guardar
+    docData.amount = Number(docData.amount) || 0;
+    docData.subtotal = Number(docData.subtotal) || 0;
+    docData.iva = Number(docData.iva) || 0;
+    docData.total = Number(docData.total) || 0;
+    
+    // No es necesario tocar el contador de facturas al editar
+    
+    await updateDocInCollection('documents', docId, docData); 
+}
+// --- FIN DE MODIFICACIÓN ---
+
 export async function toggleDocumentStatus(docId) { 
     const { documents } = getState();
     const doc = documents.find(d => d.id === docId);
@@ -109,4 +128,3 @@ export async function saveFiscalParams(fiscalParams) {
         // Podríamos lanzar un error aquí
     }
 }
-

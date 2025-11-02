@@ -63,6 +63,17 @@ function createDocumentRow(doc, state) {
          `);
     }
 
+    // --- INICIO DE MODIFICACIÓN: Añadir botón de Editar ---
+    const canEdit = (type === 'Factura' && permissions.manage_invoices) || (type === 'Proforma' && permissions.manage_proformas);
+    if (canEdit) {
+         actionsHtml.push(`
+            <button class="edit-doc-btn p-2 text-blue-400 hover:text-blue-300" data-id="${id}" title="Editar">
+                <i data-lucide="edit" class="w-4 h-4"></i>
+            </button>
+         `);
+    }
+    // --- FIN DE MODIFICACIÓN ---
+
     // Botón de eliminar
     const canDelete = (type === 'Factura' && permissions.manage_invoices) || (type === 'Proforma' && permissions.manage_proformas);
     if (canDelete) {
@@ -156,4 +167,3 @@ export function renderDocuments(type, tbody, searchInputId) {
             .join('');
     }
 }
-
