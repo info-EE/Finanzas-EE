@@ -421,12 +421,12 @@
     
             <div id="page-proformas" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Proformas</h2>
-                <!-- PASO 6: Cambiado a lg:grid-cols-3 -->
+                <!-- INICIO PASO 6: Layout lg:grid-cols-3 -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- PASO 6: Cambiado a lg:col-span-1 -->
+                    <!-- Formulario en 1 columna -->
                     <div class="card p-6 rounded-xl lg:col-span-1">
                         <h3 id="proforma-form-title" class="font-semibold mb-4 text-lg">Agregar Nueva Proforma</h3>
-                        <form id="proforma-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <form id="proforma-form" class="space-y-4">
                             <input type="hidden" id="proforma-id">
                             <div>
                                 <label for="proforma-date" class="block text-sm font-medium text-gray-400 mb-1">Fecha</label>
@@ -440,7 +440,7 @@
                                 <label for="proforma-client" class="block text-sm font-medium text-gray-400 mb-1">Cliente</label>
                                 <input type="text" id="proforma-client" class="form-input" placeholder="Nombre del Cliente" required>
                             </div>
-                            <div class="lg:col-span-2">
+                            <div>
                                <label for="proforma-amount" class="block text-sm font-medium text-gray-400 mb-1">Monto</label>
                                <div class="flex gap-2">
                                     <input type="number" id="proforma-amount" class="form-input" placeholder="1500.00" step="0.01" required>
@@ -450,54 +450,48 @@
                                     </select>
                                </div>
                             </div>
-                            <div class="lg:col-span-1 flex items-end gap-2">
-                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                            <div class="flex items-end gap-2 pt-2">
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
                                     <i data-lucide="plus-circle" class="w-4 h-4"></i> 
                                     <span id="proforma-form-submit-text">Agregar Proforma</span>
                                 </button>
-                                <button type="button" id="proforma-form-cancel-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hidden">
+                                <button type="button" id="proforma-form-cancel-btn" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors hidden">
                                     Cancelar
                                 </button>
                             </div>
-                            </form>
+                        </form>
                     </div>
-                    <!-- PASO 6: Cambiado a lg:col-span-2 -->
+                    <!-- Listado en 2 columnas -->
                     <div class="card p-6 rounded-xl lg:col-span-2">
-                        <!-- PASO 2 y 3: Añadido flex y botón de descarga -->
-                        <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
-                            <h3 class="font-semibold text-lg">Listado de Proformas</h3>
-                            <div class="flex items-center gap-2">
-                                <!-- Botón de descarga -->
-                                <div class="dropdown">
-                                    <button id="proforma-download-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 text-sm">
+                        <h3 class="font-semibold mb-4">Listado de Proformas</h3>
+                        <!-- INICIO PASOS 2/3: Filtros y Descarga -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label for="proforma-date-from" class="block text-sm font-medium text-gray-400 mb-1">Desde</label>
+                                <input type="date" id="proforma-date-from" class="form-input">
+                            </div>
+                            <div>
+                                <label for="proforma-date-to" class="block text-sm font-medium text-gray-400 mb-1">Hasta</label>
+                                <input type="date" id="proforma-date-to" class="form-input">
+                            </div>
+                            <div class="flex items-end justify-end">
+                                <!-- CORRECCIÓN: 'dropdown-proforma' -> 'dropdown' -->
+                                <div class="relative dropdown w-full">
+                                    <button id="proforma-download-btn" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2">
                                         <i data-lucide="download" class="w-4 h-4"></i> Descargar
                                     </button>
-                                    <div id="proforma-download-options" class="dropdown-content" style="display:none">
+                                    <div id="proforma-download-options" class="dropdown-content w-full">
                                         <button class="download-option" data-format="pdf">Exportar como PDF</button>
                                         <button class="download-option" data-format="xlsx">Exportar como Excel</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- PASO 2 y 3: Añadidos filtros de fecha y búsqueda -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="md:col-span-2">
-                                <label for="proformas-search" class="block text-sm font-medium text-gray-400 mb-1">Buscar por N° o Cliente</label>
-                                <input type="text" id="proformas-search" class="form-input" placeholder="Buscar...">
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label for="proforma-date-from" class="block text-sm font-medium text-gray-400 mb-1">Desde</label>
-                                    <input type="date" id="proforma-date-from" class="form-input">
-                                </div>
-                                <div>
-                                    <label for="proforma-date-to" class="block text-sm font-medium text-gray-400 mb-1">Hasta</label>
-                                    <input type="date" id="proforma-date-to" class="form-input">
-                                </div>
-                            </div>
+                        <div class="mb-4">
+                            <label for="proformas-search" class="sr-only">Buscar</label>
+                            <input type="text" id="proformas-search" class="form-input" placeholder="Buscar por N° de proforma o cliente...">
                         </div>
-
+                        <!-- FIN PASOS 2/3 -->
                         <div class="overflow-x-auto">
                             <table class="w-full text-left min-w-[600px]">
                                 <thead>
@@ -505,7 +499,7 @@
                                         <th class="py-2 px-3">Fecha</th>
                                         <th class="py-2 px-3">N° Proforma</th>
                                         <th class="py-2 px-3">Cliente</th>
-                                        <th class="py-2 px-3 text-right">Monto</th>
+                                        <th class="py-2 px-3 text-right pr-4">Monto</th>
                                         <th class="py-2 px-3 text-center">Estado</th>
                                         <th class="py-2 px-3 text-center">Acciones</th>
                                     </tr>
@@ -1248,3 +1242,4 @@
         <script type="module" src="js/main.js?v=3"></script> 
         </body>
     </html>
+
