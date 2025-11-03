@@ -5,7 +5,7 @@ import {
     renderAll,
     exportReportAsXLSX, // <-- AÑADIDO (Paso 3)
     exportReportAsPDF   // <-- AÑADIDO (Paso 3)
-} from '../ui.js'; // Funciones principales de UI
+} from '../ui/index.js'; // <-- ESTA ES LA LÍNEA CORREGIDA (era ../ui.js)
 import {
     populateNextInvoiceNumber
 } from '../ui/controls.js'; // Funciones de controles
@@ -601,3 +601,4 @@ export function bindDocumentEvents() {
     if (elements.pdfInvoiceBtn) elements.pdfInvoiceBtn.addEventListener('click', handleDownloadPDF);
     // --- FIN DE LISTENERS AÑADIDOS ---
 }
+
