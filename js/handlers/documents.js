@@ -2,7 +2,9 @@ import * as actions from '../actions.js';
 import { elements } from '../ui/elements.js'; // <-- CORREGIDO
 import {
     switchPage,
-    renderAll
+    renderAll,
+    exportReportAsXLSX, // <-- AÑADIDO (Paso 3)
+    exportReportAsPDF   // <-- AÑADIDO (Paso 3)
 } from '../ui.js'; // Funciones principales de UI
 import {
     populateNextInvoiceNumber
@@ -20,7 +22,8 @@ import {
     showAlertModal,
     showConfirmationModal
 } from '../ui/modals.js'; // Funciones de modales
-import { getState } from '../store.js';
+// --- AÑADIDO (Paso 3) ---
+import { getState, setState } from '../store.js'; 
 import { escapeHTML } from '../utils.js';
 import { withSpinner } from './helpers.js';
 
@@ -161,6 +164,89 @@ function handleDocumentsTableClick(e) {
         showPaymentDetailsModal(receiptBtn.dataset.id);
     }
 }
+
+
+// --- AÑADIDO (Paso 3): Handler para la descarga de Proformas ---
+function handleProformaDownloadClick(e) {
+    const downloadBtn = e.target.closest('#proforma-download-btn');
+    if (downloadBtn) {
+        document.getElementById('proforma-download-options').classList.toggle('show');
+        return; // Detener aquí, solo mostramos el menú
+    }
+
+    const formatBtn = e.target.closest('.download-option');
+    if (formatBtn) {
+        const format = formatBtn.dataset.format;
+        
+        // 1. Obtener datos filtrados (lógica idéntica a renderDocuments)
+        const { documents } = getState();
+        let filteredDocs = documents.filter(doc => doc.type === 'Proforma');
+
+        const searchTerm = document.getElementById('proformas-search')?.value.toLowerCase() || '';
+        const dateFromInput = document.getElementById('proforma-date-from');
+        const dateToInput = document.getElementById('proforma-date-to');
+        let dateFrom = null;
+        let dateTo = null;
+
+        if (dateFromInput && dateFromInput.value) {
+            dateFrom = new Date(dateFromInput.value + 'T00:00:00Z');
+        }
+        if (dateToInput && dateToInput.value) {
+            dateTo = new Date(dateToInput.value + 'T23:59:59Z');
+        }
+
+        if (searchTerm) {
+            filteredDocs = filteredDocs.filter(doc => 
+                (doc.number && doc.number.toLowerCase().includes(searchTerm)) ||
+                (doc.client && doc.client.toLowerCase().includes(searchTerm))
+            );
+        }
+        if (dateFrom) {
+            filteredDocs = filteredDocs.filter(doc => {
+                const docDate = new Date(doc.date + 'T00:00:00Z');
+                return !isNaN(docDate.getTime()) && docDate >= dateFrom;
+            });
+        }
+        if (dateTo) {
+            filteredDocs = filteredDocs.filter(doc => {
+                const docDate = new Date(doc.date + 'T00:00:00Z');
+                return !isNaN(docDate.getTime()) && docDate <= dateTo;
+            });
+        }
+        
+        if (filteredDocs.length === 0) {
+            showAlertModal('Sin Datos', 'No hay proformas que coincidan con los filtros actuales para exportar.');
+            return;
+        }
+
+        // 2. Preparar datos para el reporte
+        const columns = ["Fecha", "N° Proforma", "Cliente", "Monto", "Moneda", "Estado"];
+        const data = filteredDocs
+            .sort((a, b) => new Date(b.date) - new Date(a.date)) // Asegurar orden
+            .map(doc => [
+                doc.date,
+                doc.number,
+                doc.client,
+                doc.amount,
+                doc.currency,
+                doc.status
+            ]);
+        
+        // 3. Guardar en el estado para que los helpers de exportación funcionen
+        setState({ activeReport: { type: 'Proformas', data, title: 'Listado_Proformas', columns } });
+
+        // 4. Llamar a los helpers de exportación
+        if (format === 'xlsx') {
+            exportReportAsXLSX();
+        } else if (format === 'pdf') {
+            exportReportAsPDF();
+        }
+        
+        // Ocultar dropdown
+        document.getElementById('proforma-download-options').classList.remove('show');
+    }
+}
+// --- FIN DE FUNCIÓN AÑADIDA ---
 
 
 function handleClientSelectionForInvoice(e) {
@@ -373,17 +459,49 @@ export function bindDocumentEvents() {
     }
     // --- FIN DE MODIFICACIÓN ---
     
-    // Re-bind proformasTableBody para evitar duplicados
-    if (elements.proformasTableBody) {
-        const newTbody = elements.proformasTableBody.cloneNode(false);
-        elements.proformasTableBody.parentNode.replaceChild(newTbody, elements.proformasTableBody);
-        elements.proformasTableBody = newTbody;
-        elements.proformasTableBody.addEventListener('click', handleDocumentsTableClick);
-    }
-    
-    const proformasSearch = document.getElementById('proformas-search');
-    if (proformasSearch) proformasSearch.addEventListener('input', () => renderAll());
+    // --- INICIO DE MODIFICACIÓN (PASOS 2/3) ---
+    // Limpiar y re-bindear listeners de la tarjeta de listado de Proformas
+    const proformaListCard = document.getElementById('proformas-table-body')?.closest('.card');
+    if (proformaListCard) {
+        // Clonar la tarjeta entera para limpiar TODOS los listeners (search, table, download)
+        const newCard = proformaListCard.cloneNode(true);
+        proformaListCard.parentNode.replaceChild(newCard, proformaListCard);
+        
+        // Re-asignar el tbody de elements al nuevo tbody clonado
+        elements.proformasTableBody = newCard.querySelector('#proformas-table-body');
+        
+        // 1. Re-bind listener de la tabla
+        if (elements.proformasTableBody) {
+            elements.proformasTableBody.addEventListener('click', handleDocumentsTableClick);
+        }
+        
+        // 2. Bind listener de descarga a la tarjeta
+        newCard.addEventListener('click', handleProformaDownloadClick);
+        
+        // 3. Bind listener de búsqueda
+        const proformasSearch = newCard.querySelector('#proformas-search');
+        if (proformasSearch) proformasSearch.addEventListener('input', () => renderAll());
 
+        // 4. Bind listeners de filtros de fecha
+        const proformaDateFrom = newCard.querySelector('#proforma-date-from');
+        if (proformaDateFrom) proformaDateFrom.addEventListener('input', () => renderAll());
+        
+        const proformaDateTo = newCard.querySelector('#proforma-date-to');
+        if (proformaDateTo) proformaDateTo.addEventListener('input', () => renderAll());
+
+    } else if (elements.proformasTableBody) {
+            // Fallback si no se encuentra la tarjeta (lógica antigua)
+            const newTbody = elements.proformasTableBody.cloneNode(false);
+            elements.proformasTableBody.parentNode.replaceChild(newTbody, elements.proformasTableBody);
+            elements.proformasTableBody = newTbody;
+            elements.proformasTableBody.addEventListener('click', handleDocumentsTableClick);
+            
+            // Bindear búsqueda (lógica antigua)
+            const proformasSearch = document.getElementById('proformas-search');
+            if (proformasSearch) proformasSearch.addEventListener('input', () => renderAll());
+    }
+    // --- FIN DE MODIFICACIÓN ---
+    
     // Invoicing Section (Tabs)
     const crearTab = document.getElementById('facturacion-tab-crear');
     if (crearTab) crearTab.addEventListener('click', () => {
@@ -463,7 +581,12 @@ export function bindDocumentEvents() {
     }
 
     const facturasSearch = document.getElementById('facturas-search');
-    if (facturasSearch) facturasSearch.addEventListener('input', () => renderAll());
+    if (facturasSearch) {
+        // Limpiar listener antiguo
+        const newSearch = facturasSearch.cloneNode(true);
+        facturasSearch.parentNode.replaceChild(newSearch, facturasSearch);
+        newSearch.addEventListener('input', () => renderAll());
+    }
     
     // Configuración AEAT
     if (elements.aeatConfigForm) elements.aeatConfigForm.addEventListener('submit', handleAeatConfigSave);

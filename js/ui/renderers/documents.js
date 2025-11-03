@@ -97,13 +97,19 @@ function createDocumentRow(doc, state) {
     const numberColName = (type === 'Factura') ? "N° Factura" : "N° Proforma";
     const statusColHtml = (statusColspan > 0) ? `<th class="py-2 px-3 text-center">Estado</th>` : '';
 
+    // --- PASO 5: Implementación de mejoras visuales ---
+    const statusCellHtml = (statusColspan > 0) 
+        ? `<td class="py-3 px-3 text-center flex items-center justify-center">${actionsHtml.shift()}</td>` // Centrar estado
+        : '';
+    const montoCellHtml = `<td class="py-3 px-3 text-right pr-4">${formatCurrency(amount, currency)}</td>`; // Añadido pr-4
+
     return `
         <tr class="border-b border-gray-800 hover:bg-gray-800/50">
             <td class="py-3 px-3">${date}</td>
             <td class="py-3 px-3">${escapeHTML(number)}</td>
             <td class="py-3 px-3">${escapeHTML(client)}</td>
-            <td class="py-3 px-3 text-right">${formatCurrency(amount, currency)}</td>
-            ${(statusColspan > 0) ? `<td class="py-3 px-3 text-center">${actionsHtml.shift()}</td>` : ''}
+            ${montoCellHtml}
+            ${statusCellHtml}
             <td class="py-3 px-3" colspan="${actionsColspan}">
                 <div class="flex items-center justify-center gap-2">
                     ${actionsHtml.join('')}
@@ -147,9 +153,28 @@ export function renderDocuments(type, tbody, searchInputId) {
 
     let filteredDocs = documents.filter(doc => doc.type === type);
     
+    // --- PASO 2: Obtener término de búsqueda ---
     const searchInput = document.getElementById(searchInputId);
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
+    // --- PASO 2: Obtener filtros de fecha (solo para Proformas) ---
+    let dateFrom = null;
+    let dateTo = null;
+    let hasDateFilter = false;
+    if (type === 'Proforma') {
+        const dateFromInput = document.getElementById('proforma-date-from');
+        const dateToInput = document.getElementById('proforma-date-to');
+        if (dateFromInput && dateFromInput.value) {
+            dateFrom = new Date(dateFromInput.value + 'T00:00:00Z'); // Usar UTC
+            hasDateFilter = true;
+        }
+        if (dateToInput && dateToInput.value) {
+            dateTo = new Date(dateToInput.value + 'T23:59:59Z'); // Usar UTC
+            hasDateFilter = true;
+        }
+    }
+    
+    // Aplicar filtro de búsqueda
     if (searchTerm) {
         filteredDocs = filteredDocs.filter(doc => 
             (doc.number && doc.number.toLowerCase().includes(searchTerm)) ||
@@ -157,10 +182,28 @@ export function renderDocuments(type, tbody, searchInputId) {
         );
     }
 
+    // Aplicar filtros de fecha
+    if (dateFrom) {
+        filteredDocs = filteredDocs.filter(doc => {
+            const docDate = new Date(doc.date + 'T00:00:00Z');
+            return !isNaN(docDate.getTime()) && docDate >= dateFrom;
+        });
+    }
+    if (dateTo) {
+        filteredDocs = filteredDocs.filter(doc => {
+            const docDate = new Date(doc.date + 'T00:00:00Z');
+            return !isNaN(docDate.getTime()) && docDate <= dateTo;
+        });
+    }
+
+
     if (filteredDocs.length === 0) {
-        const message = searchTerm ? "No hay documentos que coincidan con la búsqueda." : `No hay ${type.toLowerCase()}s registradas.`;
+        const message = (searchTerm || hasDateFilter) 
+            ? "No hay documentos que coincidan con los filtros." 
+            : `No hay ${type.toLowerCase()}s registradas.`;
         tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">${message}</td></tr>`;
     } else {
+        // --- PASO 4: Asegurar el orden correcto ---
         tbody.innerHTML = filteredDocs
             .sort((a, b) => new Date(b.date) - new Date(a.date))
             .map(doc => createDocumentRow(doc, state))

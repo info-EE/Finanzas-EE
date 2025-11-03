@@ -421,8 +421,10 @@
     
             <div id="page-proformas" class="page-content hidden">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6 text-white">Gestión de Proformas</h2>
-                <div class="grid grid-cols-1 gap-6">
-                    <div class="card p-6 rounded-xl">
+                <!-- PASO 6: Cambiado a lg:grid-cols-3 -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- PASO 6: Cambiado a lg:col-span-1 -->
+                    <div class="card p-6 rounded-xl lg:col-span-1">
                         <h3 id="proforma-form-title" class="font-semibold mb-4 text-lg">Agregar Nueva Proforma</h3>
                         <form id="proforma-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <input type="hidden" id="proforma-id">
@@ -459,11 +461,43 @@
                             </div>
                             </form>
                     </div>
-                    <div class="card p-6 rounded-xl">
-                        <h3 class="font-semibold mb-4">Listado de Proformas</h3>
-                        <div class="mb-4">
-                            <input type="text" id="proformas-search" class="form-input" placeholder="Buscar por N° de proforma o cliente...">
+                    <!-- PASO 6: Cambiado a lg:col-span-2 -->
+                    <div class="card p-6 rounded-xl lg:col-span-2">
+                        <!-- PASO 2 y 3: Añadido flex y botón de descarga -->
+                        <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
+                            <h3 class="font-semibold text-lg">Listado de Proformas</h3>
+                            <div class="flex items-center gap-2">
+                                <!-- Botón de descarga -->
+                                <div class="dropdown">
+                                    <button id="proforma-download-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 text-sm">
+                                        <i data-lucide="download" class="w-4 h-4"></i> Descargar
+                                    </button>
+                                    <div id="proforma-download-options" class="dropdown-content" style="display:none">
+                                        <button class="download-option" data-format="pdf">Exportar como PDF</button>
+                                        <button class="download-option" data-format="xlsx">Exportar como Excel</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- PASO 2 y 3: Añadidos filtros de fecha y búsqueda -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div class="md:col-span-2">
+                                <label for="proformas-search" class="block text-sm font-medium text-gray-400 mb-1">Buscar por N° o Cliente</label>
+                                <input type="text" id="proformas-search" class="form-input" placeholder="Buscar...">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label for="proforma-date-from" class="block text-sm font-medium text-gray-400 mb-1">Desde</label>
+                                    <input type="date" id="proforma-date-from" class="form-input">
+                                </div>
+                                <div>
+                                    <label for="proforma-date-to" class="block text-sm font-medium text-gray-400 mb-1">Hasta</label>
+                                    <input type="date" id="proforma-date-to" class="form-input">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="overflow-x-auto">
                             <table class="w-full text-left min-w-[600px]">
                                 <thead>
