@@ -1,4 +1,4 @@
-import { getState, setState } from '../store.js';
+import { getState, setState, getDefaultState } from '../store.js';
 import { 
     saveSettings,
     getAllUsers, 
@@ -19,8 +19,20 @@ export async function loadAndSetAllUsers() {
     const rawUsers = await getAllUsers();
     const { settings } = getState();
     const blockedUserIds = (settings && settings.blockedUserIds) || [];
-    // *** CÓDIGO MODIFICADO: No filtrar por email, solo por ID bloqueado ***
-    const filteredUsers = rawUsers.filter(user => !blockedUserIds.includes(user.id));
+    
+    // --- INICIO DE MODIFICACIÓN ---
+    // Traer la lista de admin emails del default state para "desbloquearlos"
+    const defaultAdminEmails = getDefaultState().settings.adminEmails || [];
+
+    const filteredUsers = rawUsers.filter(user => {
+        // No mostrar si está bloqueado, A MENOS QUE sea un admin por defecto
+        const isBlocked = blockedUserIds.includes(user.id);
+        const isAdmin = user.email ? defaultAdminEmails.includes(user.email) : false;
+        // Mostrar si (no está bloqueado) O (es un admin por defecto)
+        return !isBlocked || isAdmin;
+    });
+    // --- FIN DE MODIFICACIÓN ---
+
     setState({ allUsers: filteredUsers });
 }
 
@@ -86,3 +98,4 @@ export async function blockUserAction(userId) {
     }
     return { success: true, message: 'El usuario ya estaba bloqueado.' };
 }
+

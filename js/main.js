@@ -171,7 +171,22 @@ console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userPro
                              // Filtrar usuarios bloqueados antes de actualizar el estado
                              const { settings } = getState();
                              const blockedUserIds = (settings && settings.blockedUserIds) || [];
-                             const filteredUsers = allUsers.filter(u => u.email && !blockedUserIds.includes(u.id));
+
+                             // --- INICIO DE MODIFICACIÓN ---
+                             // Traer la lista de admin emails del default state para "desbloquearlos"
+                             const defaultAdminEmails = getDefaultState().settings.adminEmails || [];
+                
+                             const filteredUsers = allUsers.filter(u => {
+                                 if (!u.email) return false; // Sigue filtrando usuarios sin email
+                                 
+                                 const isBlocked = blockedUserIds.includes(u.id);
+                                 const isAdmin = defaultAdminEmails.includes(u.email);
+                                 
+                                 // Mostrar si (no está bloqueado) O (es un admin por defecto)
+                                 return !isBlocked || isAdmin;
+                             });
+                             // --- FIN DE MODIFICACIÓN ---
+
                              setState({ allUsers: filteredUsers });
                         });
                     } else {
@@ -302,3 +317,4 @@ console.log(`Acceso denegado. isAdmin: ${isAdmin}, userProfile status: ${userPro
 
 // 6. Esperar a que el DOM esté listo para ejecutar main
 document.addEventListener('DOMContentLoaded', main);
+
